@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChangeEvent, FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   BookOpen,
@@ -24,6 +24,7 @@ import {
   MessageSquareQuote,
   ShieldAlert,
   Send,
+  Trash2,
   Star,
   Upload,
   UserCircle,
@@ -32,7 +33,13 @@ import {
 } from "lucide-react";
 import { apiGetJson, apiPostJson, ApiError } from "../lib/api";
 import { normalizeAuthUser } from "../lib/freelancerStorage";
-import { createCommunityPost, getCommunityPosts, type CommunityPostPriority } from "../lib/postsStorage";
+import {
+  createCommunityPost,
+  deleteCommunityPost,
+  getCommunityPosts,
+  updateCommunityPost,
+  type CommunityPostPriority,
+} from "../lib/postsStorage";
 import { disconnectSocket } from "../lib/socket";
 import { ChatLayout } from "../components/chat/ChatLayout";
 
@@ -160,6 +167,17 @@ function ClientHomePageContent() {
   const [postTitleInput, setPostTitleInput] = useState("");
   const [postDescriptionInput, setPostDescriptionInput] = useState("");
   const [postStatusMessage, setPostStatusMessage] = useState("");
+
+  const CLIENT_FEATURED_POST_KEY_PREFIX = "peermatch_client_featured_post_id_v1:";
+  const [clientFeaturedPostId, setClientFeaturedPostId] = useState<string>("");
+  const [featuredTitleInput, setFeaturedTitleInput] = useState<string>("");
+  const [featuredCategoryInput, setFeaturedCategoryInput] = useState<string>("");
+  const [featuredPriorityInput, setFeaturedPriorityInput] = useState<CommunityPostPriority>("Normal");
+  const [featuredContentInput, setFeaturedContentInput] = useState<string>("");
+  const [featuredSaving, setFeaturedSaving] = useState(false);
+  const [featuredDeleting, setFeaturedDeleting] = useState(false);
+  const [featuredStatusMessage, setFeaturedStatusMessage] = useState<string>("");
+
   const recentActivities: ActivityItem[] = [];
   const notifications: string[] = [];
 
@@ -174,7 +192,7 @@ function ClientHomePageContent() {
 
   const postsHeading = "Community Feed";
 
-  const formatTimeAgo = (value: string) => {
+  const formatTimeAgo = useCallback((value: string) => {
     const ts = new Date(value).getTime();
     if (!Number.isFinite(ts)) return "Just now";
     const diffMs = Date.now() - ts;
@@ -185,22 +203,35 @@ function ClientHomePageContent() {
     if (diffMs < hour) return `${Math.floor(diffMs / minute)} min ago`;
     if (diffMs < day) return `${Math.floor(diffMs / hour)} hr ago`;
     return `${Math.floor(diffMs / day)} day${Math.floor(diffMs / day) > 1 ? "s" : ""} ago`;
-  };
+  }, []);
 
-  const mapPostForUi = (
+  const mapPostForUi = useCallback(
+    (
     post: ReturnType<typeof getCommunityPosts>[number],
     fallbackAvatar: string,
-  ): PostItem => ({
-    id: post.id,
-    authorId: post.authorId,
-    author: post.authorName || "Client User",
-    timeAgo: formatTimeAgo(post.createdAt),
-    title: post.title,
-    content: post.content,
-    category: post.category || "General",
-    priority: post.priority,
-    avatar: post.authorAvatarDataUrl || fallbackAvatar,
-  });
+    ): PostItem => ({
+      id: post.id,
+      authorId: post.authorId,
+      author: post.authorName || "Client User",
+      timeAgo: formatTimeAgo(post.createdAt),
+      title: post.title,
+      content: post.content,
+      category: post.category || "General",
+      priority: post.priority,
+      avatar: post.authorAvatarDataUrl || fallbackAvatar,
+    }),
+    [formatTimeAgo],
+  );
+
+  const clientPosts = useMemo(() => {
+    if (!meUserId) return [];
+    return posts.filter((p) => p.authorId === meUserId);
+  }, [posts, meUserId]);
+
+  const featuredPost = useMemo(() => {
+    if (!clientFeaturedPostId) return undefined;
+    return clientPosts.find((p) => p.id === clientFeaturedPostId);
+  }, [clientPosts, clientFeaturedPostId]);
 
   useEffect(() => {
     setPeerUserId(peerFromQuery);
@@ -249,7 +280,50 @@ function ClientHomePageContent() {
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [profilePhotoDataUrl]);
+  }, [profilePhotoDataUrl, mapPostForUi]);
+
+  useEffect(() => {
+    if (!meUserId) return;
+    const stored = window.localStorage.getItem(`${CLIENT_FEATURED_POST_KEY_PREFIX}${meUserId}`);
+    if (stored) setClientFeaturedPostId(stored);
+  }, [meUserId]);
+
+  useEffect(() => {
+    if (!meUserId) return;
+    if (clientPosts.length === 0) {
+      if (clientFeaturedPostId) setClientFeaturedPostId("");
+      return;
+    }
+    const stillExists = clientFeaturedPostId && clientPosts.some((p) => p.id === clientFeaturedPostId);
+    if (!stillExists) {
+      setClientFeaturedPostId(clientPosts[0]?.id || "");
+    }
+  }, [clientPosts, clientFeaturedPostId, meUserId]);
+
+  useEffect(() => {
+    if (!meUserId) return;
+    const key = `${CLIENT_FEATURED_POST_KEY_PREFIX}${meUserId}`;
+    if (clientFeaturedPostId) {
+      window.localStorage.setItem(key, clientFeaturedPostId);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  }, [clientFeaturedPostId, meUserId]);
+
+  useEffect(() => {
+    if (!featuredPost) {
+      setFeaturedTitleInput("");
+      setFeaturedCategoryInput("");
+      setFeaturedPriorityInput("Normal");
+      setFeaturedContentInput("");
+      return;
+    }
+
+    setFeaturedTitleInput(featuredPost.title);
+    setFeaturedCategoryInput(featuredPost.category);
+    setFeaturedPriorityInput(featuredPost.priority);
+    setFeaturedContentInput(featuredPost.content);
+  }, [featuredPost?.id, featuredPost?.title, featuredPost?.category, featuredPost?.priority, featuredPost?.content]);
 
   useEffect(() => {
     setIsPanelVisible(false);
@@ -314,8 +388,6 @@ function ClientHomePageContent() {
       router.push("/login");
     }
   };
-
-  const featuredWork: Array<{ title: string; category: string; rating: number; reviews: number }> = [];
   const skillsAndExpertise: string[] = profileSkillsInput
     .split(",")
     .map((item) => item.trim())
@@ -354,6 +426,99 @@ function ClientHomePageContent() {
   ]);
 
   const canSaveProfile = hasUnsavedProfileChanges && profileLoaded && !profileSaving;
+
+  const hasFeaturedPostEdits = useMemo(() => {
+    if (!featuredPost) return false;
+    return (
+      featuredTitleInput.trim() !== featuredPost.title ||
+      featuredCategoryInput.trim() !== featuredPost.category ||
+      featuredPriorityInput !== featuredPost.priority ||
+      featuredContentInput.trim() !== featuredPost.content
+    );
+  }, [featuredPost, featuredTitleInput, featuredCategoryInput, featuredPriorityInput, featuredContentInput]);
+
+  const canSaveFeaturedPost =
+    Boolean(featuredPost) &&
+    hasFeaturedPostEdits &&
+    !featuredSaving &&
+    Boolean(featuredTitleInput.trim() && featuredCategoryInput.trim() && featuredContentInput.trim());
+
+  const handleSaveFeaturedPost = async () => {
+    if (!featuredPost || featuredSaving || !hasFeaturedPostEdits) return;
+
+    const title = featuredTitleInput.trim();
+    const category = featuredCategoryInput.trim();
+    const content = featuredContentInput.trim();
+    if (!title || !category || !content) {
+      setFeaturedStatusMessage("Please complete title, category, and description.");
+      return;
+    }
+
+    setFeaturedSaving(true);
+    setFeaturedStatusMessage("Saving changes...");
+
+    try {
+      const updated = updateCommunityPost(featuredPost.id, {
+        title,
+        category,
+        content,
+        priority: featuredPriorityInput,
+      });
+
+      if (!updated) throw new Error("Post not found. It may have been deleted.");
+
+      // Reload posts so the Client Dashboard updates immediately in this tab.
+      const fallbackAvatar = profilePhotoDataUrl || "https://api.dicebear.com/7.x/initials/svg?seed=Client";
+      const nextPosts = getCommunityPosts().map((post) => mapPostForUi(post, fallbackAvatar));
+      setPosts(nextPosts);
+
+      setFeaturedTitleInput(updated.title);
+      setFeaturedCategoryInput(updated.category);
+      setFeaturedPriorityInput(updated.priority);
+      setFeaturedContentInput(updated.content);
+
+      setFeaturedStatusMessage("Changes saved.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not save changes.";
+      setFeaturedStatusMessage(message);
+    } finally {
+      setFeaturedSaving(false);
+    }
+  };
+
+  const handleDeleteFeaturedPost = async () => {
+    if (!featuredPost || featuredDeleting) return;
+
+    const confirmed = window.confirm("Delete this featured post? This cannot be undone.");
+    if (!confirmed) return;
+
+    setFeaturedDeleting(true);
+    setFeaturedStatusMessage("Deleting featured post...");
+
+    try {
+      const deleted = deleteCommunityPost(featuredPost.id);
+      if (!deleted) throw new Error("Post not found. It may have been deleted.");
+
+      // Reload posts so the Client Dashboard updates immediately in this tab.
+      const fallbackAvatar = profilePhotoDataUrl || "https://api.dicebear.com/7.x/initials/svg?seed=Client";
+      const nextPosts = getCommunityPosts().map((post) => mapPostForUi(post, fallbackAvatar));
+      setPosts(nextPosts);
+
+      // Clear selection now; effects will re-select the first remaining post automatically.
+      setClientFeaturedPostId("");
+      setFeaturedTitleInput("");
+      setFeaturedCategoryInput("");
+      setFeaturedPriorityInput("Normal");
+      setFeaturedContentInput("");
+
+      setFeaturedStatusMessage("Featured post deleted.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not delete featured post.";
+      setFeaturedStatusMessage(message);
+    } finally {
+      setFeaturedDeleting(false);
+    }
+  };
 
   const handleProfilePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -836,15 +1001,155 @@ function ClientHomePageContent() {
                         <FileText className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
                         Featured Post
                       </h2>
-                      {featuredWork.length > 0 ? (
-                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                          {featuredWork.map((work) => (
-                            <div key={work.title} className="rounded-xl border border-zinc-200 bg-white p-3">
-                              <div className="h-20 rounded-lg bg-[#E8EFEC]" />
-                              <p className="mt-2 text-sm font-semibold text-zinc-900">{work.title}</p>
-                              <p className="text-xs text-zinc-500">{work.category}</p>
+                      {clientPosts.length > 0 ? (
+                          <div className="mt-3 space-y-4">
+                          <div>
+                            <p className="text-xs font-semibold text-zinc-700">Your posts</p>
+                              <div className="mt-2 max-h-[260px] overflow-y-auto pr-2">
+                                <div className="space-y-3">
+                              {clientPosts.map((post) => {
+                                const isActive = post.id === clientFeaturedPostId;
+                                return (
+                                  <button
+                                    key={post.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setClientFeaturedPostId(post.id);
+                                      setFeaturedStatusMessage("");
+                                    }}
+                                      className={`w-full text-left rounded-xl border p-3 transition ${
+                                      isActive
+                                        ? "border-[#FF6B35] bg-[#FFF2EB]"
+                                        : "border-zinc-200 bg-white hover:bg-zinc-50"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={post.avatar}
+                                        alt={`${post.author} avatar`}
+                                        className="h-10 w-10 rounded-full border border-zinc-300"
+                                      />
+                                      <div className="min-w-0">
+                                        <p className="truncate text-sm font-semibold text-zinc-900">{post.title}</p>
+                                        <p className="mt-1 truncate text-xs text-zinc-500">{post.category}</p>
+                                      </div>
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-2">
+                                      <span className="rounded-full border border-zinc-400 px-3 py-1 text-[10px] text-zinc-800">
+                                        {post.priority}
+                                      </span>
+                                      {isActive ? (
+                                        <span className="text-[10px] font-semibold text-[#FF6B35]">Editing</span>
+                                      ) : null}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                                </div>
                             </div>
-                          ))}
+                          </div>
+
+                          {featuredPost ? (
+                            <div className="rounded-xl border border-zinc-200 bg-white p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-xs font-semibold text-zinc-900">Edit featured post</p>
+                                <p className="text-[11px] text-zinc-500">{featuredPost.timeAgo}</p>
+                              </div>
+
+                              <label className="mt-3 block text-[11px] font-semibold text-zinc-700">Post Title</label>
+                              <input
+                                type="text"
+                                value={featuredTitleInput}
+                                onChange={(event) => setFeaturedTitleInput(event.target.value)}
+                                className="mt-1 h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/30"
+                              />
+
+                              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-zinc-700">Category</label>
+                                  <input
+                                    type="text"
+                                    value={featuredCategoryInput}
+                                    onChange={(event) => setFeaturedCategoryInput(event.target.value)}
+                                    className="mt-1 h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/30"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-zinc-700">Urgency Level</label>
+                                  <div className="relative mt-1">
+                                    <select
+                                      value={featuredPriorityInput}
+                                      onChange={(event) =>
+                                        setFeaturedPriorityInput(event.target.value === "Important" ? "Important" : "Normal")
+                                      }
+                                      className="h-10 w-full appearance-none rounded-lg border border-zinc-300 bg-white px-3 pr-9 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/30"
+                                    >
+                                      <option value="Normal">Normal</option>
+                                      <option value="Important">Important</option>
+                                    </select>
+                                    <ChevronDown
+                                      aria-hidden="true"
+                                      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600"
+                                      strokeWidth={2}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <label className="mt-3 block text-[11px] font-semibold text-zinc-700">Description</label>
+                              <textarea
+                                value={featuredContentInput}
+                                onChange={(event) => setFeaturedContentInput(event.target.value)}
+                                rows={4}
+                                className="mt-1 w-full resize-none rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs leading-5 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/30"
+                              />
+
+                              <div className="flex items-center justify-between gap-3 pt-3">
+                                <p
+                                  className={`text-xs ${
+                                    featuredStatusMessage.toLowerCase().includes("could not") ? "text-red-600" : "text-zinc-500"
+                                  }`}
+                                >
+                                  {featuredDeleting
+                                    ? "Deleting..."
+                                    : featuredSaving
+                                      ? "Saving changes..."
+                                      : featuredStatusMessage || "Make changes then click Save Changes."}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleDeleteFeaturedPost()}
+                                    disabled={!featuredPost || featuredDeleting || featuredSaving}
+                                    className={`inline-flex h-9 items-center justify-center rounded-xl px-3.5 text-xs font-semibold transition ${
+                                      !featuredPost || featuredDeleting || featuredSaving
+                                        ? "cursor-not-allowed border border-zinc-300 bg-white text-zinc-400"
+                                        : "cursor-pointer border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 active:bg-red-200"
+                                    }`}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" strokeWidth={2} />
+                                    Delete
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleSaveFeaturedPost()}
+                                    disabled={!canSaveFeaturedPost || featuredDeleting}
+                                    className={`inline-flex h-9 items-center justify-center rounded-xl px-3.5 text-xs font-semibold transition ${
+                                      canSaveFeaturedPost && !featuredDeleting
+                                        ? "cursor-pointer bg-[#FF6B35] text-white hover:brightness-95 active:brightness-90"
+                                        : "cursor-not-allowed bg-zinc-500 text-zinc-100 opacity-85"
+                                    }`}
+                                  >
+                                    {featuredSaving ? "Saving..." : "Save Changes"}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-3 text-xs text-zinc-500">
+                              Select one of your posts to edit.
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="mt-3 min-h-20 rounded-xl border border-dashed border-zinc-300 bg-white" />

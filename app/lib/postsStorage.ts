@@ -38,7 +38,7 @@ function parsePosts(raw: string | null): CommunityPost[] {
         title: String(item.title || "").trim(),
         content: String(item.content || "").trim(),
         category: String(item.category || "").trim(),
-        priority: item.priority === "Important" ? "Important" : "Normal",
+        priority: (item.priority === "Important" ? "Important" : "Normal") as CommunityPostPriority,
         createdAt: String(item.createdAt || ""),
       }))
       .filter((item) => item.id && item.authorId && item.title && item.content);
@@ -80,4 +80,50 @@ export function createCommunityPost(
   const nextPosts = [post, ...getCommunityPosts()];
   writePosts(nextPosts);
   return post;
+}
+
+export function updateCommunityPost(
+  postId: string,
+  patch: Partial<Omit<CommunityPost, "id" | "authorId" | "authorName" | "authorEmail" | "authorAccountType" | "authorAvatarDataUrl" | "createdAt">> & {
+    priority?: CommunityPostPriority;
+  },
+): CommunityPost | null {
+  const current = getCommunityPosts();
+  const idx = current.findIndex((p) => p.id === String(postId || "").trim());
+  if (idx < 0) return null;
+
+  const next = current.map((post) => {
+    if (post.id !== current[idx].id) return post;
+
+    const nextTitle = patch.title !== undefined ? String(patch.title || "").trim().slice(0, 120) : post.title;
+    const nextContent = patch.content !== undefined ? String(patch.content || "").trim().slice(0, 1200) : post.content;
+    const nextCategory =
+      patch.category !== undefined ? String(patch.category || "").trim().slice(0, 80) : post.category;
+    const nextPriority =
+      patch.priority !== undefined ? (patch.priority === "Important" ? "Important" : "Normal") : post.priority;
+
+    return {
+      ...post,
+      title: nextTitle,
+      content: nextContent,
+      category: nextCategory,
+      priority: nextPriority,
+    };
+  });
+
+  const updated = next.find((p) => p.id === current[idx].id) || null;
+  writePosts(next);
+  return updated;
+}
+
+export function deleteCommunityPost(postId: string): boolean {
+  const normalized = String(postId || "").trim();
+  if (!normalized) return false;
+
+  const current = getCommunityPosts();
+  const next = current.filter((p) => p.id !== normalized);
+
+  if (next.length === current.length) return false;
+  writePosts(next);
+  return true;
 }
