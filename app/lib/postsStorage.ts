@@ -28,19 +28,21 @@ function parsePosts(raw: string | null): CommunityPost[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
-      .map((item) => ({
-        id: String(item.id || ""),
-        authorId: String(item.authorId || ""),
-        authorName: String(item.authorName || "").trim(),
-        authorEmail: String(item.authorEmail || "").trim(),
-        authorAccountType: String(item.authorAccountType || "").trim() || undefined,
-        authorAvatarDataUrl: String(item.authorAvatarDataUrl || "").trim() || undefined,
-        title: String(item.title || "").trim(),
-        content: String(item.content || "").trim(),
-        category: String(item.category || "").trim(),
-        priority: (item.priority === "Important" ? "Important" : "Normal") as CommunityPostPriority,
-        createdAt: String(item.createdAt || ""),
-      }))
+      .map(
+        (item): CommunityPost => ({
+          id: String(item.id || ""),
+          authorId: String(item.authorId || ""),
+          authorName: String(item.authorName || "").trim(),
+          authorEmail: String(item.authorEmail || "").trim(),
+          authorAccountType: String(item.authorAccountType || "").trim() || undefined,
+          authorAvatarDataUrl: String(item.authorAvatarDataUrl || "").trim() || undefined,
+          title: String(item.title || "").trim(),
+          content: String(item.content || "").trim(),
+          category: String(item.category || "").trim(),
+          priority: item.priority === "Important" ? "Important" : "Normal",
+          createdAt: String(item.createdAt || ""),
+        }),
+      )
       .filter((item) => item.id && item.authorId && item.title && item.content);
   } catch {
     return [];
@@ -58,6 +60,21 @@ export function getCommunityPosts(): CommunityPost[] {
   if (!w) return [];
   const posts = parsePosts(w.localStorage.getItem(POSTS_KEY));
   return posts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+/** Relative time for post timestamps (ISO string). */
+export function formatCommunityPostTimeAgo(value: string): string {
+  const ts = new Date(value).getTime();
+  if (!Number.isFinite(ts)) return "Just now";
+  const diffMs = Date.now() - ts;
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (diffMs < minute) return "Just now";
+  if (diffMs < hour) return `${Math.floor(diffMs / minute)} min ago`;
+  if (diffMs < day) return `${Math.floor(diffMs / hour)} hr ago`;
+  const d = Math.floor(diffMs / day);
+  return `${d} day${d > 1 ? "s" : ""} ago`;
 }
 
 export function createCommunityPost(

@@ -105,7 +105,9 @@ export function ChatMessageRow({
 
   const toolbar = showActions ? (
     <div
-      className={`relative z-0 mb-1 flex shrink-0 flex-col items-center gap-0.5 self-end transition-opacity duration-150 ${
+      className={`relative mb-1 flex shrink-0 flex-col items-center gap-0.5 self-end transition-opacity duration-150 ${
+        openMenuId === m.id || openReactionId === m.id ? "z-[40]" : "z-0"
+      } ${
         openMenuId === m.id || openReactionId === m.id
           ? "opacity-100"
           : "pointer-events-none opacity-0 group-hover/message:pointer-events-auto group-hover/message:opacity-100"
@@ -129,7 +131,7 @@ export function ChatMessageRow({
           {openMenuId === m.id ? (
             <div
               className={`absolute top-full z-[100] mt-1 flex min-w-[180px] flex-col rounded-lg border border-zinc-200 bg-white py-1 shadow-lg ${
-                mine ? "right-0" : "left-0"
+                mine ? "left-0" : "right-0"
               }`}
             >
               {mine && allowUnsend ? (
@@ -211,7 +213,7 @@ export function ChatMessageRow({
           {openReactionId === m.id ? (
             <div
               className={`absolute bottom-full z-[100] mb-1 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1.5 py-1 shadow-lg ${
-                mine ? "right-0" : "left-0"
+                mine ? "left-0" : "right-0"
               }`}
             >
               {DEFAULT_REACTIONS.map((emoji) => (

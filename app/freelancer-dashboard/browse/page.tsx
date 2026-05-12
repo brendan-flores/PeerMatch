@@ -1,25 +1,37 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { getCommunityPosts } from "@/app/lib/postsStorage";
+import { FREELANCER_OFFERS_STORAGE_KEY, hasFreelancerOfferForPost } from "@/app/lib/freelancerOffersStorage";
 import { useFreelancerDashboardUser } from "../FreelancerDashboardShell";
-import { connectSocket, getChatSocket, sendChatMessageWithClientId } from "@/app/lib/socket";
+import { FreelancerCommunityPostCard } from "@/app/components/freelancer/FreelancerCommunityPostCard";
+import { OfferHelpView } from "@/app/components/freelancer/OfferHelpView";
 
 export default function FreelancerBrowsePage() {
+  const searchParams = useSearchParams();
   const { user } = useFreelancerDashboardUser();
   const [posts, setPosts] = useState(() => getCommunityPosts());
   const [sentStateByPostId, setSentStateByPostId] = useState<Record<string, boolean>>({});
+  const selectedPostId = searchParams.get("post") || "";
 
   useEffect(() => {
     const loadPosts = () => setPosts(getCommunityPosts());
     loadPosts();
     const onStorage = (event: StorageEvent) => {
-      if (event.key && event.key !== "peermatch_community_posts_v1") return;
-      loadPosts();
+      if (!event.key || event.key === "peermatch_community_posts_v1") loadPosts();
+      if (!event.key || event.key === FREELANCER_OFFERS_STORAGE_KEY) setOfferSentTick((n) => n + 1);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  useEffect(() => {
+    if (!selectedPostId) return;
+    const element = document.getElementById(`browse-post-${selectedPostId}`);
+    if (!element) return;
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selectedPostId, posts]);
 
   const formatTimeAgo = (value: string) => {
     const ts = new Date(value).getTime();
@@ -37,18 +49,18 @@ export default function FreelancerBrowsePage() {
   const handleOfferHelp = (post: ReturnType<typeof getCommunityPosts>[number]) => {
     if (!user?.id) return;
 
-    const clientId = String(post.authorId || "").trim();
-    if (!clientId || clientId === user.id) return;
+  const selectedPost = useMemo(
+    () => (selectedPostId ? posts.find((p) => p.id === selectedPostId) ?? null : null),
+    [posts, selectedPostId],
+  );
 
-    connectSocket(user.id);
-    const socket = getChatSocket();
-    if (!socket?.connected) return;
+  const handleOfferRecorded = () => setOfferSentTick((n) => n + 1);
 
-    const predefinedMessage = `Hi ${post.authorName || "there"}, I saw your post "${post.title}" and I can help you with this. Let me know what you need most, and I can start right away.`;
-    const clientMessageId = `offer-help-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    sendChatMessageWithClientId(clientId, predefinedMessage, clientMessageId);
-    setSentStateByPostId((prev) => ({ ...prev, [post.id]: true }));
-  };
+  const offerSentIds = useMemo(() => {
+    const uid = user?.id;
+    if (!uid) return new Set<string>();
+    return new Set(posts.filter((p) => hasFreelancerOfferForPost(uid, p.id)).map((p) => p.id));
+  }, [posts, user?.id, offerSentTick]);
 
   return (
     <main className="h-full rounded-2xl border border-zinc-100/80 bg-white p-6 shadow-[0_4px_32px_rgba(15,23,42,0.04)] sm:p-8 lg:p-10">
@@ -58,7 +70,10 @@ export default function FreelancerBrowsePage() {
         {posts.map((post) => (
           <article
             key={post.id}
-            className="group rounded-2xl border border-zinc-100 bg-zinc-50/70 p-5 transition duration-200 sm:p-6 lg:p-7 hover:border-[#FF6B35]/45 hover:bg-[#FFF8F5] hover:shadow-[0_8px_28px_rgba(255,107,53,0.08)]"
+            id={`browse-post-${post.id}`}
+            className={`group cursor-pointer rounded-2xl border bg-zinc-50/70 p-5 transition duration-200 sm:p-6 lg:p-7 hover:border-[#FF6B35]/45 hover:bg-[#FFF8F5] hover:shadow-[0_8px_28px_rgba(255,107,53,0.08)] ${
+              selectedPostId === post.id ? "border-[#FF6B35] shadow-[0_8px_28px_rgba(255,107,53,0.12)]" : "border-zinc-100"
+            }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
