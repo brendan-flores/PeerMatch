@@ -26,12 +26,17 @@
     "lucide-react": "^0.472.0",
     "mongodb": "^7.1.1",
     "mongoose": "^7.8.9",
-    "next": "16.2.1",
+    "next": "16.2.6",
     "nodemailer": "^8.0.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.10"
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -41,7 +46,7 @@
     "@types/react-dom": "^19",
     "concurrently": "^8.2.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.1",
+    "eslint-config-next": "16.2.6",
     "kill-port": "^2.0.1",
     "nodemon": "^3.0.1",
     "tailwindcss": "^4",
