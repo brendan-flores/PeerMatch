@@ -65,7 +65,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const category = categoryRaw === 'non-academic' ? 'non-academic' : 'academic';
 
     if (!title || !description || !subjectCategory) {
-      return res.status(400).json({ message: 'Subject category, title, and description are required.' });
+      return res.status(400).json({ message: 'Category, title, and description are required.' });
     }
 
     const task = await Task.create({

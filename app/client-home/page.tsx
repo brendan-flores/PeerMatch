@@ -596,17 +596,17 @@ function ClientHomePageContent() {
                           <span className="inline-flex items-center justify-center rounded-md bg-[#FFF2EB] p-1 text-[#FF6B35]">
                             <BookOpen className="h-3.5 w-3.5" strokeWidth={2} />
                           </span>
-                          Subject Category
+                          Category
                         </label>
                         <input
                           id="post-category"
                           type="text"
                           value={postCategoryInput}
                           onChange={(event) => setPostCategoryInput(event.target.value)}
-                          placeholder="e.g. Mathematics, Physics, History"
+                          placeholder="e.g. Tutoring, Design, Moving help, Errands"
                           className="h-11 w-full rounded-xl border border-zinc-300 bg-white px-4 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/30"
                         />
-                        <p className="mt-1.5 text-[11px] text-zinc-500">What subject do you need help with?</p>
+                        <p className="mt-1.5 text-[11px] text-zinc-500">What type of help or request is this?</p>
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2">
