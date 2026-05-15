@@ -6,6 +6,7 @@ import { FreelancerSidebar } from "@/app/components/freelancer/FreelancerSidebar
 import { FreelancerRightAside } from "@/app/components/freelancer/FreelancerRightAside";
 import { apiGetJson, ApiError } from "@/app/lib/api";
 import { normalizeAuthUser, persistFreelancerFromMe } from "@/app/lib/freelancerStorage";
+import type { CommunityPost } from "@/app/lib/postsStorage";
 import { connectSocket, disconnectSocket } from "@/app/lib/socket";
 
 type MeUser = { id: string; name: string; email: string; role: string; accountType?: string };
@@ -15,6 +16,8 @@ type MeResponse = { user: MeUser };
 type FreelancerUserContextValue = {
   user: MeUser | null;
   loading: boolean;
+  selectedPost: CommunityPost | null;
+  setSelectedPost: (post: CommunityPost | null) => void;
 };
 
 const FreelancerUserContext = createContext<FreelancerUserContextValue | null>(null);
@@ -24,7 +27,19 @@ export function useFreelancerDashboardUser() {
   if (!ctx) {
     throw new Error("useFreelancerDashboardUser must be used within FreelancerDashboardShell");
   }
-  return ctx;
+  return { user: ctx.user, loading: ctx.loading };
+}
+
+export function useFreelancerSelectedPost() {
+  const ctx = useContext(FreelancerUserContext);
+  if (!ctx) {
+    throw new Error("useFreelancerSelectedPost must be used within FreelancerDashboardShell");
+  }
+  return {
+    selectedPost: ctx.selectedPost,
+    setSelectedPost: ctx.setSelectedPost,
+    clearSelectedPost: () => ctx.setSelectedPost(null),
+  };
 }
 
 function isClientUser(user: MeUser | null): boolean {
@@ -39,6 +54,7 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
   const pathname = usePathname();
   const [user, setUser] = useState<MeUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [isRouteContentVisible, setIsRouteContentVisible] = useState(true);
 
   useEffect(() => {
@@ -95,7 +111,17 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
     return () => window.clearTimeout(timeoutId);
   }, [pathname]);
 
-  const value = useMemo(() => ({ user, loading }), [user, loading]);
+  useEffect(() => {
+    const postsRoutes = ["/freelancer-dashboard", "/freelancer-dashboard/browse"];
+    if (!postsRoutes.includes(pathname)) {
+      setSelectedPost(null);
+    }
+  }, [pathname]);
+
+  const value = useMemo(
+    () => ({ user, loading, selectedPost, setSelectedPost }),
+    [user, loading, selectedPost],
+  );
 
   if (loading) {
     return (

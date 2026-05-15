@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CornerUpLeft, Forward, MoreVertical, SmilePlus } from "lucide-react";
 import type { ChatMessagePayload } from "@/app/lib/chatTypes";
+import { dedupeReactions, normalizeReactionUserId } from "@/app/lib/reactionUtils";
+import { ChatEmoji } from "@/app/components/chat/ChatEmoji";
 
 const DEFAULT_REACTIONS = ["❤️", "😆", "😮", "😢", "😡", "👍"] as const;
 
@@ -27,13 +30,15 @@ function reactionChips(
   reactions: NonNullable<ChatMessagePayload["reactions"]> | undefined,
   myId: string,
 ) {
-  if (!reactions?.length) return new Map<string, { count: number; mine: boolean }>();
+  const normalizedMyId = normalizeReactionUserId(myId);
+  const list = dedupeReactions(reactions);
+  if (!list.length) return new Map<string, { count: number; mine: boolean }>();
   const map = new Map<string, { count: number; mine: boolean }>();
-  for (const r of reactions) {
+  for (const r of list) {
     const e = r.emoji;
     const cur = map.get(e) || { count: 0, mine: false };
     cur.count += 1;
-    if (r.userId === myId) cur.mine = true;
+    if (normalizeReactionUserId(r.userId) === normalizedMyId) cur.mine = true;
     map.set(e, cur);
   }
   return map;
@@ -55,7 +60,10 @@ export function ChatMessageRow({
   onRemoveIncomingFromView,
 }: ChatMessageRowProps) {
   const rowRef = useRef<HTMLDivElement | null>(null);
+  const reactButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [reactionPickerPos, setReactionPickerPos] = useState<{ top: number; left: number } | null>(null);
   const mine = String(m.senderId || "").trim() === String(currentUserId || "").trim();
+  const reactionPickerOpen = openReactionId === m.id;
   const isTombstone = Boolean(m.viewerRemoved || m.unsent);
   const pending = m.id.startsWith("pending-");
 
@@ -93,11 +101,37 @@ export function ChatMessageRow({
       const el = rowRef.current;
       if (!el) return;
       if (el.contains(e.target as Node)) return;
+      const picker = document.getElementById(`reaction-picker-${m.id}`);
+      if (picker?.contains(e.target as Node)) return;
       closeMenus();
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [closeMenus, m.id, openMenuId, openReactionId]);
+
+  useEffect(() => {
+    if (!reactionPickerOpen) {
+      setReactionPickerPos(null);
+      return;
+    }
+    const update = () => {
+      const btn = reactButtonRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const pickerWidth = DEFAULT_REACTIONS.length * 36 + 16;
+      let left = mine ? rect.left : rect.right - pickerWidth;
+      left = Math.max(8, Math.min(left, window.innerWidth - pickerWidth - 8));
+      const pickerHeight = 44;
+      setReactionPickerPos({ top: rect.top - pickerHeight - 8, left });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [reactionPickerOpen, mine]);
 
   /** Messenger-style: actions on the outer edge (left of your bubble, right of theirs). */
   const showActions = !isTombstone;
@@ -196,6 +230,7 @@ export function ChatMessageRow({
         </button>
         <div className="relative">
           <button
+            ref={reactButtonRef}
             type="button"
             className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-600 hover:bg-zinc-100"
             aria-label="React"
@@ -207,35 +242,13 @@ export function ChatMessageRow({
           >
             <SmilePlus className="h-4 w-4" strokeWidth={1.75} />
           </button>
-          {openReactionId === m.id ? (
-            <div
-              className={`absolute bottom-full z-[100] mb-1 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1.5 py-1 shadow-lg ${
-                mine ? "right-0" : "left-0"
-              }`}
-            >
-              {DEFAULT_REACTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-lg hover:bg-zinc-100"
-                  aria-label={`React ${emoji}`}
-                  onClick={() => {
-                    onReact(m.id, emoji);
-                    onOpenReaction(null);
-                  }}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
     </div>
   ) : null;
 
   const bubble = (
-    <div className="min-w-0 max-w-full">
+    <div className={`relative min-w-0 max-w-full ${reactionMap.size > 0 ? "pb-3" : ""}`}>
       <div
         className={`rounded-xl px-4 py-2.5 ${
           isTombstone
@@ -297,33 +310,72 @@ export function ChatMessageRow({
       </div>
 
       {reactionMap.size > 0 ? (
-        <div className={`mt-1 flex flex-wrap gap-1 ${mine ? "justify-end" : "justify-start"}`}>
-          {[...reactionMap.entries()].map(([emoji, info]) => (
-            <button
-              key={emoji}
-              type="button"
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs shadow-sm ${
-                info.mine
-                  ? mine
-                    ? "border-[#4DD2AC]/60 bg-white/90 text-zinc-800"
-                    : "border-[#4DD2AC]/50 bg-[#E8FFF8] text-zinc-800"
-                  : "border-zinc-200 bg-white text-zinc-700"
-              }`}
-              onClick={() => onReact(m.id, emoji)}
-            >
-              <span>{emoji}</span>
-              {info.count > 1 ? <span className="text-[10px] font-semibold">{info.count}</span> : null}
-            </button>
-          ))}
+        <div
+          className={`pointer-events-auto absolute z-20 flex ${mine ? "right-2 justify-end" : "left-2 justify-start"}`}
+          style={{ bottom: "-0.5rem" }}
+        >
+          <div
+            className={`inline-flex items-center gap-0.5 rounded-full border bg-white px-1.5 py-0.5 shadow-md ring-1 ${
+              [...reactionMap.values()].some((info) => info.mine)
+                ? "border-[#4DD2AC]/70 ring-[#4DD2AC]/25"
+                : "border-zinc-200/90 ring-zinc-100"
+            }`}
+          >
+            {[...reactionMap.entries()].map(([emoji, info]) => (
+              <button
+                key={emoji}
+                type="button"
+                className={`inline-flex items-center gap-0.5 rounded-full px-0.5 text-[15px] leading-none transition-colors hover:bg-zinc-100 ${
+                  info.mine ? "bg-[#E8FFF8]/80" : ""
+                }`}
+                aria-label={info.mine ? `Remove ${emoji} reaction` : `React with ${emoji}`}
+                onClick={() => onReact(m.id, emoji)}
+              >
+                <ChatEmoji emoji={emoji} className="text-[18px]" />
+                {info.count > 1 ? (
+                  <span className="pr-0.5 text-[11px] font-semibold tabular-nums text-zinc-600">{info.count}</span>
+                ) : null}
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
     </div>
   );
 
+  const reactionPickerPortal =
+    reactionPickerOpen && reactionPickerPos && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            id={`reaction-picker-${m.id}`}
+            role="toolbar"
+            aria-label="Choose reaction"
+            className="fixed z-[200] flex flex-nowrap items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1.5 py-1 shadow-lg"
+            style={{ top: reactionPickerPos.top, left: reactionPickerPos.left }}
+          >
+            {DEFAULT_REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-zinc-100"
+                aria-label={`React ${emoji}`}
+                onClick={() => {
+                  onReact(m.id, emoji);
+                  onOpenReaction(null);
+                }}
+              >
+                <ChatEmoji emoji={emoji} className="text-[22px]" />
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div
       ref={rowRef}
-      className={`flex w-full min-w-0 ${mine ? "justify-end" : "justify-start"}`}
+      className={`flex w-full min-w-0 ${mine ? "justify-end" : "justify-start"} ${reactionMap.size > 0 ? "mb-1" : ""}`}
     >
       {/* flex-row: own messages = [⋮ Reply 😀][bubble] (actions left of bubble); incoming = [bubble][actions] */}
       <div className="group/message relative flex max-w-[min(100%,28rem)] flex-row items-end gap-1">
@@ -339,6 +391,7 @@ export function ChatMessageRow({
           </>
         )}
       </div>
+      {reactionPickerPortal}
     </div>
   );
 }

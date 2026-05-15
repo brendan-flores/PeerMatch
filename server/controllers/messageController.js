@@ -7,7 +7,7 @@ const {
   emitViewerRemovedMessage,
   emitMessageVanishedForViewer,
 } = require('../socket/socketServer');
-const { mapReactions, toChatMessageDto } = require('../utils/chatMessageDto');
+const { mapReactions, toChatMessageDto, toggleReactionForUser } = require('../utils/chatMessageDto');
 
 const ALLOWED_REACTIONS = new Set(['❤️', '😆', '😮', '😢', '😡', '👍']);
 
@@ -332,7 +332,7 @@ async function removeMessageForMe(req, res) {
 
 /**
  * POST /api/messages/:messageId/reactions
- * Body: { emoji: string } — toggles that reaction for the current user (one reaction per user).
+ * Body: { emoji: string } — Messenger-style: one reaction per user; same emoji toggles off.
  */
 async function setMessageReaction(req, res) {
   try {
@@ -363,20 +363,11 @@ async function setMessageReaction(req, res) {
       return res.status(403).json({ message: 'Not part of this conversation.' });
     }
 
-    const reactions = Array.isArray(message.reactions) ? message.reactions.map((r) => ({ ...r })) : [];
-    const idx = reactions.findIndex((r) => String(r.userId) === myId);
-    let next = reactions;
-    if (idx >= 0) {
-      if (reactions[idx].emoji === emoji) {
-        next = reactions.filter((_, i) => i !== idx);
-      } else {
-        next = reactions.map((r, i) => (i === idx ? { userId: r.userId, emoji } : r));
-      }
-    } else {
-      next = [...reactions, { userId: myId, emoji }];
-    }
-
-    message.reactions = next;
+    const next = toggleReactionForUser(message.reactions, myId, emoji);
+    message.reactions = next.map((r) => ({
+      userId: new mongoose.Types.ObjectId(r.userId),
+      emoji: r.emoji,
+    }));
     await message.save();
 
     const payload = {

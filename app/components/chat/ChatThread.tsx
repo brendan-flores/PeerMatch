@@ -5,6 +5,7 @@ import { Info, Phone, Send, Smile, Video, X } from "lucide-react";
 import Picker from "emoji-picker-react";
 import { ApiError, apiDeleteJson, apiGetJson, apiPostJson } from "@/app/lib/api";
 import type { ChatMessagePayload } from "@/app/lib/chatTypes";
+import { dedupeReactions, toggleMessageReaction } from "@/app/lib/reactionUtils";
 import { ChatMessageRow } from "@/app/components/chat/ChatMessageRow";
 import {
   connectSocket,
@@ -271,7 +272,9 @@ export function ChatThread({
 
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === payload.id ? { ...m, reactions: Array.isArray(payload.reactions) ? payload.reactions : [] } : m,
+          m.id === payload.id
+            ? { ...m, reactions: dedupeReactions(Array.isArray(payload.reactions) ? payload.reactions : []) }
+            : m,
         ),
       );
     });
@@ -489,19 +492,8 @@ export function ChatThread({
       const applyLocal = (prev: ChatMessagePayload[]) =>
         prev.map((m) => {
           if (m.id !== messageId) return m;
-          const list = [...(m.reactions || [])];
-          const idx = list.findIndex((r) => r.userId === currentUserId);
-          let next = list;
-          if (idx >= 0) {
-            if (list[idx].emoji === emoji) {
-              next = list.filter((_, i) => i !== idx);
-            } else {
-              next = list.map((r, i) => (i === idx ? { userId: currentUserId, emoji } : r));
-            }
-          } else {
-            next = [...list, { userId: currentUserId, emoji }];
-          }
-          return { ...m, reactions: next };
+          const next = toggleMessageReaction(m.reactions, currentUserId, emoji);
+          return { ...m, reactions: next.length ? next : undefined };
         });
 
       if (messageId.startsWith("pending-")) {
@@ -516,7 +508,9 @@ export function ChatThread({
           { emoji },
         );
         setMessages((prev) =>
-          prev.map((m) => (m.id === messageId ? { ...m, reactions: data.reactions || [] } : m)),
+          prev.map((m) =>
+            m.id === messageId ? { ...m, reactions: dedupeReactions(data.reactions || []) } : m,
+          ),
         );
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Could not react.";
@@ -638,7 +632,7 @@ export function ChatThread({
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#F5F5F5] px-6 py-6">
-        <div className="space-y-4">
+        <div className="space-y-4 pb-2">
           {loadingHistory ? <p className="text-sm text-zinc-500">Loading messages…</p> : null}
           {resolvingUser ? <p className="text-sm text-zinc-500">Looking up user…</p> : null}
           {socketError ? <p className="text-sm text-red-600">{socketError}</p> : null}

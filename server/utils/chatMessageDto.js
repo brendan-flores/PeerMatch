@@ -1,11 +1,35 @@
 const mongoose = require('mongoose');
 
+/** Messenger-style: at most one reaction per user per message. */
+function dedupeReactions(reactions) {
+  const list = Array.isArray(reactions) ? reactions : [];
+  const byUser = new Map();
+  for (const r of list) {
+    const userId = String(r.userId);
+    byUser.set(userId, { userId, emoji: String(r.emoji || '') });
+  }
+  return [...byUser.values()];
+}
+
+/** Same emoji removes; different emoji replaces the user's previous reaction. */
+function toggleReactionForUser(reactions, myId, emoji) {
+  const list = dedupeReactions(reactions);
+  const idx = list.findIndex((r) => r.userId === myId);
+  if (idx >= 0) {
+    if (list[idx].emoji === emoji) return list.filter((_, i) => i !== idx);
+    return list.map((r, i) => (i === idx ? { userId: myId, emoji } : r));
+  }
+  return [...list, { userId: myId, emoji }];
+}
+
 function mapReactions(m) {
   const list = Array.isArray(m.reactions) ? m.reactions : [];
-  return list.map((r) => ({
-    userId: String(r.userId),
-    emoji: String(r.emoji || ''),
-  }));
+  return dedupeReactions(
+    list.map((r) => ({
+      userId: String(r.userId),
+      emoji: String(r.emoji || ''),
+    })),
+  );
 }
 
 function toChatMessageDto(m, myId) {
@@ -67,6 +91,8 @@ function toChatMessageDto(m, myId) {
 }
 
 module.exports = {
+  dedupeReactions,
+  toggleReactionForUser,
   mapReactions,
   toChatMessageDto,
 };
