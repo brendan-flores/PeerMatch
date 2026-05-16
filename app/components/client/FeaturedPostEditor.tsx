@@ -30,7 +30,9 @@ function formatTimeAgo(value: string) {
 }
 
 function priorityBadgeClass(priority: CommunityPostPriority) {
-  return priority === "High" ? "bg-[#FFC31E] text-zinc-900" : "bg-[#56BA54] text-zinc-900";
+  if (priority === "High") return "bg-[#FF6B35] text-white";
+  if (priority === "Low") return "bg-[#A8DADC] text-zinc-900";
+  return "bg-[#56BA54] text-zinc-900";
 }
 
 export function FeaturedPostEditor({ authorId, authorAvatar }: FeaturedPostEditorProps) {

@@ -144,6 +144,10 @@ export function OfferHelpPanel({ post, freelancerId, freelancerName, onBack }: O
             </div>
 
             <h3 className="mt-5 text-xl font-bold text-zinc-900">{post.title}</h3>
+            <div className="mt-3 flex items-center gap-2">
+              <PhilippinePeso className="h-4 w-4 text-[#FF6B35]" aria-hidden />
+              <span className="text-sm font-semibold text-zinc-900">Budget: ₱{post.budget.toLocaleString()}</span>
+            </div>
             <p className="mt-3 text-sm leading-relaxed text-zinc-600">{post.content}</p>
 
             {tags.length > 0 ? (

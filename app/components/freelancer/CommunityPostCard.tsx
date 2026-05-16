@@ -9,7 +9,22 @@ type CommunityPostCardProps = {
 };
 
 export function CommunityPostCard({ post, onSelect }: CommunityPostCardProps) {
-  const isUrgent = post.priority === "Important";
+  const getPriorityStyles = () => {
+    switch (post.priority) {
+      case "High":
+        return "bg-[#FF6B35] text-white";
+      case "Low":
+        return "bg-[#A8DADC] text-zinc-900";
+      case "Normal":
+      default:
+        return "bg-[#56BA54] text-zinc-900";
+    }
+  };
+
+  const getPriorityLabel = () => {
+    if (post.priority === "High") return "Urgent";
+    return post.priority;
+  };
 
   return (
     <article
@@ -44,11 +59,12 @@ export function CommunityPostCard({ post, onSelect }: CommunityPostCardProps) {
             <span className="rounded-full border border-zinc-400 px-4 py-1 text-xs text-zinc-800">{post.category}</span>
           ) : null}
           <span
-            className={`rounded-full px-4 py-1 text-xs font-semibold ${
-              isUrgent ? "bg-red-100 text-red-700" : "bg-[#56BA54] text-zinc-900"
-            }`}
+            className={`rounded-full px-4 py-1 text-xs font-semibold ${getPriorityStyles()}`}
           >
-            {isUrgent ? "Urgent" : post.priority}
+            {getPriorityLabel()}
+          </span>
+          <span className="rounded-full bg-[#FFF2EB] px-4 py-1 text-xs font-semibold text-[#C2410C]">
+            P{post.budget}
           </span>
         </div>
       </div>
