@@ -13,23 +13,35 @@ const roleDisplayNames: Record<RoleType, string> = {
   freelancer: "Freelancer",
 };
 
+const USERNAME_HINT = "3–30 characters. Letters, numbers, and underscores only.";
+
+function getUsernameValidationError(value: string): string | null {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized.length < 3 || normalized.length > 30) return USERNAME_HINT;
+  if (!/^[a-z0-9_]+$/.test(normalized)) return USERNAME_HINT;
+  return null;
+}
+
 export default function RegisterRolePage() {
   const router = useRouter();
   const params = useParams();
   const role = (params.role as RoleType) || "client";
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const usernameError = getUsernameValidationError(username);
+  const showUsernameHint = usernameError !== null;
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!firstName || !lastName || !email || !password) {
+    if (!username || !email || !password) {
       setStatusMessage("Please fill in every field.");
       return;
     }
@@ -40,14 +52,19 @@ export default function RegisterRolePage() {
     }
 
     const trimmedEmail = email.trim();
-    const name = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const trimmedUsername = username.trim();
+    const usernameError = getUsernameValidationError(trimmedUsername);
+    if (!trimmedUsername || usernameError) {
+      setStatusMessage(usernameError || "Please fill in every field.");
+      return;
+    }
 
     setIsSubmitting(true);
     setStatusMessage("");
 
     try {
       await apiPostJson<{ message: string; email: string }>("/api/auth/register", {
-        name,
+        username: trimmedUsername,
         email: trimmedEmail,
         password,
         role,
@@ -95,35 +112,43 @@ export default function RegisterRolePage() {
             </div>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="firstName" className="mb-2 block text-sm font-medium text-zinc-700">
-                    First Name
-                  </label>
+              <div>
+                <label htmlFor="username" className="mb-2 block text-sm font-medium text-zinc-700">
+                  Username
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <circle cx="12" cy="12" r="9" stroke="#94A3B8" strokeWidth="1.5" />
+                      <circle cx="12" cy="10" r="2.5" stroke="#94A3B8" strokeWidth="1.5" />
+                      <path
+                        d="M7 18.5C7.8 15.9 9.7 14.5 12 14.5C14.3 14.5 16.2 15.9 17 18.5"
+                        stroke="#94A3B8"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
                   <input
-                    id="firstName"
-                    name="firstName"
+                    id="username"
+                    name="username"
                     type="text"
-                    value={firstName}
-                    onChange={(event) => setFirstName(event.target.value)}
-                    placeholder="First Name"
-                    className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    placeholder="Username"
+                    aria-invalid={showUsernameHint}
+                    className={`ui-input w-full rounded-3xl border bg-[#F8FAFC] py-4 pl-14 pr-4 text-sm text-[#0F172A] outline-none focus:ring-2 ${
+                      showUsernameHint
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-200/50"
+                        : "border-zinc-200 focus:border-[#0069A8] focus:ring-[#66A5CC]/30"
+                    }`}
                   />
                 </div>
-                <div>
-                  <label htmlFor="lastName" className="mb-2 block text-sm font-medium text-zinc-700">
-                    Last Name
-                  </label>
-                  <input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    value={lastName}
-                    onChange={(event) => setLastName(event.target.value)}
-                    placeholder="Last Name"
-                    className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
-                  />
-                </div>
+                {showUsernameHint ? (
+                  <p className="mt-2 text-xs text-red-600">{usernameError}</p>
+                ) : null}
               </div>
 
               <div>
