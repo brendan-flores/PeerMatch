@@ -29,7 +29,14 @@ export default function RegisterRolePage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!firstName || !lastName || !email || !password) {
+    const isClient = role === "client";
+
+    if (!email || !password) {
+      setStatusMessage("Please fill in every field.");
+      return;
+    }
+
+    if (!isClient && (!firstName || !lastName)) {
       setStatusMessage("Please fill in every field.");
       return;
     }
@@ -40,7 +47,9 @@ export default function RegisterRolePage() {
     }
 
     const trimmedEmail = email.trim();
-    const name = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const name = isClient
+      ? trimmedEmail.split("@")[0] || "Client"
+      : `${firstName.trim()} ${lastName.trim()}`.trim();
 
     setIsSubmitting(true);
     setStatusMessage("");
@@ -95,36 +104,38 @@ export default function RegisterRolePage() {
             </div>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="firstName" className="mb-2 block text-sm font-medium text-zinc-700">
-                    First Name
-                  </label>
-                  <input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    value={firstName}
-                    onChange={(event) => setFirstName(event.target.value)}
-                    placeholder="First Name"
-                    className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
-                  />
+              {role !== "client" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="firstName" className="mb-2 block text-sm font-medium text-zinc-700">
+                      First Name
+                    </label>
+                    <input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      value={firstName}
+                      onChange={(event) => setFirstName(event.target.value)}
+                      placeholder="First Name"
+                      className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lastName" className="mb-2 block text-sm font-medium text-zinc-700">
+                      Last Name
+                    </label>
+                    <input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      value={lastName}
+                      onChange={(event) => setLastName(event.target.value)}
+                      placeholder="Last Name"
+                      className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="lastName" className="mb-2 block text-sm font-medium text-zinc-700">
-                    Last Name
-                  </label>
-                  <input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    value={lastName}
-                    onChange={(event) => setLastName(event.target.value)}
-                    placeholder="Last Name"
-                    className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
-                  />
-                </div>
-              </div>
+              ) : null}
 
               <div>
                 <label htmlFor="email" className="mb-2 block text-sm font-medium text-zinc-700">

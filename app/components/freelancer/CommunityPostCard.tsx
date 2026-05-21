@@ -1,6 +1,7 @@
 "use client";
 
 import type { CommunityPost } from "@/app/lib/postsStorage";
+import { resolveAuthorAvatarUrl } from "@/app/lib/communityPosts";
 import { formatTimeAgo } from "@/app/lib/formatTimeAgo";
 
 type CommunityPostCardProps = {
@@ -42,10 +43,11 @@ export function CommunityPostCard({ post, onSelect }: CommunityPostCardProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <img
-            src={
-              post.authorAvatarDataUrl ||
-              `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(post.authorName || "Client")}`
-            }
+            src={resolveAuthorAvatarUrl({
+              authorAvatarDataUrl: post.authorAvatarDataUrl,
+              authorName: post.authorName,
+              authorId: post.authorId,
+            })}
             alt=""
             className="h-10 w-10 rounded-full border border-zinc-300 object-cover"
           />
