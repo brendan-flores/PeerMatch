@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import SidebarBrand from "../components/SidebarBrand";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -587,13 +588,7 @@ function ClientHomePageContent() {
         }`}
       >
         <aside className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm ${activePanel === "messages" ? "h-full" : "sticky top-6 h-[calc(100vh-3rem)]"} lg:row-span-1`}>
-          <div className="flex items-center gap-3 rounded-xl border border-zinc-100 bg-white px-3 py-3 shadow-sm">
-            <Image src="/peermatch-logo.png" alt="PeerMatch logo" width={32} height={32} className="h-8 w-8 object-contain" />
-            <div>
-              <p className="text-sm font-semibold tracking-tight text-zinc-900">PeerMatch</p>
-              <p className="text-[11px] text-zinc-500">Student Collaboration</p>
-            </div>
-          </div>
+          <SidebarBrand />
 
           <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
             {navItems.map((item) => {
