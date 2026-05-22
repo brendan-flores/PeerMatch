@@ -24,6 +24,10 @@ export type ActivityItem = {
   sub: string;
   at: string;
   badge: "pending" | "completed" | "warning";
+  kind?: "default" | "task_approved";
+  approvedByName?: string;
+  clientName?: string;
+  taskTitle?: string;
 };
 
 export type AdminUserRow = {

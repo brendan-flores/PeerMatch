@@ -5,8 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { apiGetJson, apiPatchJson, ApiError } from "@/app/lib/api";
 import { formatJoinedDate } from "../lib/formatTime";
 import type { AdminUserRow } from "../types";
-import { useAdminLayoutStats } from "./AdminLayout";
-
 type RouteTab = "allusers" | "clients" | "freelancers" | "admin";
 
 type DisplayRole = "Client" | "Freelancer" | "Admin" | "Student";
@@ -124,7 +122,6 @@ function filterByRoute(list: UserRow[], t: RouteTab): UserRow[] {
 }
 
 export default function UserManagementContent() {
-  const { stats, statsLoading } = useAdminLayoutStats();
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -178,12 +175,6 @@ export default function UserManagementContent() {
       setPromotingId(null);
     }
   };
-
-  const totalUsers = stats?.totalUsers ?? 0;
-  const verifiedUsers = stats?.verifiedUsers ?? 0;
-  const suspendedUsers = stats?.suspendedUsers ?? 0;
-  const verificationRate = stats?.verificationRate ?? 0;
-  const suspendedPct = totalUsers === 0 ? 0 : Math.round((suspendedUsers / totalUsers) * 10000) / 100;
 
   return (
     <>
@@ -306,27 +297,6 @@ export default function UserManagementContent() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="admin-summary-row">
-        <article className="admin-summary-card">
-          <h3 className="admin-summary-card__label">Total Users</h3>
-          <p className="admin-summary-card__value">{statsLoading ? "…" : totalUsers.toLocaleString()}</p>
-        </article>
-        <article className="admin-summary-card">
-          <h3 className="admin-summary-card__label">Verified Students</h3>
-          <p className="admin-summary-card__value">{statsLoading ? "…" : verifiedUsers.toLocaleString()}</p>
-          <p className="admin-summary-card__hint admin-summary-card__hint--accent">
-            {statsLoading ? "…" : `${verificationRate}% verification rate`}
-          </p>
-        </article>
-        <article className="admin-summary-card">
-          <h3 className="admin-summary-card__label">Suspended Accounts</h3>
-          <p className="admin-summary-card__value admin-summary-card__value--danger">
-            {statsLoading ? "…" : suspendedUsers.toLocaleString()}
-          </p>
-          <p className="admin-summary-card__hint">{statsLoading ? "…" : `${suspendedPct}% of total users`}</p>
-        </article>
       </div>
     </>
   );
