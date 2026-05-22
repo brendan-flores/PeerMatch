@@ -5,6 +5,7 @@ const PendingRegistration = require('../models/PendingRegistration');
 const { sendVerificationEmail } = require('../utils/mailer');
 const { authMiddleware, signAccessToken, attachAccessTokenCookie } = require('../middleware/auth');
 const authController = require('../controllers/authController');
+const { listFreelancerReviews } = require('../services/freelancerReviewService');
 const {
   normalizeEmail,
   normalizeUsername,
@@ -88,15 +89,6 @@ function sanitizeFreelancerProfile(input) {
     }))
     .filter((item) => item.title || item.description);
 
-  const reviews = normalizeArray(profile.reviews)
-    .slice(0, 10)
-    .map((item) => ({
-      reviewer: safeString(item?.reviewer, 60),
-      text: safeString(item?.text, 280),
-      rating: Math.max(1, Math.min(5, safeInt(item?.rating, 5))),
-    }))
-    .filter((item) => item.reviewer || item.text);
-
   return {
     course: safeString(profile.course, 120),
     yearLevel: safeString(profile.yearLevel, 80),
@@ -112,7 +104,6 @@ function sanitizeFreelancerProfile(input) {
     skills,
     languages,
     portfolio,
-    reviews,
   };
 }
 
@@ -336,6 +327,9 @@ router.get('/profile', authMiddleware, async (req, res) => {
             .slice(0, 10),
     };
 
+    const reviews =
+      user.accountType === 'freelancer' ? await listFreelancerReviews(user._id) : [];
+
     return res.json({
       user: serializeProfileUser(user),
       profile: {
@@ -344,6 +338,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
         accountType: safeString(user.accountType, 24),
         photoDataUrl: typeof user.photoDataUrl === 'string' ? user.photoDataUrl : '',
         ...merged,
+        reviews,
       },
     });
   } catch (error) {
@@ -375,6 +370,9 @@ router.put('/profile', authMiddleware, async (req, res) => {
 
     await user.save();
 
+    const reviews =
+      user.accountType === 'freelancer' ? await listFreelancerReviews(user._id) : [];
+
     return res.json({
       message: 'Profile updated successfully.',
       profile: {
@@ -383,6 +381,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
         accountType: user.accountType || '',
         photoDataUrl: user.photoDataUrl || '',
         ...nextProfile,
+        reviews,
       },
     });
   } catch (error) {

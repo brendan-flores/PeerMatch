@@ -1,11 +1,11 @@
 /**
- * Optional: insert sample tasks when the tasks collection is empty.
+ * Optional: insert sample tasks when the clientTasks collection is empty.
  * Usage: node server/seedTasks.js
  * Requires MONGODB_URI and at least one client user in the database.
  */
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Task = require('./models/Task');
+const ClientTask = require('./models/ClientTask');
 const User = require('./models/User');
 
 async function run() {
@@ -16,9 +16,9 @@ async function run() {
     process.exit(1);
   }
 
-  const existing = await Task.countDocuments();
+  const existing = await ClientTask.countDocuments();
   if (existing > 0) {
-    console.log(`Tasks collection already has ${existing} document(s). Skipping.`);
+    console.log(`clientTasks collection already has ${existing} document(s). Skipping.`);
     await mongoose.disconnect();
     process.exit(0);
   }
@@ -30,7 +30,7 @@ async function run() {
     process.exit(0);
   }
 
-  await Task.insertMany([
+  await ClientTask.insertMany([
     {
       title: 'Research paper literature review',
       description: 'CS elective — need APA sources.',

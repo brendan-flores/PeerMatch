@@ -12,22 +12,16 @@ import {
   ChevronDown,
   CircleDollarSign,
   CirclePlus,
-  Clock,
   FilePenLine,
   FileText,
   Handshake,
-  Heart,
-  MapPin,
   LayoutDashboard,
   Lightbulb,
   LogOut,
   MessageCircle,
-  MessageSquare,
-  MessageSquareQuote,
   ShieldAlert,
   Send,
   Sparkles,
-  Star,
   Upload,
   UserCircle,
   User,
@@ -453,11 +447,6 @@ function ClientHomePageContent() {
     () => (meUserId ? posts.filter((post) => post.authorId === meUserId) : []),
     [posts, meUserId],
   );
-  const skillsAndExpertise: string[] = profileSkillsInput
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-  const recentReviews: Array<{ name: string; timeAgo: string; rating: number; comment: string }> = [];
   const profileName = profileNameInput || displayName || "Client User";
   const profileInitials = profileName
     .split(" ")
@@ -951,43 +940,6 @@ function ClientHomePageContent() {
                     <div className="mt-3 rounded-xl bg-white px-3 py-2 text-center">
                       <p className="text-xs font-semibold text-[#FF6B35]">Verified Peer Match Account</p>
                     </div>
-
-                    <div className="mt-4 space-y-2 border-t border-zinc-200 pt-4 text-xs text-zinc-700">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-                        <input
-                          type="text"
-                          value={profileLocationInput}
-                          onChange={(event) => setProfileLocationInput(event.target.value)}
-                          placeholder="Add location"
-                          className="h-8 w-full rounded-lg border border-zinc-300 bg-white px-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/30"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-                        <span>Response time: &lt; 1 hour</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Star className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-                        <span>Member since 2026</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-[#FF6B35] text-xs font-semibold text-white hover:brightness-95"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        Message
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex h-9 items-center justify-center rounded-xl border border-zinc-300 bg-white text-xs text-zinc-700 hover:bg-zinc-50"
-                      >
-                        <Heart className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
                   </article>
 
                   <div className={dashboardProfileScrollClass}>
@@ -1104,54 +1056,6 @@ function ClientHomePageContent() {
                       )}
                     </Link>
 
-                    <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
-                      <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-                        <Handshake className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
-                        Helpers
-                      </h2>
-                      {skillsAndExpertise.length > 0 ? (
-                        <div className="mt-3 space-y-2.5">
-                          {skillsAndExpertise.map((helper, index) => (
-                            <div key={`${helper}-${index}`} className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex min-w-0 items-center gap-2.5">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E8EFEC] text-[11px] font-semibold text-zinc-700">
-                                    {helper.slice(0, 2).toUpperCase()}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="truncate text-xs font-semibold text-zinc-900">{helper}</p>
-                                    <p className="text-[10px] text-zinc-500">Helped recently</p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-[10px] leading-none text-[#FF6B35]">★★★★★</p>
-                                  <p className="mt-1 text-[10px] text-zinc-500">4.{(index % 5) + 5}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </article>
-
-                    <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
-                      <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-                        <MessageSquareQuote className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
-                        Reviews
-                      </h2>
-                      {recentReviews.length > 0 ? (
-                        <div className="mt-3 space-y-3">
-                          {recentReviews.map((review) => (
-                            <div key={`${review.name}-${review.timeAgo}`} className="rounded-xl border border-zinc-200 bg-white p-3">
-                              <p className="text-sm font-semibold text-zinc-900">{review.name}</p>
-                              <p className="text-xs text-zinc-500">{review.comment}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="mt-3 min-h-20 rounded-xl border border-dashed border-zinc-300 bg-white" />
-                      )}
-                    </article>
                     <div className="flex items-center justify-between gap-3">
                       <p className={`text-xs ${profileStatusMessage.includes("Could not") ? "text-red-600" : "text-zinc-500"}`}>
                         {profileSaving ? "Saving profile..." : profileStatusMessage || "Make changes then click Save Updates."}

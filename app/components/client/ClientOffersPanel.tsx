@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/app/lib/api";
 import { formatPhpBudget } from "@/app/lib/communityPosts";
 import { notifyAndRefreshCommunityPosts, useCommunityPostsContext } from "@/app/lib/CommunityPostsContext";
+import { freelancerProfilePath } from "@/app/lib/freelancerProfileApi";
 import {
   acceptClientOffer,
   completeClientTask,
@@ -403,7 +404,14 @@ export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelPro
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-semibold text-zinc-900">{offer.freelancerName}</p>
+                            <a
+                              href={freelancerProfilePath(offer.freelancerId)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-semibold text-zinc-900 hover:underline"
+                            >
+                              {offer.freelancerName}
+                            </a>
                             <span className="text-xs text-zinc-500">{formatTimeAgo(offer.createdAt)}</span>
                           </div>
                           {offer.rate ? (

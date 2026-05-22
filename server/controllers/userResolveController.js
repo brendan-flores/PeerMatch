@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const { buildPublicFreelancerProfile } = require('../utils/freelancerProfileDto');
+const { listFreelancerReviews } = require('../services/freelancerReviewService');
 
 function escapeRegex(input) {
   return String(input).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -81,7 +83,41 @@ async function resolveUser(req, res) {
   }
 }
 
+/**
+ * GET /api/users/:userId/freelancer-profile
+ * Public freelancer profile for clients reviewing offers.
+ */
+async function getFreelancerPublicProfile(req, res) {
+  try {
+    const userId = String(req.params?.userId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user id.' });
+    }
+
+    const user = await User.findOne({
+      _id: userId,
+      accountType: 'freelancer',
+      verified: true,
+      suspended: { $ne: true },
+    })
+      .select('name photoDataUrl course yearLevel aboutMe freelancerProfile accountType')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ message: 'Freelancer profile not found.' });
+    }
+
+    const reviews = await listFreelancerReviews(userId);
+    const profile = buildPublicFreelancerProfile(user, reviews);
+    return res.json({ profile });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Could not load freelancer profile.' });
+  }
+}
+
 module.exports = {
   resolveUser,
+  getFreelancerPublicProfile,
 };
 
