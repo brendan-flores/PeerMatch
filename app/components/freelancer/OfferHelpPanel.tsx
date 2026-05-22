@@ -40,7 +40,7 @@ export function OfferHelpPanel({ post, freelancerId, freelancerName, onBack }: O
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
-  const isUrgent = post.priority === "Important";
+  const isUrgent = post.priority === "High";
   const tags = useMemo(() => [post.category].filter(Boolean), [post.category]);
 
   const handleSubmit = async (event: FormEvent) => {

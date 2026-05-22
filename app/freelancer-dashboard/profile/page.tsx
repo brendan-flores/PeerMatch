@@ -11,6 +11,7 @@ import {
 import {
   dashboardCenterPanelClass,
   dashboardCenterPanelFixedClass,
+  dashboardPanelScrollInsetClass,
   dashboardProfileFormCardClass,
   dashboardProfileGridClass,
   dashboardProfileScrollClass,
@@ -227,7 +228,9 @@ export default function FreelancerProfilePage() {
 
   if (loading) {
     return (
-      <main className={`${dashboardCenterPanelClass} flex h-full min-h-[320px] items-center justify-center`}>
+      <main
+        className={`${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass} flex min-h-[320px] items-center justify-center`}
+      >
         <p className="text-sm text-zinc-500">Loading profile...</p>
       </main>
     );
@@ -236,7 +239,7 @@ export default function FreelancerProfilePage() {
   return (
     <section
       aria-labelledby="profile-heading"
-      className={`${dashboardProfileSectionClass} ${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass} h-full min-h-0`}
+      className={`${dashboardProfileSectionClass} ${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass} ${dashboardPanelScrollInsetClass} h-full min-h-0`}
     >
       <div className={`${dashboardProfileGridClass} h-full min-h-0 flex-1`}>
         <article className={dashboardProfileSummaryCardClass}>

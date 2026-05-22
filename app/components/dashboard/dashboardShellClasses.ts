@@ -10,14 +10,33 @@ export const dashboardGridClass =
 
 export const dashboardGridFixedClass = "h-full min-h-0";
 
-export const notificationBellClass =
-  "absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-6";
+/** Wrapper for center column — bell overlay sits outside the scrolling panel layer */
+export const dashboardCenterColumnWrapClass = "relative h-full min-h-0";
+
+/** Panel + route transition (below bell overlay) */
+export const dashboardCenterColumnContentClass = "relative z-0 h-full min-h-0 overflow-hidden";
+
+/** Full-size overlay so the bell stays clickable above the white card */
+export const dashboardCenterBellAnchorClass = "pointer-events-none absolute inset-0 z-[100]";
+
+/** Top-left of center white card, aligned with rounded corner */
+export const dashboardCenterBellInnerClass = "pointer-events-auto absolute left-4 top-4";
+
+/** Feed / panel titles sit right of the bell */
+export const dashboardCenterTitleOffsetClass = "shrink-0 pl-12 sm:pl-14";
+
+/** Scroll panels whose content starts below the corner bell */
+export const dashboardPanelScrollInsetClass = "pt-11 pl-12 sm:pt-12 sm:pl-14";
 
 /** Center column wrapper + scroll (create post, profile, messages, etc.) */
 export const dashboardCenterColumnClass = "h-full min-h-0 overflow-hidden";
 
 export const dashboardPanelBodyClass =
   "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain";
+
+/** Center panel body — scrollable, scrollbar hidden */
+export const dashboardPanelScrollClass =
+  "panel-scroll-pane flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]";
 
 /** Left / right column cards */
 export const dashboardAsideClass =
@@ -73,4 +92,8 @@ export const dashboardRightAsideSectionClass =
   "flex min-h-0 flex-1 flex-col overflow-hidden";
 
 export const dashboardRightAsideListClass =
-  "mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-0.5";
+  "panel-scroll-pane mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-0.5";
+
+/** Sidebar nav — scrollable list, scrollbar hidden */
+export const dashboardSidebarNavScrollClass =
+  "panel-scroll-pane mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1";

@@ -24,7 +24,7 @@ function FreelancerMessagesPageContent() {
   }
 
   return (
-    <main className={`${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass} max-h-full`}>
+    <main className={`${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass} max-h-full p-4`}>
       <div className="h-full max-h-full min-h-0 flex-1 overflow-hidden">
         <ChatLayout
           currentUserId={user.id}

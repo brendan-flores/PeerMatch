@@ -110,7 +110,7 @@ function apiToRow(u: AdminUserRow): UserRow {
     role: dr,
     status: u.suspended ? "Suspended" : "Active",
     tasks: u.tasksPosted,
-    rating: dr === "Freelancer" ? u.rating : null,
+    rating: dr === "Freelancer" ? (u.rating ?? null) : null,
   };
 }
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import SidebarBrand from "@/app/components/SidebarBrand";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, LogOut, MessageCircle, Search, User } from "lucide-react";
+import { dashboardSidebarNavScrollClass } from "@/app/components/dashboard/dashboardShellClasses";
 import { NavUnreadBadge } from "@/app/components/NavUnreadBadge";
 import { apiPostJson } from "@/app/lib/api";
 import { disconnectSocket } from "@/app/lib/socket";
@@ -31,10 +32,7 @@ export function FreelancerSidebar({ unreadMessageCount = 0 }: FreelancerSidebarP
     { href: "/freelancer-dashboard/profile", label: "Profile", icon: <User className="h-5 w-5 shrink-0" strokeWidth={1.75} /> },
   ];
 
-  const isFixedLayout =
-    pathname === "/freelancer-dashboard/messages" ||
-    pathname === "/freelancer-dashboard" ||
-    pathname === "/freelancer-dashboard/browse";
+  const isFixedLayout = pathname.startsWith("/freelancer-dashboard");
 
   const isActive = (href: string) => {
     if (href === "/freelancer-dashboard") return pathname === "/freelancer-dashboard";
@@ -59,7 +57,7 @@ export function FreelancerSidebar({ unreadMessageCount = 0 }: FreelancerSidebarP
     >
       <SidebarBrand />
 
-      <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
+      <nav className={dashboardSidebarNavScrollClass} aria-label="Main">
         {items.map((item) => {
           const active = isActive(item.href);
           return (
