@@ -10,6 +10,8 @@ const adminRoutes = require('./routes/admin');
 const messageRoutes = require('./routes/messages');
 const usersRoutes = require('./routes/users');
 const tasksRoutes = require('./routes/tasks');
+const notificationsRoutes = require('./routes/notifications');
+const offersRoutes = require('./routes/offers');
 const { attachSocketServer } = require('./socket/socketServer');
 
 dotenv.config();
@@ -53,6 +55,8 @@ app.use('/api/admin', requireDb, adminRoutes);
 app.use('/api/messages', requireDb, messageRoutes);
 app.use('/api/users', requireDb, usersRoutes);
 app.use('/api/tasks', requireDb, tasksRoutes);
+app.use('/api/notifications', requireDb, notificationsRoutes);
+app.use('/api/offers', requireDb, offersRoutes);
 
 app.get('/', (req, res) => res.send('PeerMatch MERN API is running'));
 

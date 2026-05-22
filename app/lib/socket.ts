@@ -258,3 +258,28 @@ export function subscribePostApproved(handler: (payload: PostApprovedPayload) =>
     s.off("post_approved", handler);
   };
 }
+
+export type NotificationSocketPayload = {
+  notification?: {
+    id: string;
+    userName: string;
+    actionText: string;
+    createdAt: string;
+    type: string;
+    read: boolean;
+    relatedTaskId?: string;
+    relatedOfferId?: string;
+    actorPhotoDataUrl?: string;
+  };
+};
+
+export function subscribeNotification(handler: (payload: NotificationSocketPayload) => void): () => void {
+  const s = socket;
+  if (!s) {
+    return () => {};
+  }
+  s.on("notification", handler);
+  return () => {
+    s.off("notification", handler);
+  };
+}

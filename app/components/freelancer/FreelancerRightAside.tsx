@@ -1,6 +1,5 @@
 "use client";
 
-import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { fetchApprovedCommunityPosts } from "@/app/lib/communityPosts";
@@ -52,18 +51,6 @@ export function FreelancerRightAside() {
 
   return (
     <aside className="flex h-full max-h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm">
-      <section className="mb-6 shrink-0">
-        <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
-        <div className="mt-3 rounded-xl border border-zinc-200 bg-white px-4 py-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 text-zinc-600">
-              <Bell className="h-5 w-5" strokeWidth={1.5} />
-            </span>
-            <p className="text-sm leading-snug text-zinc-700">Someone responded to your post</p>
-          </div>
-        </div>
-      </section>
-
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <h3 className="shrink-0 text-sm font-semibold text-zinc-900">Recent Posts</h3>
         <ul className="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-0.5">
