@@ -24,8 +24,8 @@ export type ActivityItem = {
   sub: string;
   at: string;
   badge: "pending" | "completed" | "warning";
-  kind?: "default" | "task_approved";
-  approvedByName?: string;
+  kind?: "default" | "task_approved" | "task_rejected";
+  moderatorName?: string;
   clientName?: string;
   taskTitle?: string;
 };
@@ -40,7 +40,8 @@ export type AdminUserRow = {
   verified: boolean;
   suspended: boolean;
   tasksPosted: number;
-  rating: number | null;
+  /** Present only for freelancer accounts */
+  rating?: number | null;
 };
 
 export type AdminTaskRow = {

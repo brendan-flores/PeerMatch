@@ -1,6 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
+import {
+  dashboardCenterPanelClass,
+  dashboardFeedHeaderGapClass,
+  dashboardFeedScrollClass,
+} from "@/app/components/dashboard/dashboardShellClasses";
 
 type FreelancerFeedMainProps = {
   children: ReactNode;
@@ -14,16 +19,18 @@ type FreelancerFeedMainProps = {
 export function FreelancerFeedMain({ children, scrollable, header, scroll }: FreelancerFeedMainProps) {
   if (scrollable && header != null && scroll != null) {
     return (
-      <main className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-100/80 bg-white p-6 shadow-[0_4px_32px_rgba(15,23,42,0.04)] sm:p-8 lg:p-10">
+      <main className={`${dashboardCenterPanelClass} h-full overflow-hidden`}>
         <div className="shrink-0">{header}</div>
-        <div className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5">{scroll}</div>
+        <div className={`${dashboardFeedScrollClass} ${dashboardFeedHeaderGapClass}`}>{scroll}</div>
       </main>
     );
   }
 
   return (
-    <main className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-100/80 bg-white p-6 shadow-[0_4px_32px_rgba(15,23,42,0.04)] sm:p-8 lg:p-10">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5">{children}</div>
+    <main className={`${dashboardCenterPanelClass} h-full overflow-hidden`}>
+      <div className={dashboardFeedScrollClass}>
+        {children}
+      </div>
     </main>
   );
 }

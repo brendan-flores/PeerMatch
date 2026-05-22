@@ -110,7 +110,7 @@ function apiToRow(u: AdminUserRow): UserRow {
     role: dr,
     status: u.suspended ? "Suspended" : "Active",
     tasks: u.tasksPosted,
-    rating: u.rating,
+    rating: dr === "Freelancer" ? u.rating : null,
   };
 }
 
@@ -158,6 +158,8 @@ export default function UserManagementContent() {
   }, []);
 
   const visible = useMemo(() => filterByRoute(rows, activeTab), [rows, activeTab]);
+  const showRatingColumn = activeTab === "freelancers" || activeTab === "allusers";
+  const tableColSpan = showRatingColumn ? 7 : 6;
 
   const handlePromoteToAdmin = async (userId: string) => {
     setPromotingId(userId);
@@ -216,14 +218,14 @@ export default function UserManagementContent() {
                 <th>Role</th>
                 <th>Status</th>
                 <th>Tasks</th>
-                <th>Rating</th>
+                {showRatingColumn ? <th>Rating</th> : null}
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={tableColSpan}>
                     <p className="admin-empty" style={{ margin: "1rem" }}>
                       Loading users…
                     </p>
@@ -231,7 +233,7 @@ export default function UserManagementContent() {
                 </tr>
               ) : visible.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={tableColSpan}>
                     <p className="admin-empty" style={{ margin: "1rem" }}>
                       No users in this view.
                     </p>
@@ -261,15 +263,17 @@ export default function UserManagementContent() {
                       </span>
                     </td>
                     <td>{u.tasks}</td>
-                    <td>
-                      {u.rating != null ? (
-                        <span className="admin-rating">
-                          {u.rating.toFixed(1)} <IconStar />
-                        </span>
-                      ) : (
-                        <span className="admin-muted-cell">—</span>
-                      )}
-                    </td>
+                    {showRatingColumn ? (
+                      <td>
+                        {u.role === "Freelancer" && u.rating != null ? (
+                          <span className="admin-rating">
+                            {u.rating.toFixed(1)} <IconStar />
+                          </span>
+                        ) : (
+                          <span className="admin-muted-cell">—</span>
+                        )}
+                      </td>
+                    ) : null}
                     <td>
                       <div className="admin-row-actions">
                         <button type="button" className="admin-row-icon" aria-label={`View ${u.name}`}>

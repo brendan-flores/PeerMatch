@@ -234,7 +234,7 @@ export function FeaturedPostEditor({ authorId, authorAvatar }: FeaturedPostEdito
         {myPostsLoading ? (
           <p className="mt-3 text-sm text-zinc-500">Loading posts…</p>
         ) : myAuthorPosts.length > 0 ? (
-          <div className="mt-2 max-h-56 space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
+          <div className="profile-scroll-pane mt-2 max-h-56 space-y-2 overflow-y-auto pr-1">
             {myAuthorPosts.map((post) => {
               const isSelected = post.id === selectedPostId;
               const displayTitle = isSelected ? editTitle.trim() || post.title : post.title;
