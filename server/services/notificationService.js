@@ -163,6 +163,79 @@ async function notifyClientPostReview({ clientId }) {
 /**
  * System notification for the client when their post is approved.
  */
+/**
+ * Notify a freelancer when the client accepts their offer.
+ */
+async function notifyFreelancerOfferAccepted({
+  freelancerId,
+  clientId,
+  clientName,
+  taskId,
+  offerId,
+  taskTitle,
+}) {
+  const name = String(clientName || '').trim() || 'The client';
+  const title = String(taskTitle || '').trim();
+  const actionText = title
+    ? `accepted your offer for "${title}"`
+    : 'accepted your offer';
+  await createNotification({
+    recipientId: freelancerId,
+    actorId: clientId,
+    actorName: name,
+    type: 'response',
+    actionText,
+    relatedTaskId: taskId,
+    relatedOfferId: offerId,
+  });
+}
+
+/**
+ * Notify a freelancer when the client marks a task as completed.
+ */
+/**
+ * Notify a freelancer when the client rejects their offer.
+ */
+async function notifyFreelancerOfferRejected({
+  freelancerId,
+  clientId,
+  clientName,
+  taskId,
+  offerId,
+  taskTitle,
+}) {
+  const name = String(clientName || '').trim() || 'The client';
+  const title = String(taskTitle || '').trim();
+  const actionText = title
+    ? `declined your offer for "${title}"`
+    : 'declined your offer';
+  await createNotification({
+    recipientId: freelancerId,
+    actorId: clientId,
+    actorName: name,
+    type: 'response',
+    actionText,
+    relatedTaskId: taskId,
+    relatedOfferId: offerId,
+  });
+}
+
+async function notifyFreelancerTaskCompleted({ freelancerId, clientId, clientName, taskId, taskTitle }) {
+  const name = String(clientName || '').trim() || 'The client';
+  const title = String(taskTitle || '').trim();
+  const actionText = title
+    ? `marked "${title}" as completed`
+    : 'marked your task as completed';
+  await createNotification({
+    recipientId: freelancerId,
+    actorId: clientId,
+    actorName: name,
+    type: 'response',
+    actionText,
+    relatedTaskId: taskId,
+  });
+}
+
 async function notifyClientPostApproved({ clientId, taskId }) {
   await Notification.updateMany(
     { recipientId: clientId, type: 'post_review', read: false },
@@ -187,4 +260,7 @@ module.exports = {
   notifyClientNewOffer,
   notifyClientPostReview,
   notifyClientPostApproved,
+  notifyFreelancerOfferAccepted,
+  notifyFreelancerOfferRejected,
+  notifyFreelancerTaskCompleted,
 };

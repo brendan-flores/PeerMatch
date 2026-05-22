@@ -10,11 +10,24 @@ function urgencyLabel(value) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function resolveClientId(task) {
+  const raw = task?.clientId;
+  if (!raw) return '';
+  if (typeof raw === 'object' && raw._id) return String(raw._id);
+  return String(raw);
+}
+
 function mapTaskToFeedPost(task, client) {
-  const clientDoc = client || task.clientId;
+  const clientDoc =
+    client && typeof client === 'object' && client._id
+      ? client
+      : task.clientId && typeof task.clientId === 'object' && task.clientId.name
+        ? task.clientId
+        : client || null;
+  const authorId = resolveClientId(task) || (clientDoc?._id ? String(clientDoc._id) : '');
   return {
     id: String(task._id),
-    authorId: clientDoc?._id ? String(clientDoc._id) : String(task.clientId || ''),
+    authorId,
     authorName: clientDoc?.name || 'Client User',
     authorEmail: clientDoc?.email || '',
     authorAccountType: clientDoc?.accountType || 'client',
@@ -25,6 +38,15 @@ function mapTaskToFeedPost(task, client) {
     priority: urgencyLabel(task.urgency),
     budget: typeof task.budget === 'number' ? task.budget : 0,
     status: task.status,
+    hireStatus: task.hireStatus || 'open',
+    assignedFreelancerId: task.assignedFreelancerId
+      ? String(task.assignedFreelancerId?._id || task.assignedFreelancerId)
+      : undefined,
+    assignedFreelancerName: task.assignedFreelancerName || undefined,
+    completedAt: task.completedAt ? new Date(task.completedAt).toISOString() : undefined,
+    reviewSubmittedAt: task.reviewSubmittedAt
+      ? new Date(task.reviewSubmittedAt).toISOString()
+      : undefined,
     createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : new Date().toISOString(),
   };
 }

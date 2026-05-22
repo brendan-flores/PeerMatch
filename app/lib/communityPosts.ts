@@ -44,6 +44,11 @@ function mapFeedPosts(posts: ApiFeedPost[] | undefined): CommunityPost[] {
     budget: typeof post.budget === "number" ? post.budget : 0,
     createdAt: post.createdAt,
     status: post.status,
+    hireStatus: post.hireStatus,
+    assignedFreelancerId: post.assignedFreelancerId,
+    assignedFreelancerName: post.assignedFreelancerName,
+    completedAt: post.completedAt,
+    reviewSubmittedAt: post.reviewSubmittedAt,
   }));
 }
 
