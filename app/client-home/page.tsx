@@ -7,6 +7,7 @@ import { FreelancerFeedMain } from "../components/freelancer/FreelancerFeedMain"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Bell,
   BookOpen,
   CalendarDays,
   ChevronDown,
@@ -42,6 +43,7 @@ import {
   URGENCY_OPTIONS,
 } from "../lib/communityPosts";
 import { useCommunityPostsContext } from "../lib/CommunityPostsContext";
+import { ClientOffersPanel } from "../components/client/ClientOffersPanel";
 import { FeaturedPostEditor } from "../components/client/FeaturedPostEditor";
 import {
   isCommunityPostWithinLast24Hours,
@@ -54,6 +56,7 @@ import { ClientPostToast, type ClientPostToastState } from "../components/Client
 import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
 import { NotificationsDropdown } from "../components/NotificationsDropdown";
 import { NavUnreadBadge } from "../components/NavUnreadBadge";
+import { fetchClientOffers, isOfferPending } from "../lib/offersApi";
 import { useNotifications } from "../hooks/useNotifications";
 import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
 
@@ -169,10 +172,11 @@ function ClientHomePageContent() {
   const [savedProfileSnapshot, setSavedProfileSnapshot] = useState<ProfileFormSnapshot | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [isPanelVisible, setIsPanelVisible] = useState(true);
-  const { approvedPosts, refreshAll } = useCommunityPostsContext();
+  const { approvedPosts, approvedLoading, approvedError, refreshAll } = useCommunityPostsContext();
   const [postCategoryInput, setPostCategoryInput] = useState("");
   const [postPriorityInput, setPostPriorityInput] = useState<CommunityPostPriority>("Normal");
   const [postSubmitting, setPostSubmitting] = useState(false);
+  const [pendingOffersCount, setPendingOffersCount] = useState(0);
   const [postTitleInput, setPostTitleInput] = useState("");
   const [postDescriptionInput, setPostDescriptionInput] = useState("");
   const [postBudgetInput, setPostBudgetInput] = useState("");
@@ -366,6 +370,23 @@ function ClientHomePageContent() {
     }, 90);
     return () => window.clearTimeout(timeoutId);
   }, [activePanel]);
+
+  useEffect(() => {
+    if (!meUserId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await fetchClientOffers();
+        if (cancelled) return;
+        setPendingOffersCount(list.filter((offer) => isOfferPending(offer.status)).length);
+      } catch {
+        // ignore — offers panel will surface errors when opened
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [meUserId, notifications, activePanel]);
 
   useEffect(() => {
     setPeerUserId(peerFromQuery);
@@ -569,6 +590,11 @@ function ClientHomePageContent() {
       label: "Message",
       icon: <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={1.75} />,
     },
+    {
+      href: "/client-home?panel=offers",
+      label: "Offers",
+      icon: <Handshake className="h-5 w-5 shrink-0" strokeWidth={1.75} />,
+    },
     { href: "/client-home?panel=profile", label: "Profile", icon: <User className="h-5 w-5 shrink-0" strokeWidth={1.75} /> },
   ];
 
@@ -622,6 +648,9 @@ function ClientHomePageContent() {
                   {item.href.includes("panel=messages") ? (
                     <NavUnreadBadge count={unreadMessageCount} active={active} />
                   ) : null}
+                  {item.href.includes("panel=offers") ? (
+                    <NavUnreadBadge count={pendingOffersCount} active={active} />
+                  ) : null}
                 </Link>
               );
             })}
@@ -657,7 +686,11 @@ function ClientHomePageContent() {
               }
               scroll={
                 <section aria-labelledby="client-community-feed" className="space-y-4">
-                  {approvedPosts.length > 0 ? (
+                  {approvedLoading ? (
+                    <p className="text-sm text-zinc-500">Loading community posts...</p>
+                  ) : approvedError ? (
+                    <p className="text-sm text-red-600">{approvedError}</p>
+                  ) : approvedPosts.length > 0 ? (
                     approvedPosts.map((post) => (
                       <CommunityPostCard
                         key={post.id}
@@ -870,6 +903,8 @@ function ClientHomePageContent() {
                   </div>
                 </div>
               </section>
+            ) : activePanel === "offers" ? (
+              <ClientOffersPanel onPendingCountChange={setPendingOffersCount} />
             ) : activePanel === "messages" ? (
               <section
                 aria-labelledby="messages-heading"
@@ -1155,8 +1190,47 @@ function ClientHomePageContent() {
             isFixedShellLayout ? "h-full overflow-hidden" : "gap-8"
           }`}
         >
-          <section className={isFixedShellLayout ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}>
-            <h3 className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout ? "shrink-0" : ""}`}>
+          <section className={isFixedShellLayout || isFeedView ? "mb-6 shrink-0" : ""}>
+            <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
+            {notifications.length === 0 ? (
+              <p className="mt-3 rounded-xl border border-zinc-200 bg-white px-4 py-4 text-xs text-zinc-500 shadow-sm">
+                No notifications yet
+              </p>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {notifications.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() =>
+                      router.push(
+                        item.type === "new_offer" ? "/client-home?panel=offers" : "/client-home",
+                      )
+                    }
+                    className={`w-full rounded-xl border px-4 py-4 text-left text-xs shadow-sm hover:brightness-[0.98] ${
+                      item.type === "post_approved"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                        : item.type === "post_review"
+                          ? "border-[#FFD4C2] bg-[#FFF2EB] text-[#9A3412]"
+                          : "border-zinc-200 bg-white text-zinc-700"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Bell aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.6} />
+                      <span>{item.actionText}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section
+            className={isFixedShellLayout || isFeedView ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}
+          >
+            <h3
+              className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout || isFeedView ? "shrink-0" : ""}`}
+            >
               Recent Posts
             </h3>
             <div

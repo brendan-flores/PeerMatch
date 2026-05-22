@@ -10,7 +10,7 @@ import { useFreelancerDashboardUser, useFreelancerSelectedPost } from "../Freela
 export default function FreelancerBrowsePage() {
   const { user } = useFreelancerDashboardUser();
   const { selectedPost, setSelectedPost, clearSelectedPost } = useFreelancerSelectedPost();
-  const { posts, loading } = useCommunityPosts();
+  const { posts, loading, error, reload } = useCommunityPosts();
 
   if (selectedPost && user) {
     return (
@@ -37,8 +37,16 @@ export default function FreelancerBrowsePage() {
       scroll={
         <div className="space-y-4">
           {loading ? <p className="text-sm text-zinc-500">Loading posts…</p> : null}
-          {!loading && posts.map((post) => <CommunityPostCard key={post.id} post={post} onSelect={setSelectedPost} />)}
-          {!loading && posts.length === 0 ? <p className="text-sm text-zinc-500">No posts yet.</p> : null}
+          {!loading && error ? (
+            <p className="text-sm text-red-600">
+              {error}{" "}
+              <button type="button" className="font-semibold underline" onClick={() => void reload()}>
+                Retry
+              </button>
+            </p>
+          ) : null}
+          {!loading && !error && posts.map((post) => <CommunityPostCard key={post.id} post={post} onSelect={setSelectedPost} />)}
+          {!loading && !error && posts.length === 0 ? <p className="text-sm text-zinc-500">No posts yet.</p> : null}
         </div>
       }
     />

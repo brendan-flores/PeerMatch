@@ -22,6 +22,7 @@ type CommunityPostsContextValue = {
   myPosts: CommunityPost[];
   approvedLoading: boolean;
   myPostsLoading: boolean;
+  approvedError: string | null;
   refreshApproved: () => Promise<void>;
   refreshMyPosts: () => Promise<void>;
   refreshAll: () => Promise<void>;
@@ -36,14 +37,19 @@ export function CommunityPostsProvider({ children }: { children: ReactNode }) {
   const [myPosts, setMyPosts] = useState<CommunityPost[]>([]);
   const [approvedLoading, setApprovedLoading] = useState(true);
   const [myPostsLoading, setMyPostsLoading] = useState(true);
+  const [approvedError, setApprovedError] = useState<string | null>(null);
 
   const refreshApproved = useCallback(async () => {
     setApprovedLoading(true);
     try {
       const feed = await fetchApprovedCommunityPosts();
       setApprovedPosts(feed);
+      setApprovedError(null);
       clearCommunityPostsStorage();
-    } catch {
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not load community posts. Is the API server running?";
+      setApprovedError(message);
       setApprovedPosts([]);
     } finally {
       setApprovedLoading(false);
@@ -91,6 +97,7 @@ export function CommunityPostsProvider({ children }: { children: ReactNode }) {
       myPosts,
       approvedLoading,
       myPostsLoading,
+      approvedError,
       refreshApproved,
       refreshMyPosts,
       refreshAll,
@@ -102,6 +109,7 @@ export function CommunityPostsProvider({ children }: { children: ReactNode }) {
       myPosts,
       approvedLoading,
       myPostsLoading,
+      approvedError,
       refreshApproved,
       refreshMyPosts,
       refreshAll,
