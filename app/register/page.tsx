@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import AuthPageHeader from "../components/AuthPageHeader";
 import { ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -59,21 +60,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#E5F6F4]">
       <div className="flex min-h-screen w-full flex-col">
-        <header className="sticky top-0 z-50 w-full">
-          <div className="w-full rounded-b-[2rem] border-b border-slate-200/70 bg-white/95 px-6 py-4 shadow-sm shadow-slate-200 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-            <div className="mx-auto flex w-full max-w-[1120px] items-center justify-center">
-              <div className="px-1 py-1">
-                <Image
-                  src="/logo.png"
-                  alt="PeerMatch — Student Collaboration"
-                  width={240}
-                  height={48}
-                  className="h-12 w-auto object-contain"
-                />
-              </div>
-            </div>
-          </div>
-        </header>
+        <AuthPageHeader />
 
         <main className="flex flex-1 items-start justify-center px-4 py-10">
           <div className="ui-page-enter ui-surface w-full max-w-xl rounded-[2.5rem] bg-white px-10 py-10 shadow-[0_30px_90px_rgba(0,0,0,0.14)]">
