@@ -170,6 +170,15 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Category, title, and description are required.' });
     }
 
+    const budgetProvided = req.body?.budget !== undefined || req.body?.rate !== undefined;
+    if (budgetProvided) {
+      const budgetResult = parseBudget(req.body?.budget ?? req.body?.rate);
+      if (!budgetResult.ok) {
+        return res.status(400).json({ message: budgetResult.message });
+      }
+      task.budget = budgetResult.budget;
+    }
+
     task.title = title;
     task.description = description;
     task.subjectCategory = subjectCategory;
@@ -189,6 +198,36 @@ router.put('/:id', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Could not update your post. Please try again.' });
+  }
+});
+
+/** Client deletes their own post */
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid post id.' });
+    }
+
+    const user = await User.findById(req.user.userId).select('accountType role suspended').lean();
+    if (!user) {
+      return res.status(401).json({ message: 'Authentication required.' });
+    }
+    if (user.suspended) {
+      return res.status(403).json({ message: 'Your account is suspended.' });
+    }
+    if (user.role !== 'user' || user.accountType !== 'client') {
+      return res.status(403).json({ message: 'Only client accounts can delete posts.' });
+    }
+
+    const task = await Task.findOneAndDelete({ _id: req.params.id, clientId: req.user.userId });
+    if (!task) {
+      return res.status(404).json({ message: 'Post not found or you do not have permission to delete it.' });
+    }
+
+    res.json({ message: 'Post deleted successfully.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Could not delete your post. Please try again.' });
   }
 });
 

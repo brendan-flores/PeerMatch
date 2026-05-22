@@ -33,7 +33,6 @@ import {
 } from "lucide-react";
 import { apiGetJson, apiPostJson, ApiError } from "../lib/api";
 import {
-  fetchApprovedCommunityPosts,
   fetchMyCommunityPosts,
   formatPhpBudget,
   POST_APPROVED_MESSAGE,
@@ -41,10 +40,9 @@ import {
   urgencyBadgeClass,
   URGENCY_OPTIONS,
 } from "../lib/communityPosts";
+import { useCommunityPostsContext } from "../lib/CommunityPostsContext";
 import { FeaturedPostEditor } from "../components/client/FeaturedPostEditor";
 import {
-  clearCommunityPostsStorage,
-  COMMUNITY_POSTS_CHANGED_EVENT,
   isCommunityPostWithinLast24Hours,
   notifyCommunityPostsChanged,
   type CommunityPostPriority,
@@ -165,7 +163,7 @@ function ClientHomePageContent() {
   const [savedProfileSnapshot, setSavedProfileSnapshot] = useState<ProfileFormSnapshot | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [isPanelVisible, setIsPanelVisible] = useState(true);
-  const [posts, setPosts] = useState<PostItem[]>([]);
+  const { approvedPosts, refreshAll } = useCommunityPostsContext();
   const [postCategoryInput, setPostCategoryInput] = useState("");
   const [postPriorityInput, setPostPriorityInput] = useState<CommunityPostPriority>("Normal");
   const [postSubmitting, setPostSubmitting] = useState(false);
@@ -187,11 +185,6 @@ function ClientHomePageContent() {
   const displayHours = displayHoursRaw;
 
   const postsHeading = "Community Feed";
-
-  const recentPosts = useMemo(
-    () => posts.filter((post) => isCommunityPostWithinLast24Hours(post.createdAt)),
-    [posts],
-  );
 
   const formatTimeAgo = (value: string) => {
     const ts = new Date(value).getTime();
@@ -267,23 +260,16 @@ function ClientHomePageContent() {
     };
   }, [router]);
 
-  const loadFeedPosts = useCallback(async () => {
-    const fallbackAvatar = profilePhotoDataUrl || "https://api.dicebear.com/7.x/initials/svg?seed=Client";
-    try {
-      const feed = await fetchApprovedCommunityPosts();
-      setPosts(feed.map((post) => mapPostForUi(post, fallbackAvatar)));
-      clearCommunityPostsStorage();
-    } catch {
-      setPosts([]);
-    }
-  }, [profilePhotoDataUrl]);
+  const fallbackAvatar = profilePhotoDataUrl || "https://api.dicebear.com/7.x/initials/svg?seed=Client";
+  const posts = useMemo(
+    () => approvedPosts.map((post) => mapPostForUi(post, fallbackAvatar)),
+    [approvedPosts, fallbackAvatar],
+  );
 
-  useEffect(() => {
-    void loadFeedPosts();
-    const onRefresh = () => void loadFeedPosts();
-    window.addEventListener(COMMUNITY_POSTS_CHANGED_EVENT, onRefresh);
-    return () => window.removeEventListener(COMMUNITY_POSTS_CHANGED_EVENT, onRefresh);
-  }, [loadFeedPosts]);
+  const recentPosts = useMemo(
+    () => posts.filter((post) => isCommunityPostWithinLast24Hours(post.createdAt)),
+    [posts],
+  );
 
   const dismissPostToast = useCallback(() => setPostToast(null), []);
 
@@ -298,9 +284,9 @@ function ClientHomePageContent() {
         ),
       );
       notifyCommunityPostsChanged();
-      void loadFeedPosts();
+      void refreshAll();
     },
-    [loadFeedPosts],
+    [refreshAll],
   );
 
   useEffect(() => {
@@ -558,7 +544,7 @@ function ClientHomePageContent() {
           [POST_REVIEW_MESSAGE, ...prev.filter((item) => item !== POST_REVIEW_MESSAGE)].slice(0, 5),
         );
         notifyCommunityPostsChanged();
-        await loadFeedPosts();
+        await refreshAll();
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Could not save your post. Please try again.";
         setPostStatusMessage(message);
@@ -601,11 +587,16 @@ function ClientHomePageContent() {
         }`}
       >
         <aside className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm ${activePanel === "messages" ? "h-full" : "sticky top-6 h-[calc(100vh-3rem)]"} lg:row-span-1`}>
-          <div className="flex items-center gap-3 rounded-xl border border-zinc-100 bg-white px-3 py-3 shadow-sm">
-            <Image src="/logo.png" alt="PeerMatch logo" width={32} height={32} className="h-8 w-8 object-contain" />
-            <div>
-              <p className="text-sm font-semibold tracking-tight text-zinc-900">PeerMatch</p>
-              <p className="text-[11px] text-zinc-500">Student Collaboration</p>
+          <div className="flex items-center justify-center rounded-xl border border-zinc-100 bg-white px-3 py-3.5 shadow-sm">
+            <div className="flex h-20 w-full items-center justify-center">
+              <Image
+                src="/peermatch-logo.png"
+                alt="PeerMatch — Student Collaboration"
+                width={512}
+                height={237}
+                className="h-full w-full object-contain"
+                priority
+              />
             </div>
           </div>
 
@@ -1019,6 +1010,11 @@ function ClientHomePageContent() {
                                 >
                                   {post.priority}
                                 </span>
+                                {post.budget > 0 ? (
+                                  <span className="rounded-full bg-[#FFF2EB] px-2 py-0.5 text-[10px] font-semibold text-[#C2410C]">
+                                    {formatPhpBudget(post.budget)}
+                                  </span>
+                                ) : null}
                               </div>
                             </div>
                           ))}

@@ -3,7 +3,7 @@
  *
  * Usage: node server/seedAdmin.js
  * Required: MONGODB_URI, SEED_ADMIN_PASSWORD (min 8 chars)
- * Optional: SEED_ADMIN_EMAIL (default admin@peermatch.com), SEED_ADMIN_NAME
+ * Optional: SEED_ADMIN_EMAIL (default admin@peermatch.com), SEED_ADMIN_NAME, SEED_ADMIN_USERNAME
  */
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
@@ -31,6 +31,10 @@ async function run() {
   const email = normalizeEmail(process.env.SEED_ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL);
   const password = process.env.SEED_ADMIN_PASSWORD;
   const name = (process.env.SEED_ADMIN_NAME || 'PeerMatch Admin').trim();
+  const username = (process.env.SEED_ADMIN_USERNAME || email.split('@')[0] || 'admin')
+    .trim()
+    .toLowerCase()
+    .slice(0, 30);
 
   if (!password || password.length < 8) {
     console.error('SEED_ADMIN_PASSWORD must be set and at least 8 characters.');
@@ -51,6 +55,7 @@ async function run() {
 
   const hashedPassword = await bcrypt.hash(password, 12);
   await User.create({
+    username,
     name,
     email,
     password: hashedPassword,
