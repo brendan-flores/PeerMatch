@@ -1,5 +1,6 @@
 "use client";
 
+import { dashboardRightAsideListClass } from "@/app/components/dashboard/dashboardShellClasses";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { fetchApprovedCommunityPosts } from "@/app/lib/communityPosts";
@@ -25,10 +26,7 @@ function formatTimeAgo(value: string) {
 export function FreelancerRightAside() {
   const pathname = usePathname();
   const router = useRouter();
-  const isFixedLayout =
-    pathname === "/freelancer-dashboard/messages" ||
-    pathname === "/freelancer-dashboard" ||
-    pathname === "/freelancer-dashboard/browse";
+  const isFixedLayout = pathname.startsWith("/freelancer-dashboard");
   const [posts, setPosts] = useState<CommunityPost[]>([]);
 
   useEffect(() => {
@@ -62,9 +60,7 @@ export function FreelancerRightAside() {
     >
       <section className={isFixedLayout ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}>
         <h3 className={`text-sm font-semibold text-zinc-900 ${isFixedLayout ? "shrink-0" : ""}`}>Recent Posts</h3>
-        <ul
-          className={`mt-3 space-y-3 ${isFixedLayout ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5" : ""}`}
-        >
+        <ul className={isFixedLayout ? dashboardRightAsideListClass : "mt-3 space-y-3"}>
           {recentPosts.length === 0 ? (
             <li className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">
               No recent post

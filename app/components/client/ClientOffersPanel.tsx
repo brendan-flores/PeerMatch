@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Handshake, Star } from "lucide-react";
+import { dashboardCenterTitleOffsetClass } from "@/app/components/dashboard/dashboardShellClasses";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/app/lib/api";
 import { formatPhpBudget } from "@/app/lib/communityPosts";
@@ -239,7 +240,10 @@ export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelPro
   return (
     <section aria-labelledby="offers-heading" className="space-y-6">
       <div>
-        <h1 id="offers-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
+        <h1
+          id="offers-heading"
+          className={`text-4xl font-bold tracking-tight text-zinc-900 ${dashboardCenterTitleOffsetClass}`}
+        >
           Offers
         </h1>
         <p className="mt-1.5 text-sm text-zinc-600">

@@ -151,14 +151,16 @@ body {
   height: 0 !important;
 }
 
-/* Community feed scroll: hidden scrollbar, scroll still works */
-.feed-scroll-pane {
+/* Dashboard scroll panes: hidden scrollbar, scroll still works */
+.feed-scroll-pane,
+.panel-scroll-pane {
   scrollbar-width: none;
   -ms-overflow-style: none;
   scrollbar-color: transparent transparent;
 }
 
-.feed-scroll-pane::-webkit-scrollbar {
+.feed-scroll-pane::-webkit-scrollbar,
+.panel-scroll-pane::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
   display: none !important;
@@ -167,7 +169,10 @@ body {
 
 .feed-scroll-pane::-webkit-scrollbar-thumb,
 .feed-scroll-pane::-webkit-scrollbar-track,
-.feed-scroll-pane::-webkit-scrollbar-button {
+.feed-scroll-pane::-webkit-scrollbar-button,
+.panel-scroll-pane::-webkit-scrollbar-thumb,
+.panel-scroll-pane::-webkit-scrollbar-track,
+.panel-scroll-pane::-webkit-scrollbar-button {
   display: none !important;
   width: 0 !important;
   height: 0 !important;

@@ -31,7 +31,7 @@ export default function FreelancerDashboardPage() {
     <FreelancerFeedMain
       scrollable
       header={
-        <FeedPageHeader userId={user?.id ?? null} title="Community Feed" />
+        <FeedPageHeader title="Community Feed" />
       }
       scroll={
         <section aria-labelledby="latest-posts-heading" className="space-y-4">

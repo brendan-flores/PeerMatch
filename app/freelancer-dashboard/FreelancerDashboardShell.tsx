@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { NotificationsDropdown } from "@/app/components/NotificationsDropdown";
+import { DashboardCenterColumn } from "@/app/components/dashboard/DashboardCenterColumn";
 import { FreelancerSidebar } from "@/app/components/freelancer/FreelancerSidebar";
 import { FreelancerRightAside } from "@/app/components/freelancer/FreelancerRightAside";
 import { useNotifications } from "@/app/hooks/useNotifications";
@@ -159,44 +159,28 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
     );
   }
 
-  const isMessagesRoute = pathname === "/freelancer-dashboard/messages";
-  const isFeedRoute =
-    pathname === "/freelancer-dashboard" || pathname === "/freelancer-dashboard/browse";
-  const isFixedShellLayout = isMessagesRoute || isFeedRoute;
-
   return (
     <FreelancerUserContext.Provider value={value}>
       <div
-        className={`relative bg-[#E5F6F4] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
-          isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
-        }`}
+        className="relative h-[100dvh] overflow-hidden bg-[#E5F6F4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6"
       >
-        {!isFeedRoute ? (
-          <NotificationsDropdown
+        <div
+          className="mx-auto grid h-full min-h-0 w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px]"
+        >
+          <div className="h-full min-h-0 overflow-hidden lg:row-span-1">
+            <FreelancerSidebar />
+          </div>
+          <DashboardCenterColumn
             items={notifications}
             onMarkAllRead={markAllRead}
             onMarkOneRead={markOneRead}
-            className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
-          />
-        ) : null}
-        <div
-          className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
-            isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
-          }`}
-        >
-          <div className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}>
-            <FreelancerSidebar />
-          </div>
-          <div
-            className={`min-h-0 transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
-              isFixedShellLayout ? "h-full min-h-0 overflow-hidden" : ""
-            } ${
+            contentClassName={`transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
               isRouteContentVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
             }`}
           >
             {children}
-          </div>
-          <div className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}>
+          </DashboardCenterColumn>
+          <div className="h-full min-h-0 overflow-hidden lg:row-span-1">
             <FreelancerRightAside />
           </div>
         </div>

@@ -7,7 +7,6 @@ import { FreelancerFeedMain } from "../components/freelancer/FreelancerFeedMain"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bell,
   BookOpen,
   CalendarDays,
   ChevronDown,
@@ -53,8 +52,15 @@ import {
 import { connectSocket, disconnectSocket, subscribePostApproved } from "../lib/socket";
 import { ChatLayout } from "../components/chat/ChatLayout";
 import { ClientPostToast, type ClientPostToastState } from "../components/ClientPostToast";
+import { DashboardCenterColumn } from "../components/dashboard/DashboardCenterColumn";
+import {
+  dashboardPanelScrollClass,
+  dashboardPanelScrollInsetClass,
+  dashboardProfileScrollClass,
+  dashboardRightAsideListClass,
+  dashboardSidebarNavScrollClass,
+} from "../components/dashboard/dashboardShellClasses";
 import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
-import { NotificationsDropdown } from "../components/NotificationsDropdown";
 import { NavUnreadBadge } from "../components/NavUnreadBadge";
 import { fetchClientOffers, isOfferPending } from "../lib/offersApi";
 import { useNotifications } from "../hooks/useNotifications";
@@ -605,35 +611,24 @@ function ClientHomePageContent() {
   };
 
   const isFeedView = pathname === "/client-home" && !activePanel;
-  const isFixedShellLayout = activePanel === "messages" || isFeedView;
+
+  const panelTransitionClass = `transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
+    isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
+  }`;
 
   return (
     <div
-      className={`bg-[#E5F6F4] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
-        isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
-      }`}
+      className="h-[100dvh] overflow-hidden bg-[#E5F6F4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6"
     >
-      {!isFeedView ? (
-        <NotificationsDropdown
-          items={notifications}
-          onMarkAllRead={markAllRead}
-          onMarkOneRead={markOneRead}
-          className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
-        />
-      ) : null}
       <div
-        className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
-          isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
-        }`}
+        className="mx-auto grid h-full min-h-0 w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px]"
       >
         <aside
-          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
-            isFixedShellLayout ? "h-full overflow-hidden" : "sticky top-6 h-[calc(100vh-3rem)] max-h-[calc(100vh-3rem)]"
-          }`}
+          className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1"
         >
           <SidebarBrand />
 
-          <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
+          <nav className={dashboardSidebarNavScrollClass} aria-label="Main">
             {navItems.map((item) => {
               const active = isNavActive(item.href);
               return (
@@ -667,23 +662,16 @@ function ClientHomePageContent() {
         </aside>
 
         {isFeedView ? (
-          <div
-            className={`h-full min-h-0 overflow-hidden transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
-              isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
-            }`}
+          <DashboardCenterColumn
+            items={notifications}
+            onMarkAllRead={markAllRead}
+            onMarkOneRead={markOneRead}
+            contentClassName={panelTransitionClass}
           >
             <FreelancerFeedMain
               scrollable
               children={null}
-              header={
-                <FeedPageHeader
-                  userId={meUserId || null}
-                  title={postsHeading}
-                  items={notifications}
-                  onMarkAllRead={markAllRead}
-                  onMarkOneRead={markOneRead}
-                />
-              }
+              header={<FeedPageHeader title={postsHeading} />}
               scroll={
                 <section aria-labelledby="client-community-feed" className="space-y-4">
                   {approvedLoading ? (
@@ -706,21 +694,24 @@ function ClientHomePageContent() {
                 </section>
               }
             />
-          </div>
+          </DashboardCenterColumn>
         ) : (
+        <DashboardCenterColumn
+          items={notifications}
+          onMarkAllRead={markAllRead}
+          onMarkOneRead={markOneRead}
+          contentClassName={panelTransitionClass}
+        >
         <main
-          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] ${
+          className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] ${
             activePanel === "profile" || activePanel === "featured-post" || activePanel === "messages"
               ? "p-4"
               : "p-6 sm:p-8 lg:p-10"
-          } ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}
+          }`}
         >
-          <div
-            className={`flex min-h-0 flex-1 flex-col transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
-              isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
-            }`}
-          >
+          <div className="flex h-full min-h-0 flex-1 flex-col">
             {activePanel === "create-post" ? (
+              <div className={`${dashboardPanelScrollClass} ${dashboardPanelScrollInsetClass}`}>
               <section aria-labelledby="create-post-heading">
                 <h1 id="create-post-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
                   Create New Post
@@ -903,8 +894,11 @@ function ClientHomePageContent() {
                   </div>
                 </div>
               </section>
+              </div>
             ) : activePanel === "offers" ? (
-              <ClientOffersPanel onPendingCountChange={setPendingOffersCount} />
+              <div className={`${dashboardPanelScrollClass} ${dashboardPanelScrollInsetClass}`}>
+                <ClientOffersPanel onPendingCountChange={setPendingOffersCount} />
+              </div>
             ) : activePanel === "messages" ? (
               <section
                 aria-labelledby="messages-heading"
@@ -922,10 +916,10 @@ function ClientHomePageContent() {
             ) : activePanel === "profile" || activePanel === "featured-post" ? (
               <section
                 aria-labelledby={activePanel === "featured-post" ? "featured-post-heading" : "profile-heading"}
-                className="flex min-h-0 flex-1 flex-col"
+                className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${dashboardPanelScrollInsetClass}`}
               >
-                <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)] xl:items-start">
-                  <article className="sticky top-4 z-10 h-fit w-full max-w-[320px] rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:max-w-none">
+                <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden xl:grid-cols-[260px_minmax(0,1fr)] xl:items-stretch">
+                  <article className="h-fit w-full max-w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:max-w-none">
                     <div className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-zinc-200 bg-[#E8EFEC]">
                       {profilePhotoDataUrl ? (
                         <img src={profilePhotoDataUrl} alt="Profile" className="h-full w-full object-cover" />
@@ -996,7 +990,7 @@ function ClientHomePageContent() {
                     </div>
                   </article>
 
-                  <div className="profile-scroll-pane max-h-[calc(100vh-3.5rem)] min-h-0 min-w-0 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] scroll-smooth">
+                  <div className={dashboardProfileScrollClass}>
                     {activePanel === "featured-post" ? (
                       <FeaturedPostEditor authorId={meUserId} authorAvatar={profilePhotoDataUrl || undefined} />
                     ) : (
@@ -1183,61 +1177,13 @@ function ClientHomePageContent() {
             ) : null}
           </div>
         </main>
+        </DashboardCenterColumn>
         )}
 
-        <aside
-          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
-            isFixedShellLayout ? "h-full overflow-hidden" : "gap-8"
-          }`}
-        >
-          <section className={isFixedShellLayout || isFeedView ? "mb-6 shrink-0" : ""}>
-            <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
-            {notifications.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-zinc-200 bg-white px-4 py-4 text-xs text-zinc-500 shadow-sm">
-                No notifications yet
-              </p>
-            ) : (
-              <div className="mt-3 space-y-2">
-                {notifications.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() =>
-                      router.push(
-                        item.type === "new_offer" ? "/client-home?panel=offers" : "/client-home",
-                      )
-                    }
-                    className={`w-full rounded-xl border px-4 py-4 text-left text-xs shadow-sm hover:brightness-[0.98] ${
-                      item.type === "post_approved"
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                        : item.type === "post_review"
-                          ? "border-[#FFD4C2] bg-[#FFF2EB] text-[#9A3412]"
-                          : "border-zinc-200 bg-white text-zinc-700"
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Bell aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.6} />
-                      <span>{item.actionText}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section
-            className={isFixedShellLayout || isFeedView ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}
-          >
-            <h3
-              className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout || isFeedView ? "shrink-0" : ""}`}
-            >
-              Recent Posts
-            </h3>
-            <div
-              className={`mt-3 space-y-3 ${
-                isFixedShellLayout ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5" : ""
-              }`}
-            >
+        <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1">
+          <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <h3 className="shrink-0 text-sm font-semibold text-zinc-900">Recent Posts</h3>
+            <div className={dashboardRightAsideListClass}>
               {recentPosts.length === 0 ? (
                 <p className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">
                   No recent post

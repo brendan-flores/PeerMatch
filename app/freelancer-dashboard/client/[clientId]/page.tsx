@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { MapPin, MessageCircle, UserCircle } from "lucide-react";
-import { dashboardCenterPanelClass } from "@/app/components/dashboard/dashboardShellClasses";
+import {
+  dashboardCenterPanelClass,
+  dashboardCenterPanelFixedClass,
+  dashboardPanelScrollClass,
+  dashboardPanelScrollInsetClass,
+} from "@/app/components/dashboard/dashboardShellClasses";
 import { ApiError, apiGetJson } from "@/app/lib/api";
 
 type ResolvedUser = {
@@ -69,8 +74,8 @@ export default function FreelancerClientProfilePage() {
   }, [client?.name]);
 
   return (
-    <main className={`${dashboardCenterPanelClass} h-full`}>
-      <div className="max-w-2xl">
+    <main className={`${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass}`}>
+      <div className={`${dashboardPanelScrollClass} ${dashboardPanelScrollInsetClass} max-w-2xl`}>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Client Profile</h1>
         <p className="mt-2 text-sm text-zinc-500">Review details about the client before starting a conversation.</p>
 
