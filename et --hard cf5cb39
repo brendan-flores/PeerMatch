@@ -1,0 +1,77 @@
+[33mfffb648[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m)[m HEAD@{0}: reset: moving to HEAD~1
+[33m2f9f692[m[33m ([m[1;31morigin/feat/client-offers-and-task-assignment-amorin[m[33m)[m HEAD@{1}: reset: moving to HEAD~1
+[33m48c87ad[m HEAD@{2}: reset: moving to HEAD~1
+[33mcf5cb39[m[33m ([m[1;31morigin/dev[m[33m)[m HEAD@{3}: commit: [feat][Bren] Admin UI
+[33m48c87ad[m HEAD@{4}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m2f9f692[m[33m ([m[1;31morigin/feat/client-offers-and-task-assignment-amorin[m[33m)[m HEAD@{5}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33mfffb648[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m)[m HEAD@{6}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33mf7a85d1[m HEAD@{7}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m4148f7b[m HEAD@{8}: checkout: moving from feature/admin-page-UI to dev
+[33mdbc1988[m[33m ([m[1;32mfeature/admin-page-UI[m[33m)[m HEAD@{9}: commit: [feat][Bren] Updated the admin UI
+[33m4148f7b[m HEAD@{10}: checkout: moving from dev to feature/admin-page-UI
+[33m4148f7b[m HEAD@{11}: checkout: moving from main to dev
+[33mf90204f[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{12}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m6bb8ed6[m HEAD@{13}: checkout: moving from dev to main
+[33m4148f7b[m HEAD@{14}: commit: [fix][Bren] client homepage UI
+[33md127405[m HEAD@{15}: checkout: moving from main to dev
+[33m6bb8ed6[m HEAD@{16}: checkout: moving from dev to main
+[33md127405[m HEAD@{17}: checkout: moving from main to dev
+[33m6bb8ed6[m HEAD@{18}: checkout: moving from dev to main
+[33md127405[m HEAD@{19}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33maaf2dc0[m HEAD@{20}: checkout: moving from feature/Freelancer&client-homepage-updates-saducas to dev
+[33m268ed39[m HEAD@{21}: checkout: moving from main to feature/Freelancer&client-homepage-updates-saducas
+[33m01eec37[m HEAD@{22}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m3515f97[m HEAD@{23}: checkout: moving from dev to main
+[33maaf2dc0[m HEAD@{24}: commit: [fix][Bren] polished freelancer-details and client-details page
+[33m0bc81d8[m HEAD@{25}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m45482e7[m HEAD@{26}: checkout: moving from revert-80-feature/Freelancer-Details-Page-saducas to dev
+[33m08e1fe9[m[33m ([m[1;32mrevert-80-feature/Freelancer-Details-Page-saducas[m[33m)[m HEAD@{27}: checkout: moving from dev to revert-80-feature/Freelancer-Details-Page-saducas
+[33m45482e7[m HEAD@{28}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33mda2ce9d[m HEAD@{29}: checkout: moving from feature/Freelancer-Details-Page-saducas to dev
+[33m249fffa[m HEAD@{30}: checkout: moving from dev to feature/Freelancer-Details-Page-saducas
+[33mda2ce9d[m HEAD@{31}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33mffc1e58[m HEAD@{32}: checkout: moving from origin-fix-Logo-replacement to dev
+[33m2bc664d[m HEAD@{33}: checkout: moving from dev to origin-fix-Logo-replacement
+[33mffc1e58[m HEAD@{34}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33macdbab1[m HEAD@{35}: checkout: moving from feature/Client-Information-Page-Updated to dev
+[33m371ef0f[m[33m ([m[1;32mfeature/Client-Information-Page-Updated[m[33m)[m HEAD@{36}: checkout: moving from dev to feature/Client-Information-Page-Updated
+[33macdbab1[m HEAD@{37}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33md093e51[m HEAD@{38}: checkout: moving from feature/Client-Information-Page-Updated to dev
+[33ma1e741c[m HEAD@{39}: checkout: moving from dev to feature/Client-Information-Page-Updated
+[33md093e51[m HEAD@{40}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m29278fe[m HEAD@{41}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m07d8791[m HEAD@{42}: checkout: moving from feature/Client-Information-Page-Updated to dev
+[33m088caea[m HEAD@{43}: checkout: moving from dev to feature/Client-Information-Page-Updated
+[33m07d8791[m HEAD@{44}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m9de5416[m HEAD@{45}: checkout: moving from Origin/Feature-Freelancer-Client-Sign-Up-Page to dev
+[33m225c500[m[33m ([m[1;32mOrigin/Feature-Freelancer-Client-Sign-Up-Page[m[33m)[m HEAD@{46}: checkout: moving from Origin/feature-logo-update to Origin/Feature-Freelancer-Client-Sign-Up-Page
+[33mc052b62[m[33m ([m[1;32mOrigin/feature-logo-update[m[33m)[m HEAD@{47}: checkout: moving from dev to Origin/feature-logo-update
+[33m8785b26[m HEAD@{48}: checkout: moving from realtime-chat-typing-amorin to dev
+[33m6e4c937[m[33m ([m[1;32mrealtime-chat-typing-amorin[m[33m)[m HEAD@{49}: checkout: moving from Origin/feature-logo-update to realtime-chat-typing-amorin
+[33mc052b62[m[33m ([m[1;32mOrigin/feature-logo-update[m[33m)[m HEAD@{50}: checkout: moving from realtime-chat-typing-amorin to Origin/feature-logo-update
+[33m6e4c937[m[33m ([m[1;32mrealtime-chat-typing-amorin[m[33m)[m HEAD@{51}: checkout: moving from dev to realtime-chat-typing-amorin
+[33m8785b26[m HEAD@{52}: checkout: moving from realtime-chat-typing-amorin to dev
+[33m6e4c937[m[33m ([m[1;32mrealtime-chat-typing-amorin[m[33m)[m HEAD@{53}: checkout: moving from dev to realtime-chat-typing-amorin
+[33m8785b26[m HEAD@{54}: checkout: moving from main to dev
+[33m32a1e50[m HEAD@{55}: checkout: moving from realtime-chat-typing-amorin to main
+[33m6e4c937[m[33m ([m[1;32mrealtime-chat-typing-amorin[m[33m)[m HEAD@{56}: checkout: moving from dev to realtime-chat-typing-amorin
+[33m8785b26[m HEAD@{57}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33mb5011eb[m HEAD@{58}: checkout: moving from feature/client&freelancer-dashboards-firstupdates-Saducas to dev
+[33m8e43ba1[m[33m ([m[1;32mfeature/client&freelancer-dashboards-firstupdates-Saducas[m[33m)[m HEAD@{59}: checkout: moving from dev to feature/client&freelancer-dashboards-firstupdates-Saducas
+[33mb5011eb[m HEAD@{60}: checkout: moving from feature/client&freelancer-dashboards-firstupdates-Saducas to dev
+[33m8e43ba1[m[33m ([m[1;32mfeature/client&freelancer-dashboards-firstupdates-Saducas[m[33m)[m HEAD@{61}: checkout: moving from dev to feature/client&freelancer-dashboards-firstupdates-Saducas
+[33mb5011eb[m HEAD@{62}: checkout: moving from fix-savechanges-editbudget-deletepost-amorin to dev
+[33mf197eb1[m[33m ([m[1;32mfix-savechanges-editbudget-deletepost-amorin[m[33m)[m HEAD@{63}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m6e4c937[m[33m ([m[1;32mrealtime-chat-typing-amorin[m[33m)[m HEAD@{64}: checkout: moving from dev to fix-savechanges-editbudget-deletepost-amorin
+[33m6e4c937[m[33m ([m[1;32mrealtime-chat-typing-amorin[m[33m)[m HEAD@{65}: checkout: moving from main to dev
+[33m32a1e50[m HEAD@{66}: checkout: moving from dev to main
+[33m6e4c937[m[33m ([m[1;32mrealtime-chat-typing-amorin[m[33m)[m HEAD@{67}: checkout: moving from fix-savechanges-editbudget-deletepost-amorin to dev
+[33m6e4c937[m[33m ([m[1;32mrealtime-chat-typing-amorin[m[33m)[m HEAD@{68}: checkout: moving from main to fix-savechanges-editbudget-deletepost-amorin
+[33m32a1e50[m HEAD@{69}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m0f015d7[m HEAD@{70}: checkout: moving from dev to main
+[33m6e4c937[m[33m ([m[1;32mrealtime-chat-typing-amorin[m[33m)[m HEAD@{71}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m91b76b9[m HEAD@{72}: checkout: moving from fix-view-budget-indashboard-freelancer to dev
+[33m8a3919d[m HEAD@{73}: checkout: moving from dev to fix-view-budget-indashboard-freelancer
+[33m91b76b9[m HEAD@{74}: checkout: moving from fix-view-budget-indashboard-freelancer to dev
+[33m8a3919d[m HEAD@{75}: checkout: moving from dev to fix-view-budget-indashboard-freelancer
+[33m91b76b9[m HEAD@{76}: checkout: moving fro

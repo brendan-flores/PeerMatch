@@ -150,3 +150,25 @@ body {
   width: 0 !important;
   height: 0 !important;
 }
+
+/* Community feed scroll: hidden scrollbar, scroll still works */
+.feed-scroll-pane {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-color: transparent transparent;
+}
+
+.feed-scroll-pane::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+
+.feed-scroll-pane::-webkit-scrollbar-thumb,
+.feed-scroll-pane::-webkit-scrollbar-track,
+.feed-scroll-pane::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

@@ -53,6 +53,7 @@ import {
 import { connectSocket, disconnectSocket, subscribePostApproved } from "../lib/socket";
 import { ChatLayout } from "../components/chat/ChatLayout";
 import { ClientPostToast, type ClientPostToastState } from "../components/ClientPostToast";
+import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
 import { NotificationsDropdown } from "../components/NotificationsDropdown";
 import { NavUnreadBadge } from "../components/NavUnreadBadge";
 import { fetchClientOffers, isOfferPending } from "../lib/offersApi";
@@ -604,7 +605,7 @@ function ClientHomePageContent() {
   };
 
   const isFeedView = pathname === "/client-home" && !activePanel;
-  const isFixedShellLayout = activePanel === "messages";
+  const isFixedShellLayout = activePanel === "messages" || isFeedView;
 
   return (
     <div
@@ -612,12 +613,14 @@ function ClientHomePageContent() {
         isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
       }`}
     >
-      <NotificationsDropdown
-        items={notifications}
-        onMarkAllRead={markAllRead}
-        onMarkOneRead={markOneRead}
-        className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
-      />
+      {!isFeedView ? (
+        <NotificationsDropdown
+          items={notifications}
+          onMarkAllRead={markAllRead}
+          onMarkOneRead={markOneRead}
+          className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
+        />
+      ) : null}
       <div
         className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
           isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
@@ -625,7 +628,7 @@ function ClientHomePageContent() {
       >
         <aside
           className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
-            isFixedShellLayout ? "h-full overflow-hidden" : "sticky top-6 h-[calc(100vh-3rem)]"
+            isFixedShellLayout ? "h-full overflow-hidden" : "sticky top-6 h-[calc(100vh-3rem)] max-h-[calc(100vh-3rem)]"
           }`}
         >
           <SidebarBrand />
@@ -665,7 +668,7 @@ function ClientHomePageContent() {
 
         {isFeedView ? (
           <div
-            className={`min-h-0 transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
+            className={`h-full min-h-0 overflow-hidden transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
               isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
             }`}
           >
@@ -673,7 +676,13 @@ function ClientHomePageContent() {
               scrollable
               children={null}
               header={
-                <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{postsHeading}</h2>
+                <FeedPageHeader
+                  userId={meUserId || null}
+                  title={postsHeading}
+                  items={notifications}
+                  onMarkAllRead={markAllRead}
+                  onMarkOneRead={markOneRead}
+                />
               }
               scroll={
                 <section aria-labelledby="client-community-feed" className="space-y-4">
@@ -1178,11 +1187,7 @@ function ClientHomePageContent() {
 
         <aside
           className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
-            isFixedShellLayout
-              ? "h-full overflow-hidden"
-              : isFeedView
-                ? "sticky top-6 h-[calc(100vh-3rem)] overflow-hidden"
-                : "gap-8"
+            isFixedShellLayout ? "h-full overflow-hidden" : "gap-8"
           }`}
         >
           <section className={isFixedShellLayout || isFeedView ? "mb-6 shrink-0" : ""}>
@@ -1230,9 +1235,7 @@ function ClientHomePageContent() {
             </h3>
             <div
               className={`mt-3 space-y-3 ${
-                isFixedShellLayout || isFeedView
-                  ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5"
-                  : ""
+                isFixedShellLayout ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5" : ""
               }`}
             >
               {recentPosts.length === 0 ? (

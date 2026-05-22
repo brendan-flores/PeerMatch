@@ -19,6 +19,15 @@ import {
   Upload,
   UserCircle,
 } from "lucide-react";
+import {
+  dashboardCenterPanelClass,
+  dashboardCenterPanelFixedClass,
+  dashboardProfileFormCardClass,
+  dashboardProfileGridClass,
+  dashboardProfileScrollClass,
+  dashboardProfileSectionClass,
+  dashboardProfileSummaryCardClass,
+} from "@/app/components/dashboard/dashboardShellClasses";
 import { ApiError, apiGetJson, apiPutJson } from "@/app/lib/api";
 
 type LanguageItem = { name: string; proficiency: string };
@@ -238,16 +247,19 @@ export default function FreelancerProfilePage() {
 
   if (loading) {
     return (
-      <main className="flex h-full min-h-[320px] items-center justify-center rounded-2xl border border-zinc-200 bg-white p-10 shadow-sm">
+      <main className={`${dashboardCenterPanelClass} flex h-full min-h-[320px] items-center justify-center`}>
         <p className="text-sm text-zinc-500">Loading profile...</p>
       </main>
     );
   }
 
   return (
-    <section aria-labelledby="profile-heading" className="flex min-h-0 flex-1 flex-col rounded-2xl border border-zinc-200 bg-white p-4">
-      <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)] xl:items-start">
-        <article className="sticky top-4 z-10 h-fit w-full max-w-[320px] rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:max-w-none">
+    <section
+      aria-labelledby="profile-heading"
+      className={`${dashboardProfileSectionClass} ${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass} h-full min-h-0`}
+    >
+      <div className={`${dashboardProfileGridClass} h-full min-h-0 flex-1`}>
+        <article className={dashboardProfileSummaryCardClass}>
           <div className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-zinc-200 bg-[#E8EFEC]">
             {profile.photoDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -317,8 +329,8 @@ export default function FreelancerProfilePage() {
           </div>
         </article>
 
-        <div className="profile-scroll-pane max-h-[calc(100vh-3.5rem)] min-h-0 min-w-0 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] scroll-smooth">
-          <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
+        <div className={dashboardProfileScrollClass}>
+          <article className={dashboardProfileFormCardClass}>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
               <UserCircle className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
               About
@@ -390,7 +402,7 @@ export default function FreelancerProfilePage() {
             />
           </article>
 
-          <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
+          <article className={dashboardProfileFormCardClass}>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
               <FileText className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
               Featured Post
@@ -406,7 +418,7 @@ export default function FreelancerProfilePage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
+          <article className={dashboardProfileFormCardClass}>
             <div className="flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
                 <Award className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
@@ -453,7 +465,7 @@ export default function FreelancerProfilePage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
+          <article className={dashboardProfileFormCardClass}>
             <div className="flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
                 <Globe2 className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
@@ -492,7 +504,7 @@ export default function FreelancerProfilePage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
+          <article className={dashboardProfileFormCardClass}>
             <div className="flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
                 <Briefcase className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
@@ -537,7 +549,7 @@ export default function FreelancerProfilePage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
+          <article className={dashboardProfileFormCardClass}>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
               <MessageSquareQuote className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
               Reviews
@@ -591,7 +603,7 @@ export default function FreelancerProfilePage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
+          <article className={dashboardProfileFormCardClass}>
             <h2 className="text-lg font-semibold text-zinc-900">Availability &amp; stats</h2>
             <div className="mt-3 space-y-2 rounded-xl border border-zinc-200 bg-white p-3 text-xs">
               <label className="flex items-center justify-between gap-2">

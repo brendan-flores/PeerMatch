@@ -1,5 +1,6 @@
 "use client";
 
+import { FeedPageHeader } from "@/app/components/dashboard/FeedPageHeader";
 import { CommunityPostCard } from "@/app/components/freelancer/CommunityPostCard";
 import { FreelancerFeedMain } from "@/app/components/freelancer/FreelancerFeedMain";
 import { OfferHelpPanel } from "@/app/components/freelancer/OfferHelpPanel";
@@ -30,9 +31,7 @@ export default function FreelancerDashboardPage() {
     <FreelancerFeedMain
       scrollable
       header={
-        <h2 id="latest-posts-heading" className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
-          Community Feed
-        </h2>
+        <FeedPageHeader userId={user?.id ?? null} title="Community Feed" />
       }
       scroll={
         <section aria-labelledby="latest-posts-heading" className="space-y-4">
