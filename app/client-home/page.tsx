@@ -1,8 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import SidebarBrand from "../components/SidebarBrand";
+import { CommunityPostCard } from "../components/freelancer/CommunityPostCard";
+import { FreelancerFeedMain } from "../components/freelancer/FreelancerFeedMain";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -581,7 +582,7 @@ function ClientHomePageContent() {
 
   return (
     <div
-      className={`relative bg-[#F0F7F4] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
+      className={`bg-[#E5F6F4] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
         isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
       }`}
     >
@@ -601,13 +602,7 @@ function ClientHomePageContent() {
             isFixedShellLayout ? "h-full overflow-hidden" : "sticky top-6 h-[calc(100vh-3rem)]"
           }`}
         >
-          <div className="flex items-center gap-3 rounded-xl border border-zinc-100 bg-white px-3 py-3 shadow-sm">
-            <Image src="/peermatch-logo.png" alt="PeerMatch logo" width={32} height={32} className="h-8 w-8 object-contain" />
-            <div>
-              <p className="text-sm font-semibold tracking-tight text-zinc-900">PeerMatch</p>
-              <p className="text-[11px] text-zinc-500">Student Collaboration</p>
-            </div>
-          </div>
+          <SidebarBrand />
 
           <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
             {navItems.map((item) => {
@@ -639,6 +634,38 @@ function ClientHomePageContent() {
           </button>
         </aside>
 
+        {isFeedView ? (
+          <div
+            className={`min-h-0 transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
+              isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
+            }`}
+          >
+            <FreelancerFeedMain
+              scrollable
+              children={null}
+              header={
+                <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{postsHeading}</h2>
+              }
+              scroll={
+                <section aria-labelledby="client-community-feed" className="space-y-4">
+                  {approvedPosts.length > 0 ? (
+                    approvedPosts.map((post) => (
+                      <CommunityPostCard
+                        key={post.id}
+                        post={post}
+                        onSelect={(selected) =>
+                          router.push(`/client-home?post=${encodeURIComponent(selected.id)}`)
+                        }
+                      />
+                    ))
+                  ) : (
+                    <p className="text-sm text-zinc-500">No posts yet.</p>
+                  )}
+                </section>
+              }
+            />
+          </div>
+        ) : (
         <main
           className={`flex min-h-0 flex-col rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] ${
             activePanel === "profile" || activePanel === "featured-post" || activePanel === "messages"
@@ -648,8 +675,8 @@ function ClientHomePageContent() {
         >
           <div
             className={`flex min-h-0 flex-1 flex-col transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
-              isFeedView ? "overflow-hidden" : ""
-            } ${isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"}`}
+              isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
+            }`}
           >
             {activePanel === "create-post" ? (
               <section aria-labelledby="create-post-heading">
@@ -1109,57 +1136,10 @@ function ClientHomePageContent() {
                   </div>
                 </div>
               </section>
-            ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <h2 className="shrink-0 text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{postsHeading}</h2>
-
-                <div className="mt-5 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-0.5">
-                  {posts.length > 0 ? (
-                    posts.map((post) => (
-                      <button
-                        key={post.id}
-                        type="button"
-                        onClick={() => router.push(`/client-home?post=${encodeURIComponent(post.id)}`)}
-                        className="block w-full rounded-2xl border border-zinc-100 bg-zinc-50 p-5 text-left hover:bg-zinc-100 lg:p-7"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={post.avatar}
-                              alt={`${post.author} avatar`}
-                              className="h-10 w-10 rounded-full border border-zinc-300"
-                            />
-                            <div>
-                              <p className="text-2xl font-semibold text-zinc-900">{post.author}</p>
-                              <p className="text-xs text-zinc-500">{post.timeAgo}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="rounded-full border border-zinc-400 px-4 py-1 text-xs text-zinc-800">
-                              {post.category}
-                            </span>
-                            <span
-                              className={`rounded-full px-4 py-1 text-xs font-semibold ${urgencyBadgeClass(post.priority)}`}
-                            >
-                              {post.priority}
-                            </span>
-                            {post.budget > 0 ? (
-                              <span className="rounded-full bg-[#FFF2EB] px-4 py-1 text-xs font-semibold text-[#C2410C]">
-                                {formatPhpBudget(post.budget)}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                        <p className="mt-4 text-2xl font-semibold leading-tight text-zinc-900">{post.title}</p>
-                        <p className="mt-5 text-base leading-[1.6] text-zinc-700">{post.content}</p>
-                      </button>
-                    ))
-                  ) : null}
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
         </main>
+        )}
 
         <aside
           className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
