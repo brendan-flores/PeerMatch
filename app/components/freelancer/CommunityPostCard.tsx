@@ -1,7 +1,9 @@
 "use client";
 
-import type { CommunityPost } from "@/app/lib/postsStorage";
+import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
 import { formatTimeAgo } from "@/app/lib/formatTimeAgo";
+import { resolvePostAuthorAvatar } from "@/app/lib/profilePhotoDisplay";
+import type { CommunityPost } from "@/app/lib/postsStorage";
 
 type CommunityPostCardProps = {
   post: CommunityPost;
@@ -9,6 +11,12 @@ type CommunityPostCardProps = {
 };
 
 export function CommunityPostCard({ post, onSelect }: CommunityPostCardProps) {
+  const { userId, photoDataUrl, photoVersion } = useCurrentUserProfile();
+  const avatarSrc = resolvePostAuthorAvatar(
+    post,
+    userId && photoDataUrl ? { id: userId, photoDataUrl } : null,
+  );
+
   const getPriorityStyles = () => {
     switch (post.priority) {
       case "High":
@@ -42,10 +50,8 @@ export function CommunityPostCard({ post, onSelect }: CommunityPostCardProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <img
-            src={
-              post.authorAvatarDataUrl ||
-              `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(post.authorName || "Client")}`
-            }
+            key={`${post.id}-${avatarSrc.slice(-48)}-${photoVersion}`}
+            src={avatarSrc}
             alt=""
             className="h-10 w-10 rounded-full border border-zinc-300 object-cover"
           />

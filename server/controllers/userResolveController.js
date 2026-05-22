@@ -42,7 +42,7 @@ async function resolveUser(req, res) {
 
     // Direct ObjectId resolve.
     if (mongoose.Types.ObjectId.isValid(q)) {
-      const user = await User.findById(q).select('name email accountType').lean();
+      const user = await User.findById(q).select('name email accountType photoDataUrl').lean();
       return res.json({
         user: user
           ? {
@@ -50,6 +50,7 @@ async function resolveUser(req, res) {
               name: user.name,
               email: user.email,
               accountType: user.accountType || null,
+              photoDataUrl: typeof user.photoDataUrl === 'string' ? user.photoDataUrl : '',
             }
           : null,
       });
@@ -62,7 +63,7 @@ async function resolveUser(req, res) {
       ...baseFilters,
       ...nameQuery,
     })
-      .select('name email accountType')
+      .select('name email accountType photoDataUrl')
       .lean();
 
     return res.json({
@@ -72,6 +73,7 @@ async function resolveUser(req, res) {
             name: user.name,
             email: user.email,
             accountType: user.accountType || null,
+            photoDataUrl: typeof user.photoDataUrl === 'string' ? user.photoDataUrl : '',
           }
         : null,
     });

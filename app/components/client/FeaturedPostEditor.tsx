@@ -7,6 +7,8 @@ import {
   notifyAndRefreshCommunityPosts,
   useCommunityPostsContext,
 } from "@/app/lib/CommunityPostsContext";
+import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
+import { UserAvatar } from "@/app/components/UserAvatar";
 import { formatPhpBudget } from "@/app/lib/communityPosts";
 import type { CommunityPost, CommunityPostPriority } from "@/app/lib/postsStorage";
 
@@ -35,6 +37,7 @@ function priorityBadgeClass(priority: CommunityPostPriority) {
 }
 
 export function FeaturedPostEditor({ authorId, authorAvatar }: FeaturedPostEditorProps) {
+  const { photoDataUrl } = useCurrentUserProfile();
   const {
     myPosts,
     myPostsLoading,
@@ -187,8 +190,6 @@ export function FeaturedPostEditor({ authorId, authorAvatar }: FeaturedPostEdito
     }
   };
 
-  const cardAvatar = authorAvatar || "https://api.dicebear.com/7.x/initials/svg?seed=Client";
-
   const previewTitle = selectedPost ? editTitle.trim() || selectedPost.title : "";
   const previewCategory = selectedPost ? editCategory.trim() || selectedPost.category : "";
   const previewPriority = selectedPost ? editPriority : "Normal";
@@ -202,7 +203,12 @@ export function FeaturedPostEditor({ authorId, authorAvatar }: FeaturedPostEdito
       {selectedPost ? (
         <article className="rounded-2xl border-2 border-[#FF6B35] bg-white p-4 shadow-sm">
           <div className="flex items-start gap-3">
-            <img src={cardAvatar} alt="" className="h-10 w-10 shrink-0 rounded-full border border-zinc-200" />
+            <UserAvatar
+              id={authorId}
+              name="Client"
+              photoDataUrl={authorAvatar || photoDataUrl}
+              size="md"
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-zinc-900">{previewTitle}</p>
               <p className="truncate text-xs text-zinc-500">{previewCategory || "General"}</p>
@@ -256,7 +262,12 @@ export function FeaturedPostEditor({ authorId, authorAvatar }: FeaturedPostEdito
                       : "border-zinc-200 hover:border-zinc-300"
                   }`}
                 >
-                  <img src={cardAvatar} alt="" className="h-9 w-9 shrink-0 rounded-full border border-zinc-200" />
+                  <UserAvatar
+                    id={authorId}
+                    name="Client"
+                    photoDataUrl={authorAvatar || photoDataUrl}
+                    size="sm"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-zinc-900">{displayTitle}</p>
                     <p className="truncate text-xs text-zinc-500">{displayCategory || "General"}</p>

@@ -10,9 +10,17 @@ import { useUnreadMessageCount } from "@/app/hooks/useUnreadMessageCount";
 import { apiGetJson, ApiError } from "@/app/lib/api";
 import { normalizeAuthUser, persistFreelancerFromMe } from "@/app/lib/freelancerStorage";
 import type { CommunityPost } from "@/app/lib/postsStorage";
+import { USER_PROFILE_PHOTO_UPDATED_EVENT, type ProfilePhotoUpdatedDetail } from "@/app/lib/profilePhoto";
 import { connectSocket, disconnectSocket } from "@/app/lib/socket";
 
-type MeUser = { id: string; name: string; email: string; role: string; accountType?: string };
+type MeUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  accountType?: string;
+  photoDataUrl?: string;
+};
 
 type MeResponse = { user: MeUser };
 
@@ -70,10 +78,12 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
         if (cancelled) return;
         const raw = me.user as Record<string, unknown>;
         const base = normalizeAuthUser(me.user);
+        const photoDataUrl = String(raw.photoDataUrl || "").trim();
         const nextUser: MeUser = {
           ...base,
           role: typeof raw.role === "string" ? raw.role : "",
           ...(typeof raw.accountType === "string" ? { accountType: raw.accountType } : {}),
+          ...(photoDataUrl ? { photoDataUrl } : {}),
         };
         persistFreelancerFromMe(base);
         setUser(nextUser);
@@ -92,6 +102,19 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
       cancelled = true;
     };
   }, [router]);
+
+  useEffect(() => {
+    const onPhotoUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<ProfilePhotoUpdatedDetail>).detail;
+      const userId = String(detail?.userId || "").trim();
+      if (!userId) return;
+      setUser((prev) =>
+        prev && String(prev.id) === userId ? { ...prev, photoDataUrl: detail.photoDataUrl } : prev,
+      );
+    };
+    window.addEventListener(USER_PROFILE_PHOTO_UPDATED_EVENT, onPhotoUpdated);
+    return () => window.removeEventListener(USER_PROFILE_PHOTO_UPDATED_EVENT, onPhotoUpdated);
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;

@@ -30,6 +30,9 @@ import {
   dashboardProfileSummaryCardClass,
 } from "@/app/components/dashboard/dashboardShellClasses";
 import { ApiError, apiGetJson, apiPutJson } from "@/app/lib/api";
+import { UserAvatar } from "@/app/components/UserAvatar";
+import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
+import { persistProfilePhotoFromFile } from "@/app/lib/profilePhoto";
 
 type LanguageItem = { name: string; proficiency: string };
 type PortfolioItem = { title: string; description: string };
@@ -56,7 +59,10 @@ type ProfileData = {
   photoDataUrl: string;
 };
 
-type ProfileResponse = { profile: Partial<ProfileData> };
+type ProfileResponse = {
+  user?: { id?: string; name?: string; email?: string; photoDataUrl?: string };
+  profile: Partial<ProfileData>;
+};
 
 const yearLevels = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 const courseOptions = [
@@ -140,6 +146,9 @@ export default function FreelancerProfilePage() {
   const [savedSnapshot, setSavedSnapshot] = useState<ProfileData>(defaultProfile);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [photoSaving, setPhotoSaving] = useState(false);
+  const [meUserId, setMeUserId] = useState("");
+  const { photoDataUrl: globalPhotoDataUrl, syncProfile } = useCurrentUserProfile();
   const [newSkill, setNewSkill] = useState("");
   const [errorText, setErrorText] = useState("");
   const [successText, setSuccessText] = useState("");
@@ -148,16 +157,6 @@ export default function FreelancerProfilePage() {
   const isDirty = useMemo(() => JSON.stringify(profile) !== JSON.stringify(savedSnapshot), [profile, savedSnapshot]);
 
   const profileDisplayName = profile.name.trim() || "Freelancer";
-  const profileInitials = useMemo(
-    () =>
-      profileDisplayName
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() || "")
-        .join("") || "FL",
-    [profileDisplayName],
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -165,9 +164,17 @@ export default function FreelancerProfilePage() {
       try {
         const res = await apiGetJson<ProfileResponse>("/api/auth/profile");
         if (cancelled) return;
-        const merged = mergeProfile(res.profile);
+        const userId = String(res.user?.id || "").trim();
+        if (userId) setMeUserId(userId);
+        const merged = mergeProfile({
+          ...res.profile,
+          name: res.profile?.name || res.user?.name || "",
+          email: res.profile?.email || res.user?.email || "",
+          photoDataUrl: res.profile?.photoDataUrl || res.user?.photoDataUrl || "",
+        });
         setProfile(merged);
         setSavedSnapshot(merged);
+        if (userId) syncProfile(userId, merged.photoDataUrl);
       } catch (error) {
         if (cancelled) return;
         const message = error instanceof ApiError ? error.message : "Unable to load profile.";
@@ -179,7 +186,9 @@ export default function FreelancerProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [syncProfile]);
+
+  const displayProfilePhoto = globalPhotoDataUrl || profile.photoDataUrl;
 
   const updateField = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) => {
     setProfile((prev) => ({ ...prev, [key]: value }));
@@ -197,13 +206,30 @@ export default function FreelancerProfilePage() {
   const handleProfilePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        updateField("photoDataUrl", reader.result);
+    void (async () => {
+      setPhotoSaving(true);
+      setErrorText("");
+      setSuccessText("");
+      try {
+        const { photoDataUrl: photo, userId } = await persistProfilePhotoFromFile(file, meUserId);
+        if (userId) {
+          setMeUserId(userId);
+          syncProfile(userId, photo);
+        }
+        setProfile((prev) => {
+          const next = { ...prev, photoDataUrl: photo };
+          setSavedSnapshot(next);
+          return next;
+        });
+        setSuccessText("Profile photo saved");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not save profile photo.";
+        setErrorText(message);
+      } finally {
+        setPhotoSaving(false);
+        event.target.value = "";
       }
-    };
-    reader.readAsDataURL(file);
+    })();
   };
 
   const handleSave = async () => {
@@ -263,28 +289,31 @@ export default function FreelancerProfilePage() {
     >
       <div className={`${dashboardProfileGridClass} h-full min-h-0 flex-1`}>
         <article className={dashboardProfileSummaryCardClass}>
-          <div className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-zinc-200 bg-[#E8EFEC]">
-            {profile.photoDataUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.photoDataUrl} alt="Profile" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-zinc-800">{profileInitials}</div>
-            )}
+          <div className="mx-auto flex justify-center">
+            <UserAvatar
+              id={meUserId}
+              name={profileDisplayName}
+              photoDataUrl={displayProfilePhoto}
+              size="2xl"
+              alt="Profile"
+              initialsClassName="bg-[#E8EFEC] text-zinc-800"
+            />
           </div>
           <input
             ref={profilePhotoInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.svg"
             className="hidden"
             onChange={handleProfilePhotoChange}
           />
           <button
             type="button"
             onClick={() => profilePhotoInputRef.current?.click()}
-            className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            disabled={photoSaving}
+            className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <Upload className="h-3.5 w-3.5" />
-            Change photo
+            {photoSaving ? "Saving photo..." : "Change photo"}
           </button>
           <h1 id="profile-heading" className="mt-3 text-center text-2xl font-bold tracking-tight text-zinc-900">
             {profileDisplayName}

@@ -3,6 +3,7 @@ import { apiGetJson } from "./api";
 export type UserSearchResult = {
   id: string;
   name: string;
+  photoDataUrl?: string;
 };
 
 export async function searchUsersByQuery(q: string): Promise<UserSearchResult[]> {
