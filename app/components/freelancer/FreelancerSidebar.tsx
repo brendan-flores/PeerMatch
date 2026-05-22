@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import SidebarBrand from "@/app/components/SidebarBrand";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, LogOut, MessageCircle, Search, User } from "lucide-react";
 import { apiPostJson } from "@/app/lib/api";
@@ -49,18 +49,7 @@ export function FreelancerSidebar() {
         isMessagesRoute ? "h-full" : "sticky top-6 h-[calc(100vh-3rem)]"
       }`}
     >
-      <div className="flex items-center justify-center rounded-xl border border-zinc-100 bg-white px-3 py-3.5 shadow-sm">
-        <div className="flex h-20 w-full items-center justify-center">
-          <Image
-            src="/peermatch-logo.png"
-            alt="PeerMatch — Student Collaboration"
-            width={512}
-            height={237}
-            className="h-full w-full object-contain"
-            priority
-          />
-        </div>
-      </div>
+      <SidebarBrand />
 
       <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
         {items.map((item) => {
