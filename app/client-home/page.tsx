@@ -7,7 +7,6 @@ import { FreelancerFeedMain } from "../components/freelancer/FreelancerFeedMain"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bell,
   BookOpen,
   CalendarDays,
   ChevronDown,
@@ -52,6 +51,10 @@ import {
 import { connectSocket, disconnectSocket, subscribePostApproved } from "../lib/socket";
 import { ChatLayout } from "../components/chat/ChatLayout";
 import { ClientPostToast, type ClientPostToastState } from "../components/ClientPostToast";
+import { NotificationsDropdown } from "../components/NotificationsDropdown";
+import { NavUnreadBadge } from "../components/NavUnreadBadge";
+import { useNotifications } from "../hooks/useNotifications";
+import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
 
 type PostItem = {
   id: string;
@@ -173,7 +176,6 @@ function ClientHomePageContent() {
   const [postDescriptionInput, setPostDescriptionInput] = useState("");
   const [postBudgetInput, setPostBudgetInput] = useState("");
   const [postStatusMessage, setPostStatusMessage] = useState("");
-  const [notifications, setNotifications] = useState<string[]>([]);
   const [postToast, setPostToast] = useState<ClientPostToastState>(null);
   const knownApprovedPostIdsRef = useRef<Set<string>>(new Set());
 
@@ -273,22 +275,21 @@ function ClientHomePageContent() {
     [posts],
   );
 
+  const { items: notifications, markAllRead, markOneRead, refresh: refreshNotifications } =
+    useNotifications(meUserId || null);
+  const { count: unreadMessageCount } = useUnreadMessageCount(meUserId || null);
+
   const dismissPostToast = useCallback(() => setPostToast(null), []);
 
   const handlePostApproved = useCallback(
     (message?: string) => {
       const approvedMessage = String(message || "").trim() || POST_APPROVED_MESSAGE;
       setPostToast({ variant: "approved", message: approvedMessage });
-      setNotifications((prev) =>
-        [approvedMessage, ...prev.filter((item) => item !== POST_REVIEW_MESSAGE && item !== approvedMessage)].slice(
-          0,
-          5,
-        ),
-      );
       notifyCommunityPostsChanged();
       void refreshAll();
+      void refreshNotifications();
     },
-    [refreshAll],
+    [refreshAll, refreshNotifications],
   );
 
   useEffect(() => {
@@ -325,7 +326,8 @@ function ClientHomePageContent() {
   }, [meUserId]);
 
   const awaitingPostApproval =
-    postToast?.variant === "pending" || notifications.includes(POST_REVIEW_MESSAGE);
+    postToast?.variant === "pending" ||
+    notifications.some((item) => item.type === "post_review" && !item.read);
 
   useEffect(() => {
     if (!meUserId || !awaitingPostApproval) return;
@@ -542,10 +544,8 @@ function ClientHomePageContent() {
         setPostDescriptionInput("");
         setPostBudgetInput("");
         setPostToast({ variant: "pending", message: POST_REVIEW_MESSAGE });
-        setNotifications((prev) =>
-          [POST_REVIEW_MESSAGE, ...prev.filter((item) => item !== POST_REVIEW_MESSAGE)].slice(0, 5),
-        );
         notifyCommunityPostsChanged();
+        void refreshNotifications();
         await refreshAll();
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Could not save your post. Please try again.";
@@ -586,6 +586,12 @@ function ClientHomePageContent() {
         isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
       }`}
     >
+      <NotificationsDropdown
+        items={notifications}
+        onMarkAllRead={markAllRead}
+        onMarkOneRead={markOneRead}
+        className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
+      />
       <div
         className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
           isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
@@ -609,7 +615,10 @@ function ClientHomePageContent() {
                   className={`${navItemClass} ${active ? navActiveClass : ""}`}
                 >
                   {item.icon}
-                  <span>{item.label}</span>
+                  <span className="min-w-0 flex-1">{item.label}</span>
+                  {item.href.includes("panel=messages") ? (
+                    <NavUnreadBadge count={unreadMessageCount} active={active} />
+                  ) : null}
                 </Link>
               );
             })}
@@ -1137,44 +1146,6 @@ function ClientHomePageContent() {
             isFixedShellLayout ? "h-full overflow-hidden" : "gap-8"
           }`}
         >
-          <section className={isFixedShellLayout ? "mb-6 shrink-0" : ""}>
-            <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
-            {notifications.length === 0 ? (
-              <button
-                type="button"
-                onClick={() => router.push("/client-home?panel=notifications")}
-                className="mt-3 w-full rounded-xl border border-zinc-200 bg-white px-4 py-4 text-left text-xs text-zinc-700 shadow-sm hover:bg-zinc-50"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <Bell aria-hidden="true" className="h-4 w-4 text-zinc-600" strokeWidth={1.6} />
-                  <span>Someone responded to your post</span>
-                </span>
-              </button>
-            ) : (
-              <div className="mt-3 space-y-2">
-                {notifications.map((notice) => (
-                  <button
-                    key={notice}
-                    type="button"
-                    onClick={() => router.push("/client-home?panel=notifications")}
-                    className={`w-full rounded-xl border px-4 py-4 text-left text-xs shadow-sm hover:brightness-[0.98] ${
-                      notice.includes("approved")
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                        : notice.includes("review")
-                          ? "border-[#FFD4C2] bg-[#FFF2EB] text-[#9A3412]"
-                          : "border-zinc-200 bg-white text-zinc-700"
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Bell aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.6} />
-                      <span>{notice}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
           <section className={isFixedShellLayout ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}>
             <h3 className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout ? "shrink-0" : ""}`}>Recent Posts</h3>
             <div

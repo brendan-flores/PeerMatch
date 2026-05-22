@@ -6,6 +6,10 @@ const { authMiddleware } = require('../middleware/auth');
 const { mapTaskToFeedPost, normalizeUrgency } = require('../utils/taskFeedDto');
 const { parseBudget } = require('../utils/budgetValidation');
 const { suggestBudgetWithOpenAI } = require('../services/suggestBudget');
+const {
+  notifyFreelancersNewTask,
+  notifyClientPostReview,
+} = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -127,6 +131,20 @@ router.post('/', authMiddleware, async (req, res) => {
     const populated = await Task.findById(task._id)
       .populate('clientId', 'name email accountType photoDataUrl')
       .lean();
+
+    const clientName =
+      populated?.clientId?.name || user.name || 'A client';
+    const taskId = String(task._id);
+    const clientId = String(req.user.userId);
+
+    try {
+      await Promise.all([
+        notifyFreelancersNewTask({ clientId, clientName, taskId }),
+        notifyClientPostReview({ clientId }),
+      ]);
+    } catch (notifyErr) {
+      console.error('Notification dispatch failed after task create:', notifyErr);
+    }
 
     res.status(201).json({
       message: 'Your post is under review and waiting for approval.',

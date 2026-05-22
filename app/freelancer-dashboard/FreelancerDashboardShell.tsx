@@ -2,8 +2,11 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { NotificationsDropdown } from "@/app/components/NotificationsDropdown";
 import { FreelancerSidebar } from "@/app/components/freelancer/FreelancerSidebar";
 import { FreelancerRightAside } from "@/app/components/freelancer/FreelancerRightAside";
+import { useNotifications } from "@/app/hooks/useNotifications";
+import { useUnreadMessageCount } from "@/app/hooks/useUnreadMessageCount";
 import { apiGetJson, ApiError } from "@/app/lib/api";
 import { normalizeAuthUser, persistFreelancerFromMe } from "@/app/lib/freelancerStorage";
 import type { CommunityPost } from "@/app/lib/postsStorage";
@@ -56,6 +59,8 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [isRouteContentVisible, setIsRouteContentVisible] = useState(true);
+  const { items: notifications, markAllRead, markOneRead } = useNotifications(user?.id ?? null);
+  const { count: unreadMessageCount } = useUnreadMessageCount(user?.id ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,17 +167,23 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
   return (
     <FreelancerUserContext.Provider value={value}>
       <div
-        className={`bg-[#E5F6F4] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
+        className={`relative bg-[#E5F6F4] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
           isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
         }`}
       >
+        <NotificationsDropdown
+          items={notifications}
+          onMarkAllRead={markAllRead}
+          onMarkOneRead={markOneRead}
+          className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
+        />
         <div
           className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
             isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
           }`}
         >
           <div className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}>
-            <FreelancerSidebar />
+            <FreelancerSidebar unreadMessageCount={unreadMessageCount} />
           </div>
           <div
             className={`min-h-0 transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${

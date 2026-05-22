@@ -5,6 +5,7 @@ import Link from "next/link";
 import SidebarBrand from "@/app/components/SidebarBrand";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, LogOut, MessageCircle, Search, User } from "lucide-react";
+import { NavUnreadBadge } from "@/app/components/NavUnreadBadge";
 import { apiPostJson } from "@/app/lib/api";
 import { disconnectSocket } from "@/app/lib/socket";
 import { clearFreelancerGreetingSession } from "@/app/lib/freelancerStorage";
@@ -15,7 +16,11 @@ const navActiveClass = "bg-[#FF6B35] text-white shadow-sm";
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 
-export function FreelancerSidebar() {
+type FreelancerSidebarProps = {
+  unreadMessageCount?: number;
+};
+
+export function FreelancerSidebar({ unreadMessageCount = 0 }: FreelancerSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -65,7 +70,10 @@ export function FreelancerSidebar() {
               className={`${navItemClass} ${active ? navActiveClass : ""}`}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span className="min-w-0 flex-1">{item.label}</span>
+              {item.href === "/freelancer-dashboard/messages" ? (
+                <NavUnreadBadge count={unreadMessageCount} active={active} />
+              ) : null}
             </Link>
           );
         })}

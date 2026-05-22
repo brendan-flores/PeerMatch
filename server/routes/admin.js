@@ -6,6 +6,7 @@ const { authMiddleware, requireAdmin } = require('../middleware/auth');
 const authController = require('../controllers/authController');
 const { mapTaskToFeedPost } = require('../utils/taskFeedDto');
 const { emitToUser } = require('../socket/socketServer');
+const { notifyClientPostApproved } = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -264,10 +265,16 @@ router.patch('/tasks/:id', async (req, res) => {
 
     if (status === 'approved' && task.clientId) {
       const clientId = task.clientId._id ? String(task.clientId._id) : String(task.clientId);
+      const taskId = String(task._id);
       emitToUser(clientId, 'post_approved', {
         message: 'Your post has been approved.',
         post: mapTaskToFeedPost(task),
       });
+      try {
+        await notifyClientPostApproved({ clientId, taskId });
+      } catch (notifyErr) {
+        console.error('Notification dispatch failed after post approval:', notifyErr);
+      }
     }
 
     res.json({

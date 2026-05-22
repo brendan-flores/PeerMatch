@@ -4,8 +4,8 @@ import { FormEvent, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, FileText, PhilippinePeso, Send } from "lucide-react";
 import type { CommunityPost } from "@/app/lib/postsStorage";
 import { formatTimeAgo } from "@/app/lib/formatTimeAgo";
+import { apiPostJson, ApiError } from "@/app/lib/api";
 import { buildOfferChatMessage } from "@/app/lib/offerChatMessage";
-import { createPostOffer } from "@/app/lib/offersStorage";
 import { sendChatMessageWithClientId } from "@/app/lib/socket";
 
 const MESSAGE_MAX = 500;
@@ -59,23 +59,20 @@ export function OfferHelpPanel({ post, freelancerId, freelancerName, onBack }: O
     try {
       const trimmedRate = rate.trim() || undefined;
 
-      createPostOffer({
+      await apiPostJson("/api/offers", {
         postId: post.id,
         postTitle: post.title,
-        freelancerId,
-        freelancerName,
-        clientId: post.authorId,
-        clientName: post.authorName,
-        rate: trimmedRate,
         message: trimmedMessage,
+        rate: trimmedRate,
       });
 
       const chatText = buildOfferChatMessage(post, trimmedMessage, trimmedRate);
       sendChatMessageWithClientId(post.authorId, chatText, `offer-${post.id}-${Date.now()}`);
 
       setSent(true);
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Something went wrong. Please try again.";
+      setError(message);
     } finally {
       setSubmitting(false);
     }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MoreVertical, Search, Trash2 } from "lucide-react";
 import type { ChatMessagePayload } from "@/app/lib/chatTypes";
+import { dispatchUnreadMessagesRefresh } from "@/app/hooks/useUnreadMessageCount";
 import { apiDeleteJson, apiGetJson } from "@/app/lib/api";
 import {
   connectSocket,
@@ -316,6 +317,10 @@ export function ChatLayout({
           return bt - at;
         });
       });
+
+      if (senderId !== currentUserId) {
+        dispatchUnreadMessagesRefresh();
+      }
     });
 
     return unsub;
@@ -404,6 +409,7 @@ export function ChatLayout({
     setConversations((prev) =>
       prev.map((item) => (item.otherUserId === c.otherUserId ? { ...item, hasUnread: false } : item)),
     );
+    dispatchUnreadMessagesRefresh();
     setDropdownOpen(false);
     setSearchFocused(false);
     setSearchText("");

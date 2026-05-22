@@ -179,6 +179,32 @@ async function getConversations(req, res) {
 }
 
 /**
+ * GET /api/messages/unread-count
+ * Count of incoming messages not yet read by the authenticated user.
+ */
+async function getUnreadCount(req, res) {
+  try {
+    const myId = String(req.user.userId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(myId)) {
+      return res.json({ count: 0 });
+    }
+
+    const myObjId = new mongoose.Types.ObjectId(myId);
+    const count = await Message.countDocuments({
+      receiverId: myObjId,
+      unsent: { $ne: true },
+      vanishedForUsers: { $nin: [myObjId] },
+      $or: [{ status: { $in: ['sent', 'delivered'] } }, { status: { $exists: false } }],
+    });
+
+    return res.json({ count });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Could not load unread count.' });
+  }
+}
+
+/**
  * POST /api/messages/seen
  * Marks messages as seen for the authenticated receiver.
  * Expected body: { otherUserId: string }
@@ -437,6 +463,7 @@ async function vanishIncomingMessageForViewer(req, res) {
 module.exports = {
   getConversation,
   getConversations,
+  getUnreadCount,
   markSeen,
   deleteMessage,
   deleteConversation,
