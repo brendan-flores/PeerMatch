@@ -52,6 +52,7 @@ function mapTaskToFeedPost(task, client) {
 }
 
 module.exports = {
+  URGENCY_VALUES,
   mapTaskToFeedPost,
   urgencyLabel,
   normalizeUrgency,
