@@ -576,19 +576,32 @@ function ClientHomePageContent() {
     return pathname === "/client-home" && panel === activePanel;
   };
 
+  const isFeedView = pathname === "/client-home" && !activePanel;
+  const isFixedShellLayout = activePanel === "messages" || isFeedView;
+
   return (
     <div
       className={`bg-[#F0F7F4] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
-        activePanel === "messages" ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
+        isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
       }`}
     >
       <div
         className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
-          activePanel === "messages" ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
+          isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
         }`}
       >
-        <aside className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm ${activePanel === "messages" ? "h-full" : "sticky top-6 h-[calc(100vh-3rem)]"} lg:row-span-1`}>
-          <SidebarBrand />
+        <aside
+          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
+            isFixedShellLayout ? "h-full overflow-hidden" : "sticky top-6 h-[calc(100vh-3rem)]"
+          }`}
+        >
+          <div className="flex items-center gap-3 rounded-xl border border-zinc-100 bg-white px-3 py-3 shadow-sm">
+            <Image src="/peermatch-logo.png" alt="PeerMatch logo" width={32} height={32} className="h-8 w-8 object-contain" />
+            <div>
+              <p className="text-sm font-semibold tracking-tight text-zinc-900">PeerMatch</p>
+              <p className="text-[11px] text-zinc-500">Student Collaboration</p>
+            </div>
+          </div>
 
           <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
             {navItems.map((item) => {
@@ -622,12 +635,12 @@ function ClientHomePageContent() {
             activePanel === "profile" || activePanel === "featured-post" || activePanel === "messages"
               ? "p-4"
               : "p-6 sm:p-8 lg:p-10"
-          } ${!activePanel ? "h-full" : ""}`}
+          } ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}
         >
           <div
             className={`flex min-h-0 flex-1 flex-col transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
-              isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
-            }`}
+              isFeedView ? "overflow-hidden" : ""
+            } ${isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"}`}
           >
             {activePanel === "create-post" ? (
               <section aria-labelledby="create-post-heading">
@@ -1088,59 +1101,63 @@ function ClientHomePageContent() {
                 </div>
               </section>
             ) : (
-              <>
-              <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{postsHeading}</h2>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <h2 className="shrink-0 text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{postsHeading}</h2>
 
-              <div className="mt-5 space-y-4">
-                {posts.length > 0 ? (
-                  posts.map((post) => (
-                    <button
-                      key={post.id}
-                      type="button"
-                      onClick={() => router.push(`/client-home?post=${encodeURIComponent(post.id)}`)}
-                      className="block w-full rounded-2xl border border-zinc-100 bg-zinc-50 p-5 text-left hover:bg-zinc-100 lg:p-7"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={post.avatar}
-                            alt={`${post.author} avatar`}
-                            className="h-10 w-10 rounded-full border border-zinc-300"
-                          />
-                          <div>
-                            <p className="text-2xl font-semibold text-zinc-900">{post.author}</p>
-                            <p className="text-xs text-zinc-500">{post.timeAgo}</p>
+                <div className="mt-5 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-0.5">
+                  {posts.length > 0 ? (
+                    posts.map((post) => (
+                      <button
+                        key={post.id}
+                        type="button"
+                        onClick={() => router.push(`/client-home?post=${encodeURIComponent(post.id)}`)}
+                        className="block w-full rounded-2xl border border-zinc-100 bg-zinc-50 p-5 text-left hover:bg-zinc-100 lg:p-7"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={post.avatar}
+                              alt={`${post.author} avatar`}
+                              className="h-10 w-10 rounded-full border border-zinc-300"
+                            />
+                            <div>
+                              <p className="text-2xl font-semibold text-zinc-900">{post.author}</p>
+                              <p className="text-xs text-zinc-500">{post.timeAgo}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full border border-zinc-400 px-4 py-1 text-xs text-zinc-800">
+                              {post.category}
+                            </span>
+                            <span
+                              className={`rounded-full px-4 py-1 text-xs font-semibold ${urgencyBadgeClass(post.priority)}`}
+                            >
+                              {post.priority}
+                            </span>
+                            {post.budget > 0 ? (
+                              <span className="rounded-full bg-[#FFF2EB] px-4 py-1 text-xs font-semibold text-[#C2410C]">
+                                {formatPhpBudget(post.budget)}
+                              </span>
+                            ) : null}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="rounded-full border border-zinc-400 px-4 py-1 text-xs text-zinc-800">
-                            {post.category}
-                          </span>
-                          <span
-                            className={`rounded-full px-4 py-1 text-xs font-semibold ${urgencyBadgeClass(post.priority)}`}
-                          >
-                            {post.priority}
-                          </span>
-                          {post.budget > 0 ? (
-                            <span className="rounded-full bg-[#FFF2EB] px-4 py-1 text-xs font-semibold text-[#C2410C]">
-                              {formatPhpBudget(post.budget)}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                      <p className="mt-4 text-2xl font-semibold leading-tight text-zinc-900">{post.title}</p>
-                      <p className="mt-5 text-base leading-[1.6] text-zinc-700">{post.content}</p>
-                    </button>
-                  ))
-                ) : null}
+                        <p className="mt-4 text-2xl font-semibold leading-tight text-zinc-900">{post.title}</p>
+                        <p className="mt-5 text-base leading-[1.6] text-zinc-700">{post.content}</p>
+                      </button>
+                    ))
+                  ) : null}
+                </div>
               </div>
-              </>
             )}
           </div>
         </main>
 
-        <aside className={`flex min-h-0 flex-col gap-8 rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm ${activePanel === "messages" ? "h-full overflow-hidden" : ""} lg:row-span-1`}>
-          <section>
+        <aside
+          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
+            isFixedShellLayout ? "h-full overflow-hidden" : "gap-8"
+          }`}
+        >
+          <section className={isFixedShellLayout ? "mb-6 shrink-0" : ""}>
             <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
             {notifications.length === 0 ? (
               <button
@@ -1178,27 +1195,29 @@ function ClientHomePageContent() {
             )}
           </section>
 
-          <section>
-            <h3 className="text-sm font-semibold text-zinc-900">Recent Posts</h3>
-            <div className="mt-3 space-y-3">
-            {recentPosts.length === 0 ? (
-              <p className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">
-                No recent post
-              </p>
-            ) : (
-              recentPosts.map((post) => (
-                <button
-                  key={post.id}
-                  type="button"
-                  onClick={() => router.push(`/client-home?post=${encodeURIComponent(post.id)}`)}
-                  className="w-full rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-left shadow-sm hover:bg-[#efe4dd]"
-                >
-                  <p className="text-sm font-semibold text-zinc-900">{post.author}</p>
-                  <p className="mt-2 line-clamp-2 text-xs leading-snug text-zinc-700">{post.title}</p>
-                  <p className="mt-3 text-xs text-zinc-500">{post.timeAgo}</p>
-                </button>
-              ))
-            )}
+          <section className={isFixedShellLayout ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}>
+            <h3 className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout ? "shrink-0" : ""}`}>Recent Posts</h3>
+            <div
+              className={`mt-3 space-y-3 ${isFixedShellLayout ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5" : ""}`}
+            >
+              {recentPosts.length === 0 ? (
+                <p className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">
+                  No recent post
+                </p>
+              ) : (
+                recentPosts.map((post) => (
+                  <button
+                    key={post.id}
+                    type="button"
+                    onClick={() => router.push(`/client-home?post=${encodeURIComponent(post.id)}`)}
+                    className="w-full rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-left shadow-sm hover:bg-[#efe4dd]"
+                  >
+                    <p className="text-sm font-semibold text-zinc-900">{post.author}</p>
+                    <p className="mt-2 line-clamp-2 text-xs leading-snug text-zinc-700">{post.title}</p>
+                    <p className="mt-3 text-xs text-zinc-500">{post.timeAgo}</p>
+                  </button>
+                ))
+              )}
             </div>
           </section>
         </aside>

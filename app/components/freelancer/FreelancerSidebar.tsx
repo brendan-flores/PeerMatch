@@ -26,7 +26,10 @@ export function FreelancerSidebar() {
     { href: "/freelancer-dashboard/profile", label: "Profile", icon: <User className="h-5 w-5 shrink-0" strokeWidth={1.75} /> },
   ];
 
-  const isMessagesRoute = pathname === "/freelancer-dashboard/messages";
+  const isFixedLayout =
+    pathname === "/freelancer-dashboard/messages" ||
+    pathname === "/freelancer-dashboard" ||
+    pathname === "/freelancer-dashboard/browse";
 
   const isActive = (href: string) => {
     if (href === "/freelancer-dashboard") return pathname === "/freelancer-dashboard";
@@ -46,7 +49,7 @@ export function FreelancerSidebar() {
   return (
     <aside
       className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm ${
-        isMessagesRoute ? "h-full" : "sticky top-6 h-[calc(100vh-3rem)]"
+        isFixedLayout ? "h-full" : "sticky top-6 h-[calc(100vh-3rem)]"
       }`}
     >
       <SidebarBrand />
