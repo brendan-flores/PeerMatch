@@ -19,6 +19,7 @@ const taskSchema = new mongoose.Schema(
       default: 'pending',
     },
     flagged: { type: Boolean, default: false },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true },
 );

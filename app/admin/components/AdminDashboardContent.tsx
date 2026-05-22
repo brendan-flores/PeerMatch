@@ -67,6 +67,12 @@ function fmt(n: number | undefined, loading: boolean) {
   return (n ?? 0).toLocaleString();
 }
 
+function badgeLabel(badge: ActivityItem["badge"]) {
+  if (badge === "completed") return "Completed";
+  if (badge === "warning") return "Attention";
+  return "Pending";
+}
+
 export default function AdminDashboardContent() {
   const { stats, statsLoading, statsError, reloadStats } = useAdminLayoutStats();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -91,11 +97,6 @@ export default function AdminDashboardContent() {
       cancelled = true;
     };
   }, []);
-
-  const flaggedLine =
-    stats && stats.flaggedPending > 0
-      ? `Review ${stats.flaggedPending} task${stats.flaggedPending === 1 ? "" : "s"} flagged for ethical compliance.`
-      : "No tasks are currently flagged for review.";
 
   return (
     <>
@@ -173,31 +174,37 @@ export default function AdminDashboardContent() {
         ) : (
           <ul className="admin-activity-list">
             {activities.map((a) => (
-              <li key={a.id} className="admin-activity-row">
-                <div>
+              <li
+                key={a.id}
+                className={`admin-activity-row${a.kind === "task_approved" ? " admin-activity-row--approved" : ""}`}
+              >
+                <div className="admin-activity-row__body">
                   <p className="admin-activity-row__title">{a.title}</p>
-                  <p className="admin-activity-row__sub">{a.sub}</p>
+                  {a.kind === "task_approved" ? (
+                    <>
+                      {a.taskTitle ? (
+                        <p className="admin-activity-row__task">{a.taskTitle}</p>
+                      ) : null}
+                      <p className="admin-activity-row__detail">
+                        Approved by: <span>{a.approvedByName || "Admin"}</span>
+                      </p>
+                      <p className="admin-activity-row__detail">
+                        Client: <span>{a.clientName || a.sub || "Unknown client"}</span>
+                      </p>
+                    </>
+                  ) : (
+                    <p className="admin-activity-row__sub">{a.sub}</p>
+                  )}
                 </div>
                 <div className="admin-activity-row__meta">
                   <span className="admin-activity-row__time">{formatRelativeTime(a.at)}</span>
-                  <span className={`admin-badge admin-badge--${a.badge}`}>{a.badge}</span>
+                  <span className={`admin-badge admin-badge--${a.badge}`}>{badgeLabel(a.badge)}</span>
                 </div>
               </li>
             ))}
           </ul>
         )}
       </section>
-
-      <div className="admin-banners">
-        <div className="admin-banner admin-banner--primary">
-          <h3 className="admin-banner__title">Tasks Needing Attention</h3>
-          <p className="admin-banner__sub">{statsLoading ? "Loading…" : flaggedLine}</p>
-        </div>
-        <div className="admin-banner admin-banner--accent">
-          <h3 className="admin-banner__title">System Reports</h3>
-          <p className="admin-banner__sub">Generate comprehensive platform analytics.</p>
-        </div>
-      </div>
     </>
   );
 }

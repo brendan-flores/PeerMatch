@@ -96,10 +96,11 @@ async function buildRecentActivities(limit = 20) {
   const [tasks, newUsers] = await Promise.all([
     Task.find()
       .populate('clientId', 'name')
+      .populate('approvedBy', 'name')
       .sort({ updatedAt: -1 })
       .limit(30)
       .lean(),
-    User.find({ role: 'user' })
+    User.find({ role: 'user', verified: { $ne: true } })
       .select('name createdAt verified')
       .sort({ createdAt: -1 })
       .limit(20)
@@ -107,9 +108,14 @@ async function buildRecentActivities(limit = 20) {
   ]);
 
   const fromTasks = tasks.map((t) => {
-    const name = t.clientId?.name || 'Unknown client';
+    const clientName = t.clientId?.name || 'Unknown client';
     let title;
     let badge;
+    let sub;
+    let kind = 'default';
+    let approvedByName;
+    let taskTitle;
+
     if (t.status === 'pending') {
       if (t.flagged) {
         title = 'Task flagged for review';
@@ -118,29 +124,45 @@ async function buildRecentActivities(limit = 20) {
         title = 'New task submitted';
         badge = 'pending';
       }
+      sub = clientName;
     } else if (t.status === 'approved') {
-      title = 'Task approved';
+      title = 'Task Approved';
       badge = 'completed';
+      kind = 'task_approved';
+      taskTitle = t.title || 'Untitled task';
+      sub = taskTitle;
+      approvedByName = t.approvedBy?.name || 'Admin';
     } else {
       title = 'Task rejected';
       badge = 'warning';
+      sub = clientName;
     }
+
     const at = t.status === 'pending' ? t.createdAt : t.updatedAt;
     return {
       id: `task-${t._id}`,
       title,
-      sub: name,
+      sub,
       at: new Date(at).toISOString(),
       badge,
+      kind,
+      ...(kind === 'task_approved'
+        ? {
+            clientName,
+            approvedByName,
+            taskTitle,
+          }
+        : {}),
     };
   });
 
   const fromUsers = newUsers.map((u) => ({
     id: `user-${u._id}`,
-    title: u.verified ? 'Account verified' : 'New user registered',
+    title: 'New user registered',
     sub: u.name,
     at: new Date(u.createdAt).toISOString(),
-    badge: u.verified ? 'completed' : 'pending',
+    badge: 'pending',
+    kind: 'default',
   }));
 
   return [...fromTasks, ...fromUsers]
@@ -227,8 +249,14 @@ router.patch('/tasks/:id', async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid task id.' });
     }
-    const task = await Task.findByIdAndUpdate(req.params.id, { $set: { status } }, { new: true })
+    const update =
+      status === 'approved'
+        ? { $set: { status, approvedBy: req.user.userId } }
+        : { $set: { status }, $unset: { approvedBy: '' } };
+
+    const task = await Task.findByIdAndUpdate(req.params.id, update, { new: true })
       .populate('clientId', 'name email accountType photoDataUrl')
+      .populate('approvedBy', 'name')
       .lean();
     if (!task) {
       return res.status(404).json({ message: 'Task not found.' });
