@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { MapPin, MessageCircle, UserCircle } from "lucide-react";
+import { dashboardCenterPanelClass } from "@/app/components/dashboard/dashboardShellClasses";
 import { ApiError, apiGetJson } from "@/app/lib/api";
 
 type ResolvedUser = {
@@ -68,7 +69,7 @@ export default function FreelancerClientProfilePage() {
   }, [client?.name]);
 
   return (
-    <main className="h-full rounded-2xl border border-zinc-100/80 bg-white p-6 shadow-[0_4px_32px_rgba(15,23,42,0.04)] sm:p-8 lg:p-10">
+    <main className={`${dashboardCenterPanelClass} h-full`}>
       <div className="max-w-2xl">
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Client Profile</h1>
         <p className="mt-2 text-sm text-zinc-500">Review details about the client before starting a conversation.</p>

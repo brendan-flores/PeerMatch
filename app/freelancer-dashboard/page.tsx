@@ -3,6 +3,7 @@
 import { CommunityPostCard } from "@/app/components/freelancer/CommunityPostCard";
 import { FreelancerFeedMain } from "@/app/components/freelancer/FreelancerFeedMain";
 import { OfferHelpPanel } from "@/app/components/freelancer/OfferHelpPanel";
+import { dashboardFeedListClass } from "@/app/components/dashboard/dashboardShellClasses";
 import { useCommunityPosts } from "@/app/lib/useCommunityPosts";
 import { useFreelancerDashboardUser, useFreelancerSelectedPost } from "./FreelancerDashboardShell";
 
@@ -35,7 +36,7 @@ export default function FreelancerDashboardPage() {
         </h2>
       }
       scroll={
-        <section aria-labelledby="latest-posts-heading" className="space-y-4">
+        <section aria-labelledby="latest-posts-heading" className={dashboardFeedListClass}>
           {loading ? <p className="text-sm text-zinc-500">Loading posts…</p> : null}
           {!loading &&
             posts.map((post) => <CommunityPostCard key={post.id} post={post} onSelect={setSelectedPost} />)}

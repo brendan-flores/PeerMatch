@@ -129,13 +129,15 @@ body {
   line-height: 1;
 }
 
-/* Profile scroll pane: scrollbar always hidden (no hover/focus reveal — focus was keeping it visible while typing) */
+/* Scroll panes: scrollbar hidden, scrolling still works */
+.feed-scroll-pane,
 .profile-scroll-pane {
   scrollbar-width: none;
   -ms-overflow-style: none;
   scrollbar-color: transparent transparent;
 }
 
+.feed-scroll-pane::-webkit-scrollbar,
 .profile-scroll-pane::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
@@ -143,6 +145,9 @@ body {
   background: transparent !important;
 }
 
+.feed-scroll-pane::-webkit-scrollbar-thumb,
+.feed-scroll-pane::-webkit-scrollbar-track,
+.feed-scroll-pane::-webkit-scrollbar-button,
 .profile-scroll-pane::-webkit-scrollbar-thumb,
 .profile-scroll-pane::-webkit-scrollbar-track,
 .profile-scroll-pane::-webkit-scrollbar-button {
