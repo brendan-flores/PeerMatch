@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Button from "../components/Button";
 import AuthPageHeader from "../components/AuthPageHeader";
 import { useRouter } from "next/navigation";
-import Button from "../components/Button";
 import { apiPostJson, ApiError } from "../lib/api";
 
 const yearLevels = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
@@ -60,7 +60,7 @@ export default function ClientDetailsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [photoPreview, setPhotoPreview] = useState(
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=ClientDetails"
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=ClientDetails",
   );
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -74,13 +74,7 @@ export default function ClientDetailsPage() {
     return () => URL.revokeObjectURL(url);
   }, [photoFile]);
 
-  const handleChoosePhoto = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (file) {
@@ -88,22 +82,22 @@ export default function ClientDetailsPage() {
     }
   };
 
+  const handleChoosePhoto = () => {
+    fileInputRef.current?.click();
+  };
+
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
 
-      reader.onerror = () =>
-        reject(new Error("Failed to read file"));
+      reader.onerror = () => reject(new Error("Failed to read file"));
 
-      reader.onload = () =>
-        resolve(String(reader.result || ""));
+      reader.onload = () => resolve(String(reader.result || ""));
 
       reader.readAsDataURL(file);
     });
 
-  const handleSubmit = (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (isSubmitting) return;
@@ -113,9 +107,7 @@ export default function ClientDetailsPage() {
       setStatusMessage("");
 
       try {
-        const photoDataUrl = photoFile
-          ? await fileToDataUrl(photoFile)
-          : undefined;
+        const photoDataUrl = photoFile ? await fileToDataUrl(photoFile) : undefined;
 
         await apiPostJson("/api/auth/profile", {
           course,
@@ -133,9 +125,7 @@ export default function ClientDetailsPage() {
         }, 1600);
       } catch (err) {
         const message =
-          err instanceof ApiError
-            ? err.message
-            : "Could not save profile. Please try again.";
+          err instanceof ApiError ? err.message : "Could not save profile. Please try again.";
 
         setStatusMessage(message);
       } finally {
@@ -157,12 +147,11 @@ export default function ClientDetailsPage() {
               </h1>
 
               <p className="mt-2 text-sm text-slate-600">
-                Set up your client profile to connect with
-                freelancers and peers
+                Set up your client profile to connect with freelancers and peers
               </p>
             </div>
 
-            <div className="mt-10 grid gap-8 lg:grid-cols-[320px_1fr]">
+            <div className="mt-10 grid gap-8 lg:grid-cols-[320px_1fr] lg:items-start">
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex flex-col items-center gap-4">
                   <div className="relative h-24 w-24 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
@@ -176,7 +165,7 @@ export default function ClientDetailsPage() {
                   <button
                     type="button"
                     onClick={handleChoosePhoto}
-                    className="rounded-full bg-[#FA642C] px-6 py-2.5 text-sm font-semibold text-white"
+                    className="rounded-full bg-[#FA642C] px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#e05b26]"
                   >
                     Change Photo
                   </button>
@@ -188,42 +177,72 @@ export default function ClientDetailsPage() {
                     className="hidden"
                     onChange={handleFileChange}
                   />
+
+                  <div className="h-px w-full bg-slate-200" />
+
+                  <div className="w-full rounded-xl bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-semibold text-slate-900">Tip</p>
+
+                    <p className="mt-1 text-[11px] leading-5 text-slate-600">
+                      A complete client profile helps you attract better freelancers and build trust
+                      faster.
+                    </p>
+                  </div>
                 </div>
               </section>
 
               <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-                <form
-                  onSubmit={handleSubmit}
-                  className="space-y-8"
+                <div
+                  aria-live="polite"
+                  className={`mb-5 overflow-hidden rounded-xl border transition-all duration-500 ease-out ${
+                    showConfirmation
+                      ? "max-h-40 border-emerald-200 bg-emerald-50 opacity-100"
+                      : "max-h-0 border-transparent bg-transparent opacity-0"
+                  }`}
                 >
+                  <div
+                    className={`px-4 py-3 text-emerald-900 transition-transform duration-500 ease-out ${
+                      showConfirmation
+                        ? "translate-y-0 scale-100"
+                        : "-translate-y-2 scale-[0.98]"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold">Profile saved successfully.</p>
+
+                    <p className="mt-1 text-xs text-emerald-800/80">Taking you to your home page…</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-8">
                   <div>
-                    <p className="text-sm font-semibold text-slate-950">
-                      Academic Information
-                    </p>
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#0069A8] text-xs font-semibold text-white">
+                        1
+                      </span>
+
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">Academic Information</p>
+
+                        <p className="mt-1 text-xs text-slate-500">Tell us about your current studies</p>
+                      </div>
+                    </div>
 
                     <div className="mt-5 grid gap-4">
                       <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          Course
-                        </span>
+                        <span className="text-xs font-medium text-slate-700">Course</span>
 
                         <select
                           value={course}
-                          onChange={(e) =>
-                            setCourse(e.target.value)
-                          }
+                          onChange={(e) => setCourse(e.target.value)}
                           required
-                          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"
+                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
                         >
                           <option value="" disabled>
                             Select a course
                           </option>
 
                           {courseOptions.map((option) => (
-                            <option
-                              key={option}
-                              value={option}
-                            >
+                            <option key={option} value={option}>
                               {option}
                             </option>
                           ))}
@@ -231,23 +250,16 @@ export default function ClientDetailsPage() {
                       </label>
 
                       <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          Academic Year
-                        </span>
+                        <span className="text-xs font-medium text-slate-700">Academic Year</span>
 
                         <select
                           value={yearLevel}
-                          onChange={(e) =>
-                            setYearLevel(e.target.value)
-                          }
+                          onChange={(e) => setYearLevel(e.target.value)}
                           required
-                          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"
+                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
                         >
                           {yearLevels.map((level) => (
-                            <option
-                              key={level}
-                              value={level}
-                            >
+                            <option key={level} value={level}>
                               {level}
                             </option>
                           ))}
@@ -259,81 +271,85 @@ export default function ClientDetailsPage() {
                   <div className="h-px w-full bg-slate-200" />
 
                   <div>
-                    <p className="text-sm font-semibold text-slate-950">
-                      Client Information
-                    </p>
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#0069A8] text-xs font-semibold text-white">
+                        2
+                      </span>
 
-                    <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                      <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          First Name
-                        </span>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">Client Profile</p>
 
-                        <input
-                          type="text"
-                          value={firstName}
-                          onChange={(e) =>
-                            setFirstName(e.target.value)
-                          }
-                          placeholder="First Name"
-                          required
-                          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"
-                        />
-                      </label>
-
-                      <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          Last Name
-                        </span>
-
-                        <input
-                          type="text"
-                          value={lastName}
-                          onChange={(e) =>
-                            setLastName(e.target.value)
-                          }
-                          placeholder="Last Name"
-                          required
-                          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"
-                        />
-                      </label>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Share what you need help with and connect with the right peers
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="mt-4">
+                    <div className="mt-5 grid gap-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="text-xs font-medium text-slate-700">First Name</span>
+
+                          <input
+                            type="text"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            placeholder="First Name"
+                            required
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                          />
+                        </label>
+
+                        <label className="block">
+                          <span className="text-xs font-medium text-slate-700">Last Name</span>
+
+                          <input
+                            type="text"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            placeholder="Last Name"
+                            required
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                          />
+                        </label>
+                      </div>
+
                       <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          Project Details
-                        </span>
+                        <span className="text-xs font-medium text-slate-700">Project Details</span>
 
                         <textarea
                           value={aboutMe}
-                          onChange={(e) =>
-                            setAboutMe(e.target.value)
-                          }
+                          onChange={(e) => setAboutMe(e.target.value)}
                           placeholder="Tell freelancers about your project..."
                           required
                           rows={5}
-                          className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-4 py-3"
+                          className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
                         />
                       </label>
+
+                      <p className="text-[11px] text-slate-500">{aboutMe.length}/500 characters</p>
                     </div>
                   </div>
 
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full rounded-xl bg-[#FA642C] py-3.5 text-sm font-semibold text-white"
-                  >
-                    {isSubmitting
-                      ? "Saving..."
-                      : "Continue"}
-                  </Button>
+                  <div className="pt-2">
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full rounded-xl bg-[#FA642C] py-3.5 text-sm font-semibold text-white hover:bg-[#e05b26] disabled:cursor-not-allowed disabled:bg-zinc-300"
+                    >
+                      {isSubmitting ? "Saving..." : "Continue"}
+                    </Button>
 
-                  {statusMessage ? (
-                    <p className="text-center text-sm text-red-600">
-                      {statusMessage}
+                    {statusMessage ? (
+                      <p className="mt-3 text-center text-sm text-red-600" role="alert">
+                        {statusMessage}
+                      </p>
+                    ) : null}
+
+                    <p className="mt-3 text-center text-[11px] text-slate-500">
+                      You can update your client profile anytime in your settings
                     </p>
-                  ) : null}
+                  </div>
                 </form>
               </section>
             </div>

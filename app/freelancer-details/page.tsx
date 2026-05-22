@@ -63,7 +63,6 @@ export default function FreelancerDetailsPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
-  const [skills, setSkills] = useState("");
   const [aboutMe, setAboutMe] = useState("");
 
   const [photoFile, setPhotoFile] =
@@ -143,11 +142,8 @@ export default function FreelancerDetailsPage() {
           yearLevel,
           firstName,
           lastName,
-          skills,
           aboutMe,
-          ...(photoDataUrl
-            ? { photoDataUrl }
-            : {}),
+          ...(photoDataUrl ? { photoDataUrl } : {}),
         });
 
         setShowConfirmation(true);
@@ -353,8 +349,7 @@ export default function FreelancerDetailsPage() {
                         </p>
 
                         <p className="mt-1 text-xs text-slate-500">
-                          Highlight your skills and
-                          share what you can offer
+                          Share what you can offer and connect with clients and peers
                         </p>
                       </div>
                     </div>
@@ -399,23 +394,6 @@ export default function FreelancerDetailsPage() {
                           />
                         </label>
                       </div>
-
-                      <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          Skills
-                        </span>
-
-                        <input
-                          type="text"
-                          value={skills}
-                          onChange={(e) =>
-                            setSkills(e.target.value)
-                          }
-                          placeholder="e.g. UI Design, Research, Programming"
-                          required
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
-                        />
-                      </label>
 
                       <label className="block">
                         <span className="text-xs font-medium text-slate-700">
