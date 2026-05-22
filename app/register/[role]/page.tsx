@@ -20,10 +20,14 @@ function getUsernameValidationError(value: string): string | null {
   const normalized = value.trim().toLowerCase();
 
   if (!normalized) return null;
-  if (normalized.length < 3 || normalized.length > 30)
+
+  if (normalized.length < 3 || normalized.length > 30) {
     return USERNAME_HINT;
-  if (!/^[a-z0-9_]+$/.test(normalized))
+  }
+
+  if (!/^[a-z0-9_]+$/.test(normalized)) {
     return USERNAME_HINT;
+  }
 
   return null;
 }
@@ -166,6 +170,8 @@ export default function RegisterRolePage() {
                       height="18"
                       viewBox="0 0 24 24"
                       fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden
                     >
                       <circle
                         cx="12"

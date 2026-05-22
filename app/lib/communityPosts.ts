@@ -19,20 +19,6 @@ export function formatPhpBudget(amount: number): string {
   return `₱${Math.round(amount).toLocaleString("en-PH")}`;
 }
 
-/** Author photo from API, or a deterministic placeholder — never the viewer's profile photo. */
-export function resolveAuthorAvatarUrl(input: {
-  authorAvatarDataUrl?: string;
-  authorName?: string;
-  authorId?: string;
-}): string {
-  const url = String(input.authorAvatarDataUrl || "").trim();
-  if (url) return url;
-  const seed = encodeURIComponent(
-    String(input.authorName || "").trim() || String(input.authorId || "").trim() || "Client",
-  );
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}`;
-}
-
 type ApiFeedPost = CommunityPost & { status?: string };
 
 type FeedResponse = { posts: ApiFeedPost[] };
