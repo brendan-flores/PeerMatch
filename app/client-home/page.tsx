@@ -587,11 +587,16 @@ function ClientHomePageContent() {
         }`}
       >
         <aside className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm ${activePanel === "messages" ? "h-full" : "sticky top-6 h-[calc(100vh-3rem)]"} lg:row-span-1`}>
-          <div className="flex items-center gap-3 rounded-xl border border-zinc-100 bg-white px-3 py-3 shadow-sm">
-            <Image src="/peermatch-logo.png" alt="PeerMatch logo" width={32} height={32} className="h-8 w-8 object-contain" />
-            <div>
-              <p className="text-sm font-semibold tracking-tight text-zinc-900">PeerMatch</p>
-              <p className="text-[11px] text-zinc-500">Student Collaboration</p>
+          <div className="flex items-center justify-center rounded-xl border border-zinc-100 bg-white px-3 py-3.5 shadow-sm">
+            <div className="flex h-20 w-full items-center justify-center">
+              <Image
+                src="/peermatch-logo.png"
+                alt="PeerMatch — Student Collaboration"
+                width={512}
+                height={237}
+                className="h-full w-full object-contain"
+                priority
+              />
             </div>
           </div>
 
