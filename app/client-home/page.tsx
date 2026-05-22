@@ -578,7 +578,7 @@ function ClientHomePageContent() {
   };
 
   const isFeedView = pathname === "/client-home" && !activePanel;
-  const isFixedShellLayout = activePanel === "messages" || isFeedView;
+  const isFixedShellLayout = activePanel === "messages";
 
   return (
     <div
@@ -1143,13 +1143,65 @@ function ClientHomePageContent() {
 
         <aside
           className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
-            isFixedShellLayout ? "h-full overflow-hidden" : "gap-8"
+            isFixedShellLayout
+              ? "h-full overflow-hidden"
+              : isFeedView
+                ? "sticky top-6 h-[calc(100vh-3rem)] overflow-hidden"
+                : "gap-8"
           }`}
         >
-          <section className={isFixedShellLayout ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}>
-            <h3 className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout ? "shrink-0" : ""}`}>Recent Posts</h3>
+          <section className={isFixedShellLayout || isFeedView ? "mb-6 shrink-0" : ""}>
+            <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
+            {notifications.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => router.push("/client-home?panel=notifications")}
+                className="mt-3 w-full rounded-xl border border-zinc-200 bg-white px-4 py-4 text-left text-xs text-zinc-700 shadow-sm hover:bg-zinc-50"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Bell aria-hidden="true" className="h-4 w-4 text-zinc-600" strokeWidth={1.6} />
+                  <span>Someone responded to your post</span>
+                </span>
+              </button>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {notifications.map((notice) => (
+                  <button
+                    key={notice}
+                    type="button"
+                    onClick={() => router.push("/client-home?panel=notifications")}
+                    className={`w-full rounded-xl border px-4 py-4 text-left text-xs shadow-sm hover:brightness-[0.98] ${
+                      notice.includes("approved")
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                        : notice.includes("review")
+                          ? "border-[#FFD4C2] bg-[#FFF2EB] text-[#9A3412]"
+                          : "border-zinc-200 bg-white text-zinc-700"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Bell aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.6} />
+                      <span>{notice}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section
+            className={isFixedShellLayout || isFeedView ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}
+          >
+            <h3
+              className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout || isFeedView ? "shrink-0" : ""}`}
+            >
+              Recent Posts
+            </h3>
             <div
-              className={`mt-3 space-y-3 ${isFixedShellLayout ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5" : ""}`}
+              className={`mt-3 space-y-3 ${
+                isFixedShellLayout || isFeedView
+                  ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5"
+                  : ""
+              }`}
             >
               {recentPosts.length === 0 ? (
                 <p className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">

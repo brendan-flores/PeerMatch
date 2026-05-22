@@ -162,7 +162,8 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
   const isMessagesRoute = pathname === "/freelancer-dashboard/messages";
   const isFeedRoute =
     pathname === "/freelancer-dashboard" || pathname === "/freelancer-dashboard/browse";
-  const isFixedShellLayout = isMessagesRoute || isFeedRoute;
+  const isFixedShellLayout = isMessagesRoute;
+  const pinnedSideColumnClass = isFeedRoute ? "lg:self-start" : "";
 
   return (
     <FreelancerUserContext.Provider value={value}>
@@ -182,8 +183,10 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
             isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
           }`}
         >
-          <div className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}>
-            <FreelancerSidebar unreadMessageCount={unreadMessageCount} />
+          <div
+            className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : pinnedSideColumnClass}`}
+          >
+            <FreelancerSidebar />
           </div>
           <div
             className={`min-h-0 transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
@@ -194,7 +197,9 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
           >
             {children}
           </div>
-          <div className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}>
+          <div
+            className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : pinnedSideColumnClass}`}
+          >
             <FreelancerRightAside />
           </div>
         </div>
