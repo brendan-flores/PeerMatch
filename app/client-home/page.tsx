@@ -49,6 +49,8 @@ import { ClientPostToast, type ClientPostToastState } from "../components/Client
 import { DashboardCenterColumn } from "../components/dashboard/DashboardCenterColumn";
 import {
   dashboardPanelScrollClass,
+  dashboardCenterPanelCompactPaddingClass,
+  dashboardCenterPanelHeadingClass,
   dashboardPanelScrollInsetClass,
   dashboardProfileScrollClass,
   dashboardRightAsideListClass,
@@ -57,6 +59,7 @@ import {
 import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
 import { NavUnreadBadge } from "../components/NavUnreadBadge";
 import { fetchClientOffers, isOfferPending } from "../lib/offersApi";
+import type { NotificationItem } from "../lib/notifications";
 import { useNotifications } from "../hooks/useNotifications";
 import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
 
@@ -153,6 +156,7 @@ function ClientHomePageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activePanel = searchParams.get("panel");
+  const highlightPost = searchParams.get("highlightPost");
   const [displayName, setDisplayName] = useState<string>("");
   const [displayEmail, setDisplayEmail] = useState<string>("");
   const [profileNameInput, setProfileNameInput] = useState<string>("");
@@ -285,6 +289,22 @@ function ClientHomePageContent() {
   const { count: unreadMessageCount } = useUnreadMessageCount(meUserId || null);
 
   const dismissPostToast = useCallback(() => setPostToast(null), []);
+
+  const handleNotificationClick = useCallback(
+    (item: NotificationItem) => {
+      if (item.type === "new_offer" && item.relatedTaskId) {
+        router.push(
+          `/client-home?panel=offers&highlightPost=${encodeURIComponent(item.relatedTaskId)}`,
+        );
+      }
+    },
+    [router],
+  );
+
+  const clearOfferHighlightFromUrl = useCallback(() => {
+    if (!highlightPost) return;
+    router.replace("/client-home?panel=offers");
+  }, [highlightPost, router]);
 
   const handlePostApproved = useCallback(
     (message?: string) => {
@@ -655,6 +675,7 @@ function ClientHomePageContent() {
             items={notifications}
             onMarkAllRead={markAllRead}
             onMarkOneRead={markOneRead}
+            onNotificationClick={handleNotificationClick}
             contentClassName={panelTransitionClass}
           >
             <FreelancerFeedMain
@@ -689,23 +710,30 @@ function ClientHomePageContent() {
           items={notifications}
           onMarkAllRead={markAllRead}
           onMarkOneRead={markOneRead}
+          onNotificationClick={handleNotificationClick}
           contentClassName={panelTransitionClass}
         >
         <main
           className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] ${
-            activePanel === "profile" || activePanel === "featured-post" || activePanel === "messages"
-              ? "p-4"
-              : "p-6 sm:p-8 lg:p-10"
+            activePanel === "create-post" || activePanel === "offers" || activePanel === "messages"
+              ? dashboardCenterPanelCompactPaddingClass
+              : activePanel === "profile" || activePanel === "featured-post"
+                ? "p-4"
+                : "p-6 sm:p-8 lg:p-10"
           }`}
         >
           <div className="flex h-full min-h-0 flex-1 flex-col">
             {activePanel === "create-post" ? (
-              <div className={`${dashboardPanelScrollClass} ${dashboardPanelScrollInsetClass}`}>
-              <section aria-labelledby="create-post-heading">
-                <h1 id="create-post-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
-                  Create New Post
-                </h1>
-                <p className="mt-1.5 text-sm text-zinc-600">Share what you need help with and connect with peers</p>
+              <div className={dashboardPanelScrollClass}>
+              <section aria-labelledby="create-post-heading" className="min-w-0">
+                <div className={dashboardCenterPanelHeadingClass}>
+                  <h1 id="create-post-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
+                    Create New Post
+                  </h1>
+                  <p className="mt-1.5 text-sm text-zinc-600">
+                    Share what you need help with and connect with peers
+                  </p>
+                </div>
 
                 <div className="mt-7 grid gap-5 xl:grid-cols-[minmax(0,1fr)_230px]">
                   <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-5 shadow-sm sm:p-6">
@@ -885,8 +913,12 @@ function ClientHomePageContent() {
               </section>
               </div>
             ) : activePanel === "offers" ? (
-              <div className={`${dashboardPanelScrollClass} ${dashboardPanelScrollInsetClass}`}>
-                <ClientOffersPanel onPendingCountChange={setPendingOffersCount} />
+              <div className={dashboardPanelScrollClass}>
+                <ClientOffersPanel
+                  onPendingCountChange={setPendingOffersCount}
+                  highlightPostId={highlightPost}
+                  onHighlightComplete={clearOfferHighlightFromUrl}
+                />
               </div>
             ) : activePanel === "messages" ? (
               <section

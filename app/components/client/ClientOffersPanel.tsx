@@ -1,8 +1,8 @@
 "use client";
 
 import { Check, Handshake, Star } from "lucide-react";
-import { dashboardCenterTitleOffsetClass } from "@/app/components/dashboard/dashboardShellClasses";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { dashboardCenterPanelHeadingClass } from "@/app/components/dashboard/dashboardShellClasses";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/app/lib/api";
 import { formatPhpBudget } from "@/app/lib/communityPosts";
 import { notifyAndRefreshCommunityPosts, useCommunityPostsContext } from "@/app/lib/CommunityPostsContext";
@@ -74,44 +74,52 @@ function postFromOffer(offer: ClientOffer, existing?: CommunityPost): CommunityP
 
 type ClientOffersPanelProps = {
   onPendingCountChange?: (count: number) => void;
+  highlightPostId?: string | null;
+  onHighlightComplete?: () => void;
 };
 
-export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelProps) {
-  const { myPosts, myPostsLoading, refreshAll } = useCommunityPostsContext();
+export function ClientOffersPanel({
+  onPendingCountChange,
+  highlightPostId = null,
+  onHighlightComplete,
+}: ClientOffersPanelProps) {
+  const { myPosts, refreshAll } = useCommunityPostsContext();
   const [offers, setOffers] = useState<ClientOffer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
   const [busyOfferId, setBusyOfferId] = useState<string | null>(null);
   const [busyPostId, setBusyPostId] = useState<string | null>(null);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; text: string }>>({});
+  const loadRequestIdRef = useRef(0);
+  const postRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [animatingPostId, setAnimatingPostId] = useState<string | null>(null);
 
-  const loadOffers = useCallback(async () => {
-    setLoading(true);
+  const loadOffers = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    const requestId = ++loadRequestIdRef.current;
+    if (!silent) setInitialLoading(true);
     try {
       const list = await fetchClientOffers();
+      if (requestId !== loadRequestIdRef.current) return;
       setOffers(list);
       setStatusMessage("");
     } catch (err) {
+      if (requestId !== loadRequestIdRef.current) return;
       const message = err instanceof ApiError ? err.message : "Could not load offers.";
       setStatusMessage(message);
     } finally {
-      setLoading(false);
+      if (requestId !== loadRequestIdRef.current) return;
+      setInitialLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void loadOffers();
     const interval = window.setInterval(() => {
-      void loadOffers();
+      void loadOffers({ silent: true });
     }, 15000);
     return () => window.clearInterval(interval);
   }, [loadOffers]);
-
-  useEffect(() => {
-    if (!myPostsLoading) {
-      void loadOffers();
-    }
-  }, [myPostsLoading, loadOffers]);
 
   const approvedMyPosts = useMemo(
     () => myPosts.filter((post) => post.status === "approved"),
@@ -168,12 +176,41 @@ export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelPro
     onPendingCountChange?.(pendingCount);
   }, [pendingCount, onPendingCountChange]);
 
+  useEffect(() => {
+    const postId = String(highlightPostId || "").trim();
+    if (!postId || initialLoading) return;
+
+    let animTimeout: ReturnType<typeof window.setTimeout> | undefined;
+    let notifyTimeout: ReturnType<typeof window.setTimeout> | undefined;
+    let retryTimeout: ReturnType<typeof window.setTimeout> | undefined;
+
+    const trigger = () => {
+      const el = postRefs.current[postId];
+      if (!el) return false;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setAnimatingPostId(postId);
+      animTimeout = window.setTimeout(() => setAnimatingPostId(null), 2400);
+      notifyTimeout = window.setTimeout(() => onHighlightComplete?.(), 2600);
+      return true;
+    };
+
+    if (!trigger()) {
+      retryTimeout = window.setTimeout(() => trigger(), 150);
+    }
+
+    return () => {
+      if (animTimeout) window.clearTimeout(animTimeout);
+      if (notifyTimeout) window.clearTimeout(notifyTimeout);
+      if (retryTimeout) window.clearTimeout(retryTimeout);
+    };
+  }, [highlightPostId, initialLoading, groups, onHighlightComplete]);
+
   const handleAccept = async (offerId: string) => {
     setBusyOfferId(offerId);
     setStatusMessage("");
     try {
       await acceptClientOffer(offerId);
-      await loadOffers();
+      await loadOffers({ silent: true });
       await refreshAll();
       notifyAndRefreshCommunityPosts(refreshAll);
       setStatusMessage("Offer accepted. The freelancer has been notified.");
@@ -190,7 +227,7 @@ export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelPro
     setStatusMessage("");
     try {
       await rejectClientOffer(offerId);
-      await loadOffers();
+      await loadOffers({ silent: true });
       setStatusMessage("Offer rejected.");
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Could not reject the offer.";
@@ -205,7 +242,7 @@ export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelPro
     setStatusMessage("");
     try {
       await completeClientTask(postId);
-      await loadOffers();
+      await loadOffers({ silent: true });
       await refreshAll();
       notifyAndRefreshCommunityPosts(refreshAll);
       setStatusMessage("Task marked as completed. You can leave a review below.");
@@ -227,7 +264,7 @@ export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelPro
     setStatusMessage("");
     try {
       await submitTaskReview(postId, { rating: draft.rating, text: draft.text.trim() });
-      await loadOffers();
+      await loadOffers({ silent: true });
       await refreshAll();
       setStatusMessage("Thank you for your review.");
     } catch (err) {
@@ -240,11 +277,8 @@ export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelPro
 
   return (
     <section aria-labelledby="offers-heading" className="space-y-6">
-      <div>
-        <h1
-          id="offers-heading"
-          className={`text-4xl font-bold tracking-tight text-zinc-900 ${dashboardCenterTitleOffsetClass}`}
-        >
+      <div className={dashboardCenterPanelHeadingClass}>
+        <h1 id="offers-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
           Offers
         </h1>
         <p className="mt-1.5 text-sm text-zinc-600">
@@ -258,11 +292,11 @@ export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelPro
         </p>
       ) : null}
 
-      {loading && groups.length === 0 ? (
+      {initialLoading ? (
         <p className="text-sm text-zinc-500">Loading offers...</p>
       ) : null}
 
-      {!loading && groups.length === 0 ? (
+      {!initialLoading && groups.length === 0 ? (
         <div className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] px-5 py-8 text-center shadow-sm">
           <Handshake className="mx-auto h-10 w-10 text-zinc-400" strokeWidth={1.5} />
           <p className="mt-3 text-sm font-medium text-zinc-800">No offers yet</p>
@@ -282,7 +316,14 @@ export function ClientOffersPanel({ onPendingCountChange }: ClientOffersPanelPro
           return (
             <article
               key={post.id}
-              className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-5 shadow-sm sm:p-6"
+              ref={(node) => {
+                postRefs.current[post.id] = node;
+              }}
+              className={`rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-5 shadow-sm sm:p-6 ${
+                animatingPostId === post.id
+                  ? "animate-notification-highlight ring-2 ring-[#FF6B35]/80"
+                  : ""
+              }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">

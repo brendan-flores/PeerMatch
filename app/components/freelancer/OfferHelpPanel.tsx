@@ -21,6 +21,7 @@ type OfferHelpPanelProps = {
   freelancerId: string;
   freelancerName: string;
   onBack: () => void;
+  highlight?: boolean;
 };
 
 function getInitials(name: string): string {
@@ -33,7 +34,13 @@ function getInitials(name: string): string {
   return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
 }
 
-export function OfferHelpPanel({ post, freelancerId, freelancerName, onBack }: OfferHelpPanelProps) {
+export function OfferHelpPanel({
+  post,
+  freelancerId,
+  freelancerName,
+  onBack,
+  highlight = false,
+}: OfferHelpPanelProps) {
   const [rate, setRate] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -116,7 +123,11 @@ export function OfferHelpPanel({ post, freelancerId, freelancerName, onBack }: O
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-8">
         <div className="space-y-5">
-          <article className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm sm:p-6">
+          <article
+            className={`rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm sm:p-6 ${
+              highlight ? "animate-notification-highlight ring-2 ring-[#FF6B35]/80" : ""
+            }`}
+          >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 {post.authorAvatarDataUrl ? (

@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import type { NotificationItem } from "@/app/lib/notifications";
 import { DashboardCenterColumn } from "@/app/components/dashboard/DashboardCenterColumn";
 import { FreelancerSidebar } from "@/app/components/freelancer/FreelancerSidebar";
 import { FreelancerRightAside } from "@/app/components/freelancer/FreelancerRightAside";
@@ -61,6 +62,17 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
   const [isRouteContentVisible, setIsRouteContentVisible] = useState(true);
   const { items: notifications, markAllRead, markOneRead } = useNotifications(user?.id ?? null);
   const { count: unreadMessageCount } = useUnreadMessageCount(user?.id ?? null);
+
+  const handleNotificationClick = useCallback(
+    (item: NotificationItem) => {
+      if (item.type === "new_task" && item.relatedTaskId) {
+        router.push(
+          `/freelancer-dashboard?post=${encodeURIComponent(item.relatedTaskId)}&fromNotification=1`,
+        );
+      }
+    },
+    [router],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -174,6 +186,7 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
             items={notifications}
             onMarkAllRead={markAllRead}
             onMarkOneRead={markOneRead}
+            onNotificationClick={handleNotificationClick}
             contentClassName={`transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
               isRouteContentVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
             }`}

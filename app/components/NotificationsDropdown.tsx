@@ -47,6 +47,7 @@ type NotificationsDropdownProps = {
   items: NotificationItem[];
   onMarkAllRead: () => void | Promise<void>;
   onMarkOneRead: (id: string) => void | Promise<void>;
+  onNotificationClick?: (item: NotificationItem) => void;
   className?: string;
 };
 
@@ -76,6 +77,7 @@ export function NotificationsDropdown({
   items,
   onMarkAllRead,
   onMarkOneRead,
+  onNotificationClick,
   className = "",
 }: NotificationsDropdownProps) {
   const [open, setOpen] = useState(false);
@@ -156,6 +158,8 @@ export function NotificationsDropdown({
                     type="button"
                     onClick={() => {
                       if (!item.read) void onMarkOneRead(item.id);
+                      onNotificationClick?.(item);
+                      setOpen(false);
                     }}
                     className={`flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition hover:brightness-[0.99] ${
                       item.read

@@ -13,6 +13,7 @@ type DashboardCenterColumnProps = {
   items: NotificationItem[];
   onMarkAllRead: () => void | Promise<void>;
   onMarkOneRead: (id: string) => void | Promise<void>;
+  onNotificationClick?: (item: NotificationItem) => void;
   contentClassName?: string;
 };
 
@@ -21,11 +22,17 @@ export function DashboardCenterColumn({
   items,
   onMarkAllRead,
   onMarkOneRead,
+  onNotificationClick,
   contentClassName = "",
 }: DashboardCenterColumnProps) {
   return (
     <div className={dashboardCenterColumnWrapClass}>
-      <DashboardCenterBell items={items} onMarkAllRead={onMarkAllRead} onMarkOneRead={onMarkOneRead} />
+      <DashboardCenterBell
+        items={items}
+        onMarkAllRead={onMarkAllRead}
+        onMarkOneRead={onMarkOneRead}
+        onNotificationClick={onNotificationClick}
+      />
       <div className={`${dashboardCenterColumnContentClass} ${contentClassName}`.trim()}>{children}</div>
     </div>
   );
