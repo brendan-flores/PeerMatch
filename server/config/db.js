@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const { migrateUsersWithoutUsername } = require('../utils/migrateUsers');
-const { migrateLegacyTasksToClientTasks } = require('../utils/migrateClientTasks');
 
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/peer-match';
@@ -11,13 +10,8 @@ const connectDB = async () => {
     await migrateUsersWithoutUsername().catch((err) => {
       console.error('Username migration warning:', err.message);
     });
-    await migrateLegacyTasksToClientTasks().catch((err) => {
-      console.error('Client task migration warning:', err.message);
-    });
   } catch (error) {
     console.error('MongoDB connection error:', error.message);
-    // Keep the API process alive and retry so the app recovers
-    // automatically once MongoDB becomes available.
     setTimeout(connectDB, 5000);
   }
 };

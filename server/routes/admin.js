@@ -12,6 +12,7 @@ const {
   recordTaskApproved,
   recordTaskRejected,
 } = require('../services/adminActivityService');
+const { listClientTasksForAdmin } = require('../services/clientTaskStore');
 
 const router = express.Router();
 
@@ -68,7 +69,9 @@ router.get('/stats', async (req, res) => {
       flaggedPending,
     ] = await Promise.all([
       ClientTask.countDocuments(),
-      ClientTask.countDocuments({ status: 'pending' }),
+      ClientTask.countDocuments({
+        $or: [{ status: 'pending' }, { status: { $exists: false } }, { status: null }],
+      }),
       ClientTask.countDocuments({ status: 'approved' }),
       User.countDocuments({ role: 'user', suspended: { $ne: true } }),
       // Exclude admin accounts from these student/user aggregates.
@@ -141,27 +144,8 @@ router.get('/users', async (req, res) => {
 
 router.get('/tasks', async (req, res) => {
   try {
-    const [tasks, pendingTotal] = await Promise.all([
-      ClientTask.find().populate('clientId', 'name email').sort({ createdAt: -1 }).lean(),
-      ClientTask.countDocuments({ status: 'pending' }),
-    ]);
-
-    const payload = tasks.map((t) => ({
-      id: String(t._id),
-      title: t.title,
-      description: t.description || '',
-      subjectCategory: t.subjectCategory || '',
-      urgency: t.urgency || 'normal',
-      createdAt: t.createdAt ? new Date(t.createdAt).toISOString() : null,
-      updatedAt: t.updatedAt ? new Date(t.updatedAt).toISOString() : null,
-      flagged: !!t.flagged,
-      clientName: t.clientId?.name || 'Unknown',
-      budget: t.budget,
-      category: t.category,
-      status: t.status,
-    }));
-
-    res.json({ tasks: payload, pendingTotal });
+    const { tasks, pendingTotal } = await listClientTasksForAdmin();
+    res.json({ tasks, pendingTotal });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Could not load tasks.' });
