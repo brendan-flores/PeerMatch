@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { dashboardAsideClass, dashboardSidebarNavClass } from "@/app/components/dashboard/dashboardShellClasses";
 import SidebarBrand from "@/app/components/SidebarBrand";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, LogOut, MessageCircle, Search, User } from "lucide-react";
@@ -32,6 +31,8 @@ export function FreelancerSidebar({ unreadMessageCount = 0 }: FreelancerSidebarP
     { href: "/freelancer-dashboard/profile", label: "Profile", icon: <User className="h-5 w-5 shrink-0" strokeWidth={1.75} /> },
   ];
 
+  const isFixedLayout = pathname === "/freelancer-dashboard/messages";
+
   const isActive = (href: string) => {
     if (href === "/freelancer-dashboard") return pathname === "/freelancer-dashboard";
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -49,11 +50,13 @@ export function FreelancerSidebar({ unreadMessageCount = 0 }: FreelancerSidebarP
 
   return (
     <aside
-      className={`${dashboardAsideClass} h-full`}
+      className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm ${
+        isFixedLayout ? "h-full" : "sticky top-6 h-[calc(100vh-3rem)]"
+      }`}
     >
       <SidebarBrand />
 
-      <nav className={dashboardSidebarNavClass} aria-label="Main">
+      <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
         {items.map((item) => {
           const active = isActive(item.href);
           return (

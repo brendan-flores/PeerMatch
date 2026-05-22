@@ -10,6 +10,7 @@ const {
   notifyFreelancersNewTask,
   notifyClientPostReview,
 } = require('../services/notificationService');
+const { recordTaskSubmitted } = require('../services/adminActivityService');
 
 const router = express.Router();
 
@@ -141,6 +142,7 @@ router.post('/', authMiddleware, async (req, res) => {
       await Promise.all([
         notifyFreelancersNewTask({ clientId, clientName, taskId }),
         notifyClientPostReview({ clientId }),
+        recordTaskSubmitted(populated || task, clientName),
       ]);
     } catch (notifyErr) {
       console.error('Notification dispatch failed after task create:', notifyErr);

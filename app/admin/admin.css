@@ -573,6 +573,15 @@ code {
   background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%);
 }
 
+.admin-activity-row--rejected {
+  border-color: #fecaca;
+  background: linear-gradient(135deg, #f8fafc 0%, #fef2f2 100%);
+}
+
+.admin-activity-row--rejected:nth-child(odd) {
+  background: linear-gradient(135deg, #f8fafc 0%, #fef2f2 100%);
+}
+
 .admin-activity-row__body {
   min-width: 0;
   flex: 1;

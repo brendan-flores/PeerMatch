@@ -55,30 +55,6 @@ import { NotificationsDropdown } from "../components/NotificationsDropdown";
 import { NavUnreadBadge } from "../components/NavUnreadBadge";
 import { useNotifications } from "../hooks/useNotifications";
 import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
-import {
-  dashboardAsideClass,
-  dashboardAsideFixedClass,
-  dashboardCenterColumnClass,
-  dashboardCenterPanelClass,
-  dashboardCenterPanelFixedClass,
-  dashboardFeedListClass,
-  dashboardGridClass,
-  dashboardGridFixedClass,
-  dashboardPanelBodyClass,
-  dashboardProfilePanelBodyClass,
-  dashboardProfileFormCardClass,
-  dashboardProfileGridClass,
-  dashboardProfileScrollClass,
-  dashboardProfileSectionClass,
-  dashboardProfileSummaryCardClass,
-  dashboardTipsAsideClass,
-  dashboardShellClass,
-  dashboardShellFixedClass,
-  dashboardRightAsideListClass,
-  dashboardRightAsideSectionClass,
-  dashboardSidebarNavClass,
-  notificationBellClass,
-} from "../components/dashboard/dashboardShellClasses";
 
 type PostItem = {
   id: string;
@@ -602,26 +578,33 @@ function ClientHomePageContent() {
   };
 
   const isFeedView = pathname === "/client-home" && !activePanel;
-  const isProfilePanel = activePanel === "profile" || activePanel === "featured-post";
-  const centerPanelBodyClass = isProfilePanel ? dashboardProfilePanelBodyClass : dashboardPanelBodyClass;
+  const isFixedShellLayout = activePanel === "messages";
 
   return (
     <div
-      className={`${dashboardShellClass} ${dashboardShellFixedClass}`}
+      className={`bg-[#E5F6F4] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
+        isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
+      }`}
     >
       <NotificationsDropdown
         items={notifications}
         onMarkAllRead={markAllRead}
         onMarkOneRead={markOneRead}
-        className={notificationBellClass}
+        className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
       />
       <div
-        className={`${dashboardGridClass} ${dashboardGridFixedClass}`}
+        className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
+          isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
+        }`}
       >
-        <aside className={`${dashboardAsideClass} ${dashboardAsideFixedClass}`}>
+        <aside
+          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
+            isFixedShellLayout ? "h-full overflow-hidden" : "sticky top-6 h-[calc(100vh-3rem)]"
+          }`}
+        >
           <SidebarBrand />
 
-          <nav className={dashboardSidebarNavClass} aria-label="Main">
+          <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
             {navItems.map((item) => {
               const active = isNavActive(item.href);
               return (
@@ -653,7 +636,7 @@ function ClientHomePageContent() {
 
         {isFeedView ? (
           <div
-            className={`${dashboardCenterColumnClass} transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
+            className={`min-h-0 transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
               isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
             }`}
           >
@@ -664,7 +647,7 @@ function ClientHomePageContent() {
                 <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{postsHeading}</h2>
               }
               scroll={
-                <section aria-labelledby="client-community-feed" className={dashboardFeedListClass}>
+                <section aria-labelledby="client-community-feed" className="space-y-4">
                   {approvedPosts.length > 0 ? (
                     approvedPosts.map((post) => (
                       <CommunityPostCard
@@ -683,9 +666,15 @@ function ClientHomePageContent() {
             />
           </div>
         ) : (
-        <main className={`${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass}`}>
+        <main
+          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] ${
+            activePanel === "profile" || activePanel === "featured-post" || activePanel === "messages"
+              ? "p-4"
+              : "p-6 sm:p-8 lg:p-10"
+          } ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}
+        >
           <div
-            className={`${centerPanelBodyClass} transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
+            className={`flex min-h-0 flex-1 flex-col transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
               isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
             }`}
           >
@@ -696,7 +685,7 @@ function ClientHomePageContent() {
                 </h1>
                 <p className="mt-1.5 text-sm text-zinc-600">Share what you need help with and connect with peers</p>
 
-                <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1fr)_230px]">
+                <div className="mt-7 grid gap-5 xl:grid-cols-[minmax(0,1fr)_230px]">
                   <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-5 shadow-sm sm:p-6">
                     <form className="space-y-4" onSubmit={handleCreatePost}>
                       <div>
@@ -857,7 +846,7 @@ function ClientHomePageContent() {
                   </article>
 
                   <div className="space-y-4 xl:max-h-[calc(100vh-11rem)] xl:overflow-y-auto xl:pr-1">
-                    <aside className={dashboardTipsAsideClass}>
+                    <aside className="rounded-2xl border border-[#F3DCCF] bg-[#FFF2EB] p-4 shadow-sm">
                       <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
                         <Lightbulb className="h-4 w-4 text-[#FF6B35]" strokeWidth={1.8} />
                         <span>Pro Tips</span>
@@ -889,10 +878,10 @@ function ClientHomePageContent() {
             ) : activePanel === "profile" || activePanel === "featured-post" ? (
               <section
                 aria-labelledby={activePanel === "featured-post" ? "featured-post-heading" : "profile-heading"}
-                className={`${dashboardProfileSectionClass} h-full min-h-0 flex-1`}
+                className="flex min-h-0 flex-1 flex-col"
               >
-                <div className={`${dashboardProfileGridClass} h-full min-h-0 flex-1`}>
-                  <article className={dashboardProfileSummaryCardClass}>
+                <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)] xl:items-start">
+                  <article className="sticky top-4 z-10 h-fit w-full max-w-[320px] rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:max-w-none">
                     <div className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-zinc-200 bg-[#E8EFEC]">
                       {profilePhotoDataUrl ? (
                         <img src={profilePhotoDataUrl} alt="Profile" className="h-full w-full object-cover" />
@@ -963,12 +952,12 @@ function ClientHomePageContent() {
                     </div>
                   </article>
 
-                  <div className={dashboardProfileScrollClass}>
+                  <div className="profile-scroll-pane max-h-[calc(100vh-3.5rem)] min-h-0 min-w-0 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] scroll-smooth">
                     {activePanel === "featured-post" ? (
                       <FeaturedPostEditor authorId={meUserId} authorAvatar={profilePhotoDataUrl || undefined} />
                     ) : (
                       <>
-                    <article className={dashboardProfileFormCardClass}>
+                    <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
                       <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
                         <UserCircle className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
                         About
@@ -1042,7 +1031,7 @@ function ClientHomePageContent() {
 
                     <Link
                       href="/client-home?panel=featured-post"
-                      className={`block ${dashboardProfileFormCardClass} transition hover:border-[#FF6B35]/40 hover:bg-[#FFF9F6]`}
+                      className="block rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm transition hover:border-[#FF6B35]/40 hover:bg-[#FFF9F6]"
                     >
                       <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
                         <FileText className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
@@ -1077,7 +1066,7 @@ function ClientHomePageContent() {
                       )}
                     </Link>
 
-                    <article className={dashboardProfileFormCardClass}>
+                    <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
                       <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
                         <Handshake className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
                         Helpers
@@ -1107,7 +1096,7 @@ function ClientHomePageContent() {
                       ) : null}
                     </article>
 
-                    <article className={dashboardProfileFormCardClass}>
+                    <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
                       <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
                         <MessageSquareQuote className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
                         Reviews
@@ -1152,10 +1141,68 @@ function ClientHomePageContent() {
         </main>
         )}
 
-        <aside className={`${dashboardAsideClass} ${dashboardAsideFixedClass}`}>
-          <section className={dashboardRightAsideSectionClass}>
-            <h3 className="shrink-0 text-sm font-semibold text-zinc-900">Recent Posts</h3>
-            <div className={dashboardRightAsideListClass}>
+        <aside
+          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
+            isFixedShellLayout
+              ? "h-full overflow-hidden"
+              : isFeedView
+                ? "sticky top-6 h-[calc(100vh-3rem)] overflow-hidden"
+                : "gap-8"
+          }`}
+        >
+          <section className={isFixedShellLayout || isFeedView ? "mb-6 shrink-0" : ""}>
+            <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
+            {notifications.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => router.push("/client-home?panel=notifications")}
+                className="mt-3 w-full rounded-xl border border-zinc-200 bg-white px-4 py-4 text-left text-xs text-zinc-700 shadow-sm hover:bg-zinc-50"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Bell aria-hidden="true" className="h-4 w-4 text-zinc-600" strokeWidth={1.6} />
+                  <span>Someone responded to your post</span>
+                </span>
+              </button>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {notifications.map((notice) => (
+                  <button
+                    key={notice}
+                    type="button"
+                    onClick={() => router.push("/client-home?panel=notifications")}
+                    className={`w-full rounded-xl border px-4 py-4 text-left text-xs shadow-sm hover:brightness-[0.98] ${
+                      notice.includes("approved")
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                        : notice.includes("review")
+                          ? "border-[#FFD4C2] bg-[#FFF2EB] text-[#9A3412]"
+                          : "border-zinc-200 bg-white text-zinc-700"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Bell aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.6} />
+                      <span>{notice}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section
+            className={isFixedShellLayout || isFeedView ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}
+          >
+            <h3
+              className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout || isFeedView ? "shrink-0" : ""}`}
+            >
+              Recent Posts
+            </h3>
+            <div
+              className={`mt-3 space-y-3 ${
+                isFixedShellLayout || isFeedView
+                  ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5"
+                  : ""
+              }`}
+            >
               {recentPosts.length === 0 ? (
                 <p className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">
                   No recent post

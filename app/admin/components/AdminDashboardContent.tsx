@@ -73,6 +73,16 @@ function badgeLabel(badge: ActivityItem["badge"]) {
   return "Pending";
 }
 
+function activityRowClass(kind: ActivityItem["kind"]) {
+  if (kind === "task_approved") return " admin-activity-row--approved";
+  if (kind === "task_rejected") return " admin-activity-row--rejected";
+  return "";
+}
+
+function isTaskModeration(kind: ActivityItem["kind"]) {
+  return kind === "task_approved" || kind === "task_rejected";
+}
+
 export default function AdminDashboardContent() {
   const { stats, statsLoading, statsError, reloadStats } = useAdminLayoutStats();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -174,22 +184,20 @@ export default function AdminDashboardContent() {
         ) : (
           <ul className="admin-activity-list">
             {activities.map((a) => (
-              <li
-                key={a.id}
-                className={`admin-activity-row${a.kind === "task_approved" ? " admin-activity-row--approved" : ""}`}
-              >
+              <li key={a.id} className={`admin-activity-row${activityRowClass(a.kind)}`}>
                 <div className="admin-activity-row__body">
                   <p className="admin-activity-row__title">{a.title}</p>
-                  {a.kind === "task_approved" ? (
+                  {isTaskModeration(a.kind) ? (
                     <>
                       {a.taskTitle ? (
                         <p className="admin-activity-row__task">{a.taskTitle}</p>
                       ) : null}
                       <p className="admin-activity-row__detail">
-                        Approved by: <span>{a.approvedByName || "Admin"}</span>
+                        {a.kind === "task_rejected" ? "Rejected by:" : "Approved by:"}{" "}
+                        <span>{a.moderatorName || "—"}</span>
                       </p>
                       <p className="admin-activity-row__detail">
-                        Client: <span>{a.clientName || a.sub || "Unknown client"}</span>
+                        Client: <span>{a.clientName || "Unknown client"}</span>
                       </p>
                     </>
                   ) : (

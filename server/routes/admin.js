@@ -7,6 +7,11 @@ const authController = require('../controllers/authController');
 const { mapTaskToFeedPost } = require('../utils/taskFeedDto');
 const { emitToUser } = require('../socket/socketServer');
 const { notifyClientPostApproved } = require('../services/notificationService');
+const {
+  listRecentAdminActivities,
+  recordTaskApproved,
+  recordTaskRejected,
+} = require('../services/adminActivityService');
 
 const router = express.Router();
 
@@ -93,89 +98,11 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-async function buildRecentActivities(limit = 20) {
-  const [tasks, newUsers] = await Promise.all([
-    Task.find()
-      .populate('clientId', 'name')
-      .populate('approvedBy', 'name')
-      .sort({ updatedAt: -1 })
-      .limit(30)
-      .lean(),
-    User.find({ role: 'user', verified: { $ne: true } })
-      .select('name createdAt verified')
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .lean(),
-  ]);
-
-  const fromTasks = tasks.map((t) => {
-    const clientName = t.clientId?.name || 'Unknown client';
-    let title;
-    let badge;
-    let sub;
-    let kind = 'default';
-    let approvedByName;
-    let taskTitle;
-
-    if (t.status === 'pending') {
-      if (t.flagged) {
-        title = 'Task flagged for review';
-        badge = 'warning';
-      } else {
-        title = 'New task submitted';
-        badge = 'pending';
-      }
-      sub = clientName;
-    } else if (t.status === 'approved') {
-      title = 'Task Approved';
-      badge = 'completed';
-      kind = 'task_approved';
-      taskTitle = t.title || 'Untitled task';
-      sub = taskTitle;
-      approvedByName = t.approvedBy?.name || 'Admin';
-    } else {
-      title = 'Task rejected';
-      badge = 'warning';
-      sub = clientName;
-    }
-
-    const at = t.status === 'pending' ? t.createdAt : t.updatedAt;
-    return {
-      id: `task-${t._id}`,
-      title,
-      sub,
-      at: new Date(at).toISOString(),
-      badge,
-      kind,
-      ...(kind === 'task_approved'
-        ? {
-            clientName,
-            approvedByName,
-            taskTitle,
-          }
-        : {}),
-    };
-  });
-
-  const fromUsers = newUsers.map((u) => ({
-    id: `user-${u._id}`,
-    title: 'New user registered',
-    sub: u.name,
-    at: new Date(u.createdAt).toISOString(),
-    badge: 'pending',
-    kind: 'default',
-  }));
-
-  return [...fromTasks, ...fromUsers]
-    .sort((a, b) => new Date(b.at) - new Date(a.at))
-    .slice(0, limit);
-}
-
 router.get('/activities', async (req, res) => {
   try {
     const rawLimit = parseInt(String(req.query.limit || '20'), 10);
     const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 50) : 20;
-    const items = await buildRecentActivities(limit);
+    const items = await listRecentAdminActivities(limit);
     res.json({ items });
   } catch (error) {
     console.error(error);
@@ -202,7 +129,7 @@ router.get('/users', async (req, res) => {
       verified: !!u.verified,
       suspended: !!u.suspended,
       tasksPosted: countByClient.get(String(u._id)) || 0,
-      rating: null,
+      rating: u.accountType === 'freelancer' ? null : undefined,
     }));
 
     res.json({ users: payload });
@@ -250,14 +177,20 @@ router.patch('/tasks/:id', async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid task id.' });
     }
-    const update =
-      status === 'approved'
-        ? { $set: { status, approvedBy: req.user.userId } }
-        : { $set: { status }, $unset: { approvedBy: '' } };
+    const adminId = req.user.userId;
+    let update;
+    if (status === 'approved') {
+      update = { $set: { status, approvedBy: adminId }, $unset: { rejectedBy: '' } };
+    } else if (status === 'rejected') {
+      update = { $set: { status, rejectedBy: adminId }, $unset: { approvedBy: '' } };
+    } else {
+      update = { $set: { status }, $unset: { approvedBy: '', rejectedBy: '' } };
+    }
 
     const task = await Task.findByIdAndUpdate(req.params.id, update, { new: true })
       .populate('clientId', 'name email accountType photoDataUrl')
       .populate('approvedBy', 'name')
+      .populate('rejectedBy', 'name')
       .lean();
     if (!task) {
       return res.status(404).json({ message: 'Task not found.' });
@@ -275,6 +208,16 @@ router.patch('/tasks/:id', async (req, res) => {
       } catch (notifyErr) {
         console.error('Notification dispatch failed after post approval:', notifyErr);
       }
+    }
+
+    try {
+      if (status === 'approved') {
+        await recordTaskApproved(task, adminId);
+      } else if (status === 'rejected') {
+        await recordTaskRejected(task, adminId);
+      }
+    } catch (activityErr) {
+      console.error('Failed to record admin activity:', activityErr);
     }
 
     res.json({
