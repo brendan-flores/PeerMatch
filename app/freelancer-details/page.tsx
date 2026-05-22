@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Button from "../components/Button";
 import AuthPageHeader from "../components/AuthPageHeader";
 import { useRouter } from "next/navigation";
-import { apiPostJson, ApiError } from "../lib/api";
+import { apiGetJson, apiPostJson, ApiError } from "../lib/api";
 
 const yearLevels = [
   "1st Year",
@@ -52,18 +52,30 @@ const courseOptions = [
   "BS Criminology",
 ] as const;
 
+type ProfileUser = {
+  name?: string;
+  course?: string;
+  yearLevel?: string;
+  aboutMe?: string;
+  photoDataUrl?: string;
+};
+
+function splitFullName(fullName: string) {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+/** Matches login, register, verify, and freelancer dashboard shell */
+const DETAILS_PAGE_BG = "bg-[#E5F6F4]";
+
 export default function FreelancerDetailsPage() {
   const router = useRouter();
-
-  const [course, setCourse] = useState("");
-  const [yearLevel, setYearLevel] = useState(
-    yearLevels[0]
-  );
-
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-
-  const [skills, setSkills] = useState("");
+  const [course, setCourse] = useState("");
+  const [yearLevel, setYearLevel] = useState(yearLevels[0]);
   const [aboutMe, setAboutMe] = useState("");
 
   const [photoFile, setPhotoFile] =
@@ -79,11 +91,31 @@ export default function FreelancerDetailsPage() {
     useState(false);
 
   const [photoPreview, setPhotoPreview] = useState(
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=FreelancerDetails"
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=FreelancerDetails",
   );
 
   const fileInputRef =
     useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await apiGetJson<{ user: ProfileUser }>("/api/auth/profile");
+        const user = res.user;
+        if (user?.name) {
+          const { firstName: first, lastName: last } = splitFullName(user.name);
+          setFirstName(first);
+          setLastName(last);
+        }
+        if (user?.course) setCourse(user.course);
+        if (user?.yearLevel) setYearLevel(user.yearLevel);
+        if (user?.aboutMe) setAboutMe(user.aboutMe);
+        if (user?.photoDataUrl) setPhotoPreview(user.photoDataUrl);
+      } catch {
+        // User may not be logged in yet; profile fields stay at defaults.
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!photoFile) return;
@@ -129,25 +161,26 @@ export default function FreelancerDetailsPage() {
 
     if (isSubmitting) return;
 
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+    if (!trimmedFirst || !trimmedLast) {
+      setStatusMessage("Please enter your first and last name.");
+      return;
+    }
+
     void (async () => {
       setIsSubmitting(true);
       setStatusMessage("");
 
       try {
-        const photoDataUrl = photoFile
-          ? await fileToDataUrl(photoFile)
-          : undefined;
-
+        const photoDataUrl = photoFile ? await fileToDataUrl(photoFile) : undefined;
+        const name = `${trimmedFirst} ${trimmedLast}`.trim();
         await apiPostJson("/api/auth/profile", {
+          name,
           course,
           yearLevel,
-          firstName,
-          lastName,
-          skills,
-          aboutMe,
-          ...(photoDataUrl
-            ? { photoDataUrl }
-            : {}),
+          aboutMe: aboutMe.trim().slice(0, 500),
+          ...(photoDataUrl ? { photoDataUrl } : {}),
         });
 
         setShowConfirmation(true);
@@ -169,11 +202,23 @@ export default function FreelancerDetailsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#E5F6F4]">
-      <div className="flex min-h-screen w-full flex-col">
-        <AuthPageHeader />
+    <div className={`min-h-screen ${DETAILS_PAGE_BG}`}>
+      <div className={`flex min-h-screen w-full flex-col ${DETAILS_PAGE_BG}`}>
+        <header className="sticky top-0 z-50 w-full">
+          <div className="w-full rounded-b-[2rem] border-b border-slate-200/70 bg-white/95 px-6 py-4 shadow-sm shadow-slate-200 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+            <div className="mx-auto flex w-full max-w-[1120px] items-center justify-center">
+              <div className="flex items-center gap-3 px-1 py-1">
+                <Image src="/peermatch-logo.png" alt="PeerMatch logo" width={28} height={28} className="h-7 w-7 object-contain" />
+                <div className="leading-tight">
+                  <p className="text-base font-semibold text-slate-950">PeerMatch</p>
+                  <p className="text-xs text-slate-500">Student Collaboration</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
 
-        <main className="flex flex-1 items-start justify-center px-4 py-12">
+        <main className={`flex flex-1 items-start justify-center px-4 py-12 ${DETAILS_PAGE_BG}`}>
           <div className="w-full max-w-[1120px]">
             <div className="text-center">
               <h1 className="text-4xl font-semibold tracking-tight text-slate-950">
@@ -353,8 +398,7 @@ export default function FreelancerDetailsPage() {
                         </p>
 
                         <p className="mt-1 text-xs text-slate-500">
-                          Highlight your skills and
-                          share what you can offer
+                          Share your name and a short introduction for clients and peers
                         </p>
                       </div>
                     </div>
@@ -362,75 +406,37 @@ export default function FreelancerDetailsPage() {
                     <div className="mt-5 grid gap-4">
                       <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block">
-                          <span className="text-xs font-medium text-slate-700">
-                            First Name
-                          </span>
-
+                          <span className="text-xs font-medium text-slate-700">First Name</span>
                           <input
                             type="text"
                             value={firstName}
-                            onChange={(e) =>
-                              setFirstName(
-                                e.target.value
-                              )
-                            }
+                            onChange={(e) => setFirstName(e.target.value)}
                             placeholder="First Name"
                             required
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
                           />
                         </label>
-
                         <label className="block">
-                          <span className="text-xs font-medium text-slate-700">
-                            Last Name
-                          </span>
-
+                          <span className="text-xs font-medium text-slate-700">Last Name</span>
                           <input
                             type="text"
                             value={lastName}
-                            onChange={(e) =>
-                              setLastName(
-                                e.target.value
-                              )
-                            }
+                            onChange={(e) => setLastName(e.target.value)}
                             placeholder="Last Name"
                             required
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
                           />
                         </label>
                       </div>
 
                       <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          Skills
-                        </span>
-
-                        <input
-                          type="text"
-                          value={skills}
-                          onChange={(e) =>
-                            setSkills(e.target.value)
-                          }
-                          placeholder="e.g. UI Design, Research, Programming"
-                          required
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
-                        />
-                      </label>
-
-                      <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          About Me
-                        </span>
-
+                        <span className="text-xs font-medium text-slate-700">About you</span>
                         <textarea
                           value={aboutMe}
-                          onChange={(e) =>
-                            setAboutMe(
-                              e.target.value
-                            )
-                          }
-                          placeholder="Tell clients and peers about your strengths, interests, and the projects you'd like to work on..."
+                          onChange={(e) => setAboutMe(e.target.value)}
+                          placeholder="Tell clients and peers about your strengths, interests, and the kind of work you offer..."
                           required
+                          maxLength={500}
                           rows={5}
                           className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
                         />

@@ -53,7 +53,14 @@ export default function RegisterRolePage() {
   ) => {
     event.preventDefault();
 
-    if (!username || !email || !password) {
+    const nameOnDetailsPage = role === "client" || role === "freelancer";
+
+    if (!email || !password) {
+      setStatusMessage("Please fill in every field.");
+      return;
+    }
+
+    if (!nameOnDetailsPage && (!firstName || !lastName)) {
       setStatusMessage("Please fill in every field.");
       return;
     }
@@ -66,17 +73,9 @@ export default function RegisterRolePage() {
     }
 
     const trimmedEmail = email.trim();
-    const trimmedUsername = username.trim();
-
-    const validationError =
-      getUsernameValidationError(trimmedUsername);
-
-    if (!trimmedUsername || validationError) {
-      setStatusMessage(
-        validationError || "Please fill in every field."
-      );
-      return;
-    }
+    const name = nameOnDetailsPage
+      ? trimmedEmail.split("@")[0] || (role === "client" ? "Client" : "Freelancer")
+      : `${firstName.trim()} ${lastName.trim()}`.trim();
 
     setIsSubmitting(true);
     setStatusMessage("");
@@ -136,11 +135,40 @@ export default function RegisterRolePage() {
               </button>
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="mt-8 space-y-5"
-            >
-              {/* USERNAME */}
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              {role !== "client" && role !== "freelancer" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="firstName" className="mb-2 block text-sm font-medium text-zinc-700">
+                      First Name
+                    </label>
+                    <input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      value={firstName}
+                      onChange={(event) => setFirstName(event.target.value)}
+                      placeholder="First Name"
+                      className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lastName" className="mb-2 block text-sm font-medium text-zinc-700">
+                      Last Name
+                    </label>
+                    <input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      value={lastName}
+                      onChange={(event) => setLastName(event.target.value)}
+                      placeholder="Last Name"
+                      className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
+                    />
+                  </div>
+                </div>
+              ) : null}
+
               <div>
                 <label
                   htmlFor="username"
