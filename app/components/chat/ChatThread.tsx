@@ -7,6 +7,7 @@ import { ApiError, apiDeleteJson, apiGetJson, apiPostJson } from "@/app/lib/api"
 import type { ChatMessagePayload } from "@/app/lib/chatTypes";
 import { dedupeReactions, toggleMessageReaction } from "@/app/lib/reactionUtils";
 import { ChatMessageRow } from "@/app/components/chat/ChatMessageRow";
+import { dispatchUnreadMessagesRefresh } from "@/app/hooks/useUnreadMessageCount";
 import {
   connectSocket,
   emitMarkSeen,
@@ -194,7 +195,10 @@ export function ChatThread({
 
     emitMarkSeen(resolvedOtherId);
     // Fallback for non-socket receivers / legacy clients.
-    void apiPostJson("/api/messages/seen", { otherUserId: resolvedOtherId }).catch(() => undefined);
+    void apiPostJson("/api/messages/seen", { otherUserId: resolvedOtherId })
+      .then(() => dispatchUnreadMessagesRefresh())
+      .catch(() => undefined);
+    dispatchUnreadMessagesRefresh();
   }, [canChat, resolvedOtherId, messages, currentUserId]);
 
   useEffect(() => {

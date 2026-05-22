@@ -7,7 +7,6 @@ import { FreelancerFeedMain } from "../components/freelancer/FreelancerFeedMain"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bell,
   BookOpen,
   CalendarDays,
   ChevronDown,
@@ -52,6 +51,10 @@ import {
 import { connectSocket, disconnectSocket, subscribePostApproved } from "../lib/socket";
 import { ChatLayout } from "../components/chat/ChatLayout";
 import { ClientPostToast, type ClientPostToastState } from "../components/ClientPostToast";
+import { NotificationsDropdown } from "../components/NotificationsDropdown";
+import { NavUnreadBadge } from "../components/NavUnreadBadge";
+import { useNotifications } from "../hooks/useNotifications";
+import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
 
 type PostItem = {
   id: string;
@@ -173,7 +176,6 @@ function ClientHomePageContent() {
   const [postDescriptionInput, setPostDescriptionInput] = useState("");
   const [postBudgetInput, setPostBudgetInput] = useState("");
   const [postStatusMessage, setPostStatusMessage] = useState("");
-  const [notifications, setNotifications] = useState<string[]>([]);
   const [postToast, setPostToast] = useState<ClientPostToastState>(null);
   const knownApprovedPostIdsRef = useRef<Set<string>>(new Set());
 
@@ -273,22 +275,21 @@ function ClientHomePageContent() {
     [posts],
   );
 
+  const { items: notifications, markAllRead, markOneRead, refresh: refreshNotifications } =
+    useNotifications(meUserId || null);
+  const { count: unreadMessageCount } = useUnreadMessageCount(meUserId || null);
+
   const dismissPostToast = useCallback(() => setPostToast(null), []);
 
   const handlePostApproved = useCallback(
     (message?: string) => {
       const approvedMessage = String(message || "").trim() || POST_APPROVED_MESSAGE;
       setPostToast({ variant: "approved", message: approvedMessage });
-      setNotifications((prev) =>
-        [approvedMessage, ...prev.filter((item) => item !== POST_REVIEW_MESSAGE && item !== approvedMessage)].slice(
-          0,
-          5,
-        ),
-      );
       notifyCommunityPostsChanged();
       void refreshAll();
+      void refreshNotifications();
     },
-    [refreshAll],
+    [refreshAll, refreshNotifications],
   );
 
   useEffect(() => {
@@ -325,7 +326,8 @@ function ClientHomePageContent() {
   }, [meUserId]);
 
   const awaitingPostApproval =
-    postToast?.variant === "pending" || notifications.includes(POST_REVIEW_MESSAGE);
+    postToast?.variant === "pending" ||
+    notifications.some((item) => item.type === "post_review" && !item.read);
 
   useEffect(() => {
     if (!meUserId || !awaitingPostApproval) return;
@@ -542,10 +544,8 @@ function ClientHomePageContent() {
         setPostDescriptionInput("");
         setPostBudgetInput("");
         setPostToast({ variant: "pending", message: POST_REVIEW_MESSAGE });
-        setNotifications((prev) =>
-          [POST_REVIEW_MESSAGE, ...prev.filter((item) => item !== POST_REVIEW_MESSAGE)].slice(0, 5),
-        );
         notifyCommunityPostsChanged();
+        void refreshNotifications();
         await refreshAll();
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Could not save your post. Please try again.";
@@ -586,6 +586,12 @@ function ClientHomePageContent() {
         isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
       }`}
     >
+      <NotificationsDropdown
+        items={notifications}
+        onMarkAllRead={markAllRead}
+        onMarkOneRead={markOneRead}
+        className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
+      />
       <div
         className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
           isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
@@ -609,7 +615,10 @@ function ClientHomePageContent() {
                   className={`${navItemClass} ${active ? navActiveClass : ""}`}
                 >
                   {item.icon}
-                  <span>{item.label}</span>
+                  <span className="min-w-0 flex-1">{item.label}</span>
+                  {item.href.includes("panel=messages") ? (
+                    <NavUnreadBadge count={unreadMessageCount} active={active} />
+                  ) : null}
                 </Link>
               );
             })}
