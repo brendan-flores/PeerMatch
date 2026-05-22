@@ -19,14 +19,21 @@ export const dashboardCenterColumnContentClass = "relative z-0 h-full min-h-0 ov
 /** Full-size overlay so the bell stays clickable above the white card */
 export const dashboardCenterBellAnchorClass = "pointer-events-none absolute inset-0 z-[100]";
 
-/** Top-left of center white card, aligned with rounded corner */
-export const dashboardCenterBellInnerClass = "pointer-events-auto absolute left-4 top-4";
+/** Top-left of center white card — tight to corner, clear of rounded border */
+export const dashboardCenterBellInnerClass = "pointer-events-auto absolute left-3.5 top-3.5 sm:left-4 sm:top-4";
 
-/** Feed / panel titles sit right of the bell */
-export const dashboardCenterTitleOffsetClass = "shrink-0 pl-12 sm:pl-14";
+/** Titles and first content row sit to the right of the bell (44px + gap) */
+export const dashboardCenterTitleOffsetClass = "min-w-0 pl-12 sm:pl-14";
 
-/** Scroll panels whose content starts below the corner bell */
-export const dashboardPanelScrollInsetClass = "pt-11 pl-12 sm:pt-12 sm:pl-14";
+/** Centered page title block (create post, offers, messages sidebar header) */
+export const dashboardCenterPanelHeadingClass = "min-w-0 text-center";
+
+/** Scroll panels inside the center column (bell clearance is on titles via dashboardCenterTitleOffsetClass) */
+export const dashboardPanelScrollInsetClass = "min-w-0";
+
+/** Compact center panel padding (create post, offers, messages) — avoids double top gap with bell */
+export const dashboardCenterPanelCompactPaddingClass =
+  "px-4 pt-4 pb-4 sm:px-5 sm:pt-5 sm:pb-6 lg:px-6 lg:pb-8";
 
 /** Center column wrapper + scroll (create post, profile, messages, etc.) */
 export const dashboardCenterColumnClass = "h-full min-h-0 overflow-hidden";

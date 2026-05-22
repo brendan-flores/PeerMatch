@@ -15,6 +15,8 @@ export type ApiNotification = {
 
 export function mapApiNotification(n: ApiNotification): NotificationItem {
   const photo = String(n.actorPhotoDataUrl || "").trim();
+  const relatedTaskId = String(n.relatedTaskId || "").trim();
+  const relatedOfferId = String(n.relatedOfferId || "").trim();
   return {
     id: n.id,
     userName: n.userName,
@@ -23,6 +25,8 @@ export function mapApiNotification(n: ApiNotification): NotificationItem {
     type: n.type,
     read: n.read,
     ...(photo ? { actorPhotoDataUrl: photo } : {}),
+    ...(relatedTaskId ? { relatedTaskId } : {}),
+    ...(relatedOfferId ? { relatedOfferId } : {}),
   };
 }
 

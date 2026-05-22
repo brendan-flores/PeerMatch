@@ -1,6 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const Task = require('../models/Task');
+const ClientTask = require('../models/ClientTask');
 const User = require('../models/User');
 const { authMiddleware, requireAdmin } = require('../middleware/auth');
 const authController = require('../controllers/authController');
@@ -12,6 +12,7 @@ const {
   recordTaskApproved,
   recordTaskRejected,
 } = require('../services/adminActivityService');
+const { listClientTasksForAdmin } = require('../services/clientTaskStore');
 
 const router = express.Router();
 
@@ -67,15 +68,17 @@ router.get('/stats', async (req, res) => {
       suspendedUsers,
       flaggedPending,
     ] = await Promise.all([
-      Task.countDocuments(),
-      Task.countDocuments({ status: 'pending' }),
-      Task.countDocuments({ status: 'approved' }),
+      ClientTask.countDocuments(),
+      ClientTask.countDocuments({
+        $or: [{ status: 'pending' }, { status: { $exists: false } }, { status: null }],
+      }),
+      ClientTask.countDocuments({ status: 'approved' }),
       User.countDocuments({ role: 'user', suspended: { $ne: true } }),
       // Exclude admin accounts from these student/user aggregates.
       User.countDocuments({ role: 'user' }),
       User.countDocuments({ role: 'user', verified: true }),
       User.countDocuments({ role: 'user', suspended: true }),
-      Task.countDocuments({ flagged: true, status: 'pending' }),
+      ClientTask.countDocuments({ flagged: true, status: 'pending' }),
     ]);
 
     const verificationRate =
@@ -114,7 +117,7 @@ router.get('/users', async (req, res) => {
   try {
     const users = await User.find().select('-password').sort({ createdAt: -1 }).lean();
 
-    const taskCounts = await Task.aggregate([
+    const taskCounts = await ClientTask.aggregate([
       { $group: { _id: '$clientId', count: { $sum: 1 } } },
     ]);
     const countByClient = new Map(taskCounts.map((x) => [String(x._id), x.count]));
@@ -141,27 +144,8 @@ router.get('/users', async (req, res) => {
 
 router.get('/tasks', async (req, res) => {
   try {
-    const [tasks, pendingTotal] = await Promise.all([
-      Task.find().populate('clientId', 'name email').sort({ createdAt: -1 }).lean(),
-      Task.countDocuments({ status: 'pending' }),
-    ]);
-
-    const payload = tasks.map((t) => ({
-      id: String(t._id),
-      title: t.title,
-      description: t.description || '',
-      subjectCategory: t.subjectCategory || '',
-      urgency: t.urgency || 'normal',
-      createdAt: t.createdAt ? new Date(t.createdAt).toISOString() : null,
-      updatedAt: t.updatedAt ? new Date(t.updatedAt).toISOString() : null,
-      flagged: !!t.flagged,
-      clientName: t.clientId?.name || 'Unknown',
-      budget: t.budget,
-      category: t.category,
-      status: t.status,
-    }));
-
-    res.json({ tasks: payload, pendingTotal });
+    const { tasks, pendingTotal } = await listClientTasksForAdmin();
+    res.json({ tasks, pendingTotal });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Could not load tasks.' });
@@ -187,7 +171,7 @@ router.patch('/tasks/:id', async (req, res) => {
       update = { $set: { status }, $unset: { approvedBy: '', rejectedBy: '' } };
     }
 
-    const task = await Task.findByIdAndUpdate(req.params.id, update, { new: true })
+    const task = await ClientTask.findByIdAndUpdate(req.params.id, update, { new: true })
       .populate('clientId', 'name email accountType photoDataUrl')
       .populate('approvedBy', 'name')
       .populate('rejectedBy', 'name')

@@ -32,7 +32,10 @@ async function recordAdminActivity(payload) {
 
 async function listRecentAdminActivities(limit = 20) {
   const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 50) : 20;
-  const rows = await AdminActivity.find().sort({ occurredAt: -1 }).limit(safeLimit).lean();
+  const rows = await AdminActivity.find({ kind: { $ne: 'task_flagged' } })
+    .sort({ occurredAt: -1 })
+    .limit(safeLimit)
+    .lean();
   return rows.map(toActivityDto);
 }
 
@@ -43,12 +46,11 @@ async function clearAllAdminActivities() {
 
 async function recordTaskSubmitted(task, clientName) {
   const name = String(clientName || '').trim() || 'Unknown client';
-  const flagged = !!task.flagged;
   return recordAdminActivity({
-    title: flagged ? 'Task flagged for review' : 'New task submitted',
+    title: 'New task submitted',
     sub: name,
-    badge: flagged ? 'warning' : 'pending',
-    kind: flagged ? 'task_flagged' : 'task_submitted',
+    badge: 'pending',
+    kind: 'task_submitted',
     occurredAt: task.createdAt || new Date(),
     clientName: name,
     taskTitle: task.title || '',

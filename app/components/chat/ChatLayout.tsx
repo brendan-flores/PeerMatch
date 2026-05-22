@@ -16,6 +16,7 @@ import type { UserSearchResult } from "@/app/lib/userSearch";
 import { searchUsersByQuery } from "@/app/lib/userSearch";
 import { ChatThread } from "@/app/components/chat/ChatThread";
 import { UserAvatar } from "@/app/components/UserAvatar";
+import { dashboardCenterPanelHeadingClass } from "@/app/components/dashboard/dashboardShellClasses";
 
 type Conversation = {
   otherUserId: string;
@@ -486,7 +487,7 @@ export function ChatLayout({
     <div className={`flex h-full max-h-full min-h-0 w-full min-w-0 overflow-hidden bg-[#F5F5F5] ${className}`}>
       {/* Left sidebar */}
       <aside className="flex h-full max-h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden border-r border-zinc-200 bg-white">
-        <div className="shrink-0 px-4 pt-6 pb-4">
+        <div className={`shrink-0 px-4 pt-3 pb-3 ${dashboardCenterPanelHeadingClass}`}>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Messages</h1>
 
           <div ref={dropdownWrapRef} className="relative mt-4">

@@ -13,6 +13,7 @@
     "start:server": "node server/server.js",
     "seed:admin": "node server/seedAdmin.js",
     "seed:tasks": "node server/seedTasks.js",
+    "db:drop-obsolete": "node server/scripts/dropObsoleteCollections.js",
     "lint": "eslint"
   },
   "dependencies": {

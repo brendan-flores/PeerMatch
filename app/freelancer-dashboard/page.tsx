@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { FeedPageHeader } from "@/app/components/dashboard/FeedPageHeader";
 import { CommunityPostCard } from "@/app/components/freelancer/CommunityPostCard";
 import { FreelancerFeedMain } from "@/app/components/freelancer/FreelancerFeedMain";
@@ -7,10 +9,34 @@ import { OfferHelpPanel } from "@/app/components/freelancer/OfferHelpPanel";
 import { useCommunityPosts } from "@/app/lib/useCommunityPosts";
 import { useFreelancerDashboardUser, useFreelancerSelectedPost } from "./FreelancerDashboardShell";
 
-export default function FreelancerDashboardPage() {
+function FreelancerDashboardPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const postFromQuery = searchParams.get("post");
+  const fromNotification = searchParams.get("fromNotification") === "1";
   const { user } = useFreelancerDashboardUser();
   const { selectedPost, setSelectedPost, clearSelectedPost } = useFreelancerSelectedPost();
   const { posts, loading, error, reload } = useCommunityPosts();
+  const [highlightPost, setHighlightPost] = useState(false);
+
+  useEffect(() => {
+    const postId = String(postFromQuery || "").trim();
+    if (!postId || loading) return;
+    const post = posts.find((entry) => entry.id === postId);
+    if (!post) return;
+    setSelectedPost(post);
+    if (fromNotification) {
+      setHighlightPost(true);
+      const clearHighlight = window.setTimeout(() => setHighlightPost(false), 2400);
+      const clearQuery = window.setTimeout(() => {
+        router.replace(`/freelancer-dashboard?post=${encodeURIComponent(postId)}`);
+      }, 2600);
+      return () => {
+        window.clearTimeout(clearHighlight);
+        window.clearTimeout(clearQuery);
+      };
+    }
+  }, [postFromQuery, fromNotification, loading, posts, setSelectedPost, router]);
 
   if (selectedPost && user) {
     return (
@@ -21,6 +47,7 @@ export default function FreelancerDashboardPage() {
             freelancerId={user.id}
             freelancerName={user.name}
             onBack={clearSelectedPost}
+            highlight={highlightPost}
           />
         </section>
       </FreelancerFeedMain>
@@ -53,5 +80,19 @@ export default function FreelancerDashboardPage() {
         </section>
       }
     />
+  );
+}
+
+export default function FreelancerDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <p className="text-sm text-zinc-500">Loading…</p>
+        </div>
+      }
+    >
+      <FreelancerDashboardPageContent />
+    </Suspense>
   );
 }

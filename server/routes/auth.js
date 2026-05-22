@@ -1,10 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const PendingRegistration = require('../models/PendingRegistration');
 const { sendVerificationEmail } = require('../utils/mailer');
 const { authMiddleware, signAccessToken, attachAccessTokenCookie } = require('../middleware/auth');
 const authController = require('../controllers/authController');
+const { listFreelancerReviews } = require('../services/freelancerReviewService');
 const {
   normalizeEmail,
   normalizeUsername,
@@ -89,15 +89,6 @@ function sanitizeFreelancerProfile(input) {
     }))
     .filter((item) => item.title || item.description);
 
-  const reviews = normalizeArray(profile.reviews)
-    .slice(0, 10)
-    .map((item) => ({
-      reviewer: safeString(item?.reviewer, 60),
-      text: safeString(item?.text, 280),
-      rating: Math.max(1, Math.min(5, safeInt(item?.rating, 5))),
-    }))
-    .filter((item) => item.reviewer || item.text);
-
   return {
     course: safeString(profile.course, 120),
     yearLevel: safeString(profile.yearLevel, 80),
@@ -113,7 +104,6 @@ function sanitizeFreelancerProfile(input) {
     skills,
     languages,
     portfolio,
-    reviews,
   };
 }
 
@@ -144,18 +134,13 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Please use your institutional Outlook email (e.g., name@cit.edu).' });
     }
 
-    const existingUser = await User.findOne({
-      $or: [{ email: normalizedEmail }, { username: normalizedUsername }],
-    });
-    if (existingUser) {
-      if (existingUser.email === normalizedEmail) {
-        return res.status(409).json({ message: 'Email is already registered.' });
-      }
-      return res.status(409).json({ message: 'Username is already taken.' });
+    const userByEmail = await User.findOne({ email: normalizedEmail });
+    if (userByEmail?.verified) {
+      return res.status(409).json({ message: 'Email is already registered.' });
     }
 
-    const usernameTaken = await PendingRegistration.findOne({ username: normalizedUsername });
-    if (usernameTaken && usernameTaken.email !== normalizedEmail) {
+    const userByUsername = await User.findOne({ username: normalizedUsername });
+    if (userByUsername && userByUsername.email !== normalizedEmail) {
       return res.status(409).json({ message: 'Username is already taken.' });
     }
 
@@ -164,23 +149,24 @@ router.post('/register', async (req, res) => {
     const verificationCode = generateVerificationCode();
     const expiresAt = getVerificationExpiration();
 
-    // IMPORTANT: Do not create a real `User` until verification succeeds.
-    // If the user tries to register again with the same email, rotate the code and resend.
-    let pending = await PendingRegistration.findOne({ email: normalizedEmail });
+    let pending = userByEmail;
 
     if (pending) {
       pending.username = normalizedUsername;
       pending.name = displayName;
       pending.password = hashedPassword;
       pending.accountType = accountType;
+      pending.verified = false;
       pending.verification = { code: verificationCode, expiresAt };
       await pending.save();
     } else {
-      pending = await PendingRegistration.create({
+      pending = await User.create({
         username: normalizedUsername,
         name: displayName,
         email: normalizedEmail,
         password: hashedPassword,
+        role: 'user',
+        verified: false,
         ...(accountType ? { accountType } : {}),
         verification: { code: verificationCode, expiresAt },
       });
@@ -189,14 +175,14 @@ router.post('/register', async (req, res) => {
     try {
       await sendVerificationEmail(pending.email, pending.name, verificationCode);
     } catch (mailError) {
-      await PendingRegistration.deleteOne({ _id: pending._id });
+      await User.deleteOne({ _id: pending._id, verified: false });
       return res.status(502).json({
         message: `Registration failed because verification email could not be delivered: ${mailError.message}`,
       });
     }
 
     return res.status(201).json({
-      message: 'Verification code sent to email. Enter the code to create your account.',
+      message: 'Verification code sent to email. Enter the code to verify your account.',
       email: pending.email,
     });
   } catch (error) {
@@ -214,13 +200,15 @@ router.post('/verify', async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and verification code.' });
     }
 
-    const alreadyUser = await User.findOne({ email: normalizedEmail });
-    if (alreadyUser) {
-      return res.status(409).json({ message: 'Email is already registered. Please log in.', email: normalizedEmail });
-    }
-
-    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+    const pending = await User.findOne({ email: normalizedEmail, verified: false });
     if (!pending) {
+      const existing = await User.findOne({ email: normalizedEmail, verified: true });
+      if (existing) {
+        return res.status(409).json({
+          message: 'Email is already registered. Please log in.',
+          email: normalizedEmail,
+        });
+      }
       return res.status(404).json({ message: 'No pending registration found. Please register again.' });
     }
 
@@ -232,32 +220,23 @@ router.post('/verify', async (req, res) => {
       return res.status(400).json({ message: 'Verification code has expired.' });
     }
 
-    const createdUser = await User.create({
-      username: pending.username,
-      name: pending.name,
-      email: pending.email,
-      password: pending.password,
-      role: 'user',
-      ...(pending.accountType ? { accountType: pending.accountType } : {}),
-      verified: true,
-      createdAt: new Date(),
-    });
+    pending.verified = true;
+    pending.verification = undefined;
+    pending.markModified('verification');
+    await pending.save();
 
-    await PendingRegistration.deleteOne({ _id: pending._id });
-
-    // Log the user in immediately so they can complete their profile.
-    const token = signAccessToken(createdUser);
+    const token = signAccessToken(pending);
     attachAccessTokenCookie(res, token);
 
     return res.json({
-      message: 'Email verified successfully. Account created.',
+      message: 'Email verified successfully.',
       user: {
-        id: createdUser._id,
-        username: createdUser.username,
-        name: createdUser.name,
-        email: createdUser.email,
-        role: createdUser.role,
-        ...(createdUser.accountType ? { accountType: createdUser.accountType } : {}),
+        id: pending._id,
+        username: pending.username,
+        name: pending.name,
+        email: pending.email,
+        role: pending.role,
+        ...(pending.accountType ? { accountType: pending.accountType } : {}),
       },
     });
   } catch (error) {
@@ -351,6 +330,9 @@ router.get('/profile', authMiddleware, async (req, res) => {
             .slice(0, 10),
     };
 
+    const reviews =
+      user.accountType === 'freelancer' ? await listFreelancerReviews(user._id) : [];
+
     return res.json({
       user: serializeProfileUser(user),
       profile: {
@@ -359,6 +341,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
         accountType: safeString(user.accountType, 24),
         photoDataUrl: typeof user.photoDataUrl === 'string' ? user.photoDataUrl : '',
         ...merged,
+        reviews,
       },
     });
   } catch (error) {
@@ -441,6 +424,9 @@ router.put('/profile', authMiddleware, async (req, res) => {
 
     await user.save();
 
+    const reviews =
+      user.accountType === 'freelancer' ? await listFreelancerReviews(user._id) : [];
+
     return res.json({
       message: 'Profile updated successfully.',
       profile: {
@@ -449,6 +435,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
         accountType: user.accountType || '',
         photoDataUrl: user.photoDataUrl || '',
         ...nextProfile,
+        reviews,
       },
     });
   } catch (error) {
@@ -471,12 +458,12 @@ router.post('/resend', async (req, res) => {
       return res.status(400).json({ message: 'Please use your institutional Outlook email (e.g., name@cit.edu).' });
     }
 
-    const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
+    const verifiedUser = await User.findOne({ email: normalizedEmail, verified: true });
+    if (verifiedUser) {
       return res.status(200).json({ message: 'User already verified.', email: normalizedEmail });
     }
 
-    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+    const pending = await User.findOne({ email: normalizedEmail, verified: false });
     if (!pending) {
       return res.status(404).json({ message: 'No pending registration found. Please register again.' });
     }

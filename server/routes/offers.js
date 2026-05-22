@@ -1,6 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const Task = require('../models/Task');
+const ClientTask = require('../models/ClientTask');
 const Offer = require('../models/Offer');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
@@ -109,7 +109,7 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Offer message is required.' });
     }
 
-    const task = await Task.findOne({
+    const task = await ClientTask.findOne({
       _id: postId,
       status: 'approved',
       $or: [
@@ -199,7 +199,7 @@ router.patch('/:id/accept', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'This offer is no longer available.' });
     }
 
-    const task = await Task.findById(offer.postId);
+    const task = await ClientTask.findById(offer.postId);
     if (!task) {
       return res.status(404).json({ message: 'Associated post not found.' });
     }
@@ -280,7 +280,7 @@ router.patch('/:id/reject', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'This offer is no longer available.' });
     }
 
-    const task = await Task.findById(offer.postId).select('title hireStatus clientId status').lean();
+    const task = await ClientTask.findById(offer.postId).select('title hireStatus clientId status').lean();
     if (!task) {
       return res.status(404).json({ message: 'Associated post not found.' });
     }

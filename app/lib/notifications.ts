@@ -16,6 +16,8 @@ export type NotificationItem = {
   type: NotificationType;
   read: boolean;
   actorPhotoDataUrl?: string;
+  relatedTaskId?: string;
+  relatedOfferId?: string;
 };
 
 export const PEERMATCH_LOGO_URL = "/peermatch-logo.png";

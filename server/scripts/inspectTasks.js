@@ -5,7 +5,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Task = require('../models/Task');
+const ClientTask = require('../models/ClientTask');
 const User = require('../models/User');
 const { mapTaskToFeedPost } = require('../utils/taskFeedDto');
 
@@ -13,7 +13,7 @@ async function run() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/peer-match';
   await mongoose.connect(uri);
 
-  const all = await Task.find({}).select('title status hireStatus clientId assignedFreelancerId').lean();
+  const all = await ClientTask.find({}).select('title status hireStatus clientId assignedFreelancerId').lean();
   console.log('TOTAL tasks:', all.length);
 
   const byStatus = {};
@@ -29,7 +29,7 @@ async function run() {
   const withAssign = all.filter((t) => t.assignedFreelancerId);
   console.log('With assignedFreelancerId:', withAssign.length);
 
-  const feedTasks = await Task.find({
+  const feedTasks = await ClientTask.find({
     status: 'approved',
     hireStatus: { $nin: ['assigned', 'completed'] },
   })

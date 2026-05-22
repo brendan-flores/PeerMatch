@@ -56,8 +56,9 @@ const tabs: { id: TaskRouteTab; label: string; path: string }[] = [
 ];
 
 function apiToRow(t: AdminTaskRow): TaskRow {
+  const raw = String(t.status || "pending").toLowerCase();
   const status: RowStatus =
-    t.status === "pending" ? "Pending" : t.status === "approved" ? "Approved" : "Rejected";
+    raw === "approved" ? "Approved" : raw === "rejected" ? "Rejected" : "Pending";
   return {
     id: t.id,
     title: t.title,

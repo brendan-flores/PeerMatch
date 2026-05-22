@@ -4,7 +4,7 @@ const offerSchema = new mongoose.Schema(
   {
     postId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Task',
+      ref: 'ClientTask',
       required: true,
       index: true,
     },

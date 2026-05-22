@@ -11,10 +11,16 @@ type DashboardCenterBellProps = {
   items: NotificationItem[];
   onMarkAllRead: () => void | Promise<void>;
   onMarkOneRead: (id: string) => void | Promise<void>;
+  onNotificationClick?: (item: NotificationItem) => void;
 };
 
 /** Floated above center white panel — not clipped by panel overflow or transform. */
-export function DashboardCenterBell({ items, onMarkAllRead, onMarkOneRead }: DashboardCenterBellProps) {
+export function DashboardCenterBell({
+  items,
+  onMarkAllRead,
+  onMarkOneRead,
+  onNotificationClick,
+}: DashboardCenterBellProps) {
   return (
     <div className={dashboardCenterBellAnchorClass}>
       <div
@@ -24,6 +30,7 @@ export function DashboardCenterBell({ items, onMarkAllRead, onMarkOneRead }: Das
           items={items}
           onMarkAllRead={onMarkAllRead}
           onMarkOneRead={onMarkOneRead}
+          onNotificationClick={onNotificationClick}
           className="relative"
         />
       </div>

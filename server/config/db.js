@@ -12,8 +12,6 @@ const connectDB = async () => {
     });
   } catch (error) {
     console.error('MongoDB connection error:', error.message);
-    // Keep the API process alive and retry so the app recovers
-    // automatically once MongoDB becomes available.
     setTimeout(connectDB, 5000);
   }
 };
