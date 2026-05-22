@@ -13,18 +13,30 @@ const roleDisplayNames: Record<RoleType, string> = {
   freelancer: "Freelancer",
 };
 
+const USERNAME_HINT = "3–30 characters. Letters, numbers, and underscores only.";
+
+function getUsernameValidationError(value: string): string | null {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized.length < 3 || normalized.length > 30) return USERNAME_HINT;
+  if (!/^[a-z0-9_]+$/.test(normalized)) return USERNAME_HINT;
+  return null;
+}
+
 export default function RegisterRolePage() {
   const router = useRouter();
   const params = useParams();
   const role = (params.role as RoleType) || "client";
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const usernameError = getUsernameValidationError(username);
+  const showUsernameHint = usernameError !== null;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -47,16 +59,19 @@ export default function RegisterRolePage() {
     }
 
     const trimmedEmail = email.trim();
-    const name = isClient
-      ? trimmedEmail.split("@")[0] || "Client"
-      : `${firstName.trim()} ${lastName.trim()}`.trim();
+    const trimmedUsername = username.trim();
+    const usernameError = getUsernameValidationError(trimmedUsername);
+    if (!trimmedUsername || usernameError) {
+      setStatusMessage(usernameError || "Please fill in every field.");
+      return;
+    }
 
     setIsSubmitting(true);
     setStatusMessage("");
 
     try {
       await apiPostJson<{ message: string; email: string }>("/api/auth/register", {
-        name,
+        username: trimmedUsername,
         email: trimmedEmail,
         password,
         role,
@@ -76,12 +91,14 @@ export default function RegisterRolePage() {
         <header className="sticky top-0 z-50 w-full">
           <div className="w-full rounded-b-[2rem] border-b border-slate-200/70 bg-white/95 px-6 py-4 shadow-sm shadow-slate-200 backdrop-blur supports-[backdrop-filter]:bg-white/80">
             <div className="mx-auto flex w-full max-w-[1120px] items-center justify-center">
-              <div className="flex items-center gap-3 px-1 py-1">
-                <Image src="/logo.png" alt="PeerMatch logo" width={28} height={28} className="h-7 w-7 object-contain" />
-                <div className="leading-tight">
-                  <p className="text-base font-semibold text-slate-950">PeerMatch</p>
-                  <p className="text-xs text-slate-500">Student Collaboration</p>
-                </div>
+              <div className="px-1 py-1">
+                <Image
+                  src="/logo.png"
+                  alt="PeerMatch — Student Collaboration"
+                  width={240}
+                  height={48}
+                  className="h-12 w-auto object-contain"
+                />
               </div>
             </div>
           </div>

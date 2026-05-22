@@ -22,15 +22,15 @@ type MeResponse = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!email || !password) {
-      setStatusMessage("Please enter both email and password.");
+    if (!loginId || !password) {
+      setStatusMessage("Please enter your email or username and password.");
       return;
     }
 
@@ -39,7 +39,7 @@ export default function LoginPage() {
 
     try {
       const data = await apiPostJson<LoginResponse>("/api/auth/login", {
-        email: email.trim(),
+        email: loginId.trim(),
         password,
       });
       if (data.user?.id) {
@@ -78,7 +78,9 @@ export default function LoginPage() {
       const message = err instanceof ApiError ? err.message : "Login failed. Please try again.";
       setStatusMessage(message);
       if (err instanceof ApiError && err.status === 403 && message.toLowerCase().includes("verify")) {
-        router.push(`/verify?email=${encodeURIComponent(email.trim())}`);
+        const payload = err.payload as { email?: string } | undefined;
+        const verifyEmail = typeof payload?.email === "string" ? payload.email : loginId.trim();
+        router.push(`/verify?email=${encodeURIComponent(verifyEmail)}`);
       }
     } finally {
       setIsSubmitting(false);
@@ -91,12 +93,14 @@ export default function LoginPage() {
         <header className="sticky top-0 z-50 w-full">
           <div className="w-full rounded-b-[2rem] border-b border-slate-200/70 bg-white/95 px-6 py-4 shadow-sm shadow-slate-200 backdrop-blur supports-[backdrop-filter]:bg-white/80">
             <div className="mx-auto flex w-full max-w-[1120px] items-center justify-center">
-              <div className="flex items-center gap-3 px-1 py-1">
-                <Image src="/logo.png" alt="PeerMatch logo" width={28} height={28} className="h-7 w-7 object-contain" />
-                <div className="leading-tight">
-                  <p className="text-base font-semibold text-slate-950">PeerMatch</p>
-                  <p className="text-xs text-slate-500">Student Collaboration</p>
-                </div>
+              <div className="px-1 py-1">
+                <Image
+                  src="/logo.png"
+                  alt="PeerMatch — Student Collaboration"
+                  width={240}
+                  height={48}
+                  className="h-12 w-auto object-contain"
+                />
               </div>
             </div>
           </div>
@@ -105,12 +109,14 @@ export default function LoginPage() {
         <main className="flex flex-1 items-start justify-center px-4 py-10">
           <div className="ui-page-enter ui-surface w-full max-w-md rounded-[2rem] bg-white px-10 py-10 shadow-[0_30px_90px_rgba(0,0,0,0.12)]">
             <h1 className="text-3xl font-semibold text-[#0F172A]">Log in to PeerMatch</h1>
-            <p className="mt-3 text-sm text-zinc-600">Use your institutional email to access your account.</p>
+            <p className="mt-3 text-sm text-zinc-600">
+              Sign in with your institutional email or username.
+            </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <div>
-                <label htmlFor="email" className="mb-2 block text-sm font-medium text-zinc-700">
-                  Institutional Email
+                <label htmlFor="loginId" className="mb-2 block text-sm font-medium text-zinc-700">
+                  Email or Username
                 </label>
                 <div className="relative">
                   <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
@@ -120,12 +126,13 @@ export default function LoginPage() {
                     </svg>
                   </span>
                   <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="Institutional Email"
+                    id="loginId"
+                    name="loginId"
+                    type="text"
+                    autoComplete="username"
+                    value={loginId}
+                    onChange={(event) => setLoginId(event.target.value)}
+                    placeholder="Email or username"
                     required
                     className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] py-4 pl-14 pr-4 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
                   />

@@ -5,6 +5,11 @@ const PendingRegistration = require('../models/PendingRegistration');
 const { sendVerificationEmail } = require('../utils/mailer');
 const { authMiddleware, signAccessToken, attachAccessTokenCookie } = require('../middleware/auth');
 const authController = require('../controllers/authController');
+const {
+  normalizeEmail,
+  normalizeUsername,
+  validateUsername,
+} = require('../utils/userAuth');
 
 const router = express.Router();
 
@@ -21,10 +26,6 @@ function getVerificationExpiration() {
   return new Date(Date.now() + ttlMinutes * 60 * 1000);
 }
 
-function normalizeEmail(email) {
-  return String(email || '').trim().toLowerCase();
-}
-
 function isInstitutionalEmail(email) {
   const domain = (process.env.INSTITUTIONAL_EMAIL_DOMAIN || 'cit.edu').trim().toLowerCase();
   return normalizeEmail(email).endsWith(`@${domain}`);
@@ -33,6 +34,7 @@ function isInstitutionalEmail(email) {
 function serializeProfileUser(user) {
   return {
     id: user._id,
+    username: user.username,
     name: user.name,
     email: user.email,
     role: user.role,
@@ -116,12 +118,19 @@ function sanitizeFreelancerProfile(input) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role: registrationPersona } = req.body;
+    const { username, email, password, role: registrationPersona } = req.body;
     const normalizedEmail = normalizeEmail(email);
+    const usernameCheck = validateUsername(username);
 
-    if (!name || !normalizedEmail || !password) {
-      return res.status(400).json({ message: 'Please provide name, email, and password.' });
+    if (!usernameCheck.ok || !normalizedEmail || !password) {
+      return res.status(400).json({
+        message: usernameCheck.ok
+          ? 'Please provide username, email, and password.'
+          : usernameCheck.message,
+      });
     }
+
+    const normalizedUsername = usernameCheck.username;
 
     if (String(registrationPersona || '').toLowerCase() === 'admin') {
       return res.status(400).json({ message: 'Admin accounts cannot be created through public registration.' });
@@ -134,11 +143,22 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Please use your institutional Outlook email (e.g., name@cit.edu).' });
     }
 
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const existingUser = await User.findOne({
+      $or: [{ email: normalizedEmail }, { username: normalizedUsername }],
+    });
     if (existingUser) {
-      return res.status(409).json({ message: 'Email is already registered.' });
+      if (existingUser.email === normalizedEmail) {
+        return res.status(409).json({ message: 'Email is already registered.' });
+      }
+      return res.status(409).json({ message: 'Username is already taken.' });
     }
 
+    const usernameTaken = await PendingRegistration.findOne({ username: normalizedUsername });
+    if (usernameTaken && usernameTaken.email !== normalizedEmail) {
+      return res.status(409).json({ message: 'Username is already taken.' });
+    }
+
+    const displayName = normalizedUsername;
     const hashedPassword = await bcrypt.hash(password, 12);
     const verificationCode = generateVerificationCode();
     const expiresAt = getVerificationExpiration();
@@ -148,14 +168,16 @@ router.post('/register', async (req, res) => {
     let pending = await PendingRegistration.findOne({ email: normalizedEmail });
 
     if (pending) {
-      pending.name = name;
+      pending.username = normalizedUsername;
+      pending.name = displayName;
       pending.password = hashedPassword;
       pending.accountType = accountType;
       pending.verification = { code: verificationCode, expiresAt };
       await pending.save();
     } else {
       pending = await PendingRegistration.create({
-        name,
+        username: normalizedUsername,
+        name: displayName,
         email: normalizedEmail,
         password: hashedPassword,
         ...(accountType ? { accountType } : {}),
@@ -210,6 +232,7 @@ router.post('/verify', async (req, res) => {
     }
 
     const createdUser = await User.create({
+      username: pending.username,
       name: pending.name,
       email: pending.email,
       password: pending.password,
@@ -229,6 +252,7 @@ router.post('/verify', async (req, res) => {
       message: 'Email verified successfully. Account created.',
       user: {
         id: createdUser._id,
+        username: createdUser.username,
         name: createdUser.name,
         email: createdUser.email,
         role: createdUser.role,
