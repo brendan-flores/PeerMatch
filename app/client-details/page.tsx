@@ -4,22 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../components/Button";
-import { apiGetJson, apiPostJson, ApiError } from "../lib/api";
-
-type ProfileUser = {
-  name?: string;
-  course?: string;
-  yearLevel?: string;
-  aboutMe?: string;
-  photoDataUrl?: string;
-};
-
-function splitFullName(fullName: string) {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { firstName: "", lastName: "" };
-  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
-  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
-}
+import { apiPostJson, ApiError } from "../lib/api";
 
 const yearLevels = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 
@@ -70,10 +55,9 @@ const courseOptions = [
 
 export default function ClientDetailsPage() {
   const router = useRouter();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [course, setCourse] = useState("");
   const [yearLevel, setYearLevel] = useState(yearLevels[0]);
+  const [skills, setSkills] = useState("");
   const [aboutMe, setAboutMe] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -83,26 +67,6 @@ export default function ClientDetailsPage() {
     "https://api.dicebear.com/7.x/avataaars/svg?seed=ClientDetails"
   );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await apiGetJson<{ user: ProfileUser }>("/api/auth/profile");
-        const user = res.user;
-        if (user?.name) {
-          const { firstName: first, lastName: last } = splitFullName(user.name);
-          setFirstName(first);
-          setLastName(last);
-        }
-        if (user?.course) setCourse(user.course);
-        if (user?.yearLevel) setYearLevel(user.yearLevel);
-        if (user?.aboutMe) setAboutMe(user.aboutMe);
-        if (user?.photoDataUrl) setPhotoPreview(user.photoDataUrl);
-      } catch {
-        // User may not be logged in yet; profile fields stay at defaults.
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     if (!photoFile) return;
@@ -133,25 +97,16 @@ export default function ClientDetailsPage() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSubmitting) return;
-
-    const trimmedFirst = firstName.trim();
-    const trimmedLast = lastName.trim();
-    if (!trimmedFirst || !trimmedLast) {
-      setStatusMessage("Please enter your first and last name.");
-      return;
-    }
-
     void (async () => {
       setIsSubmitting(true);
       setStatusMessage("");
       try {
         const photoDataUrl = photoFile ? await fileToDataUrl(photoFile) : undefined;
-        const name = `${trimmedFirst} ${trimmedLast}`.trim();
         await apiPostJson("/api/auth/profile", {
-          name,
           course,
           yearLevel,
-          aboutMe: aboutMe.trim().slice(0, 500),
+          skills,
+          aboutMe,
           ...(photoDataUrl ? { photoDataUrl } : {}),
         });
         setShowConfirmation(true);
@@ -307,45 +262,31 @@ export default function ClientDetailsPage() {
                       <div>
                         <p className="text-sm font-semibold text-slate-950">Client Profile</p>
                         <p className="mt-1 text-xs text-slate-500">
-                          Share your name and a short introduction for freelancers and peers
+                          Describe what you need and share context for your project
                         </p>
                       </div>
                     </div>
 
                     <div className="mt-5 grid gap-4">
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <label className="block">
-                          <span className="text-xs font-medium text-slate-700">First Name</span>
-                          <input
-                            type="text"
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
-                            placeholder="First Name"
-                            required
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-xs font-medium text-slate-700">Last Name</span>
-                          <input
-                            type="text"
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
-                            placeholder="Last Name"
-                            required
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
-                          />
-                        </label>
-                      </div>
+                      <label className="block">
+                        <span className="text-xs font-medium text-slate-700">Skills Needed</span>
+                        <input
+                          type="text"
+                          value={skills}
+                          onChange={(e) => setSkills(e.target.value)}
+                          placeholder="e.g. UI Design, Research, Programming"
+                          required
+                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                        />
+                      </label>
 
                       <label className="block">
-                        <span className="text-xs font-medium text-slate-700">About you</span>
+                        <span className="text-xs font-medium text-slate-700">Project Details</span>
                         <textarea
                           value={aboutMe}
                           onChange={(e) => setAboutMe(e.target.value)}
-                          placeholder="Tell freelancers a bit about yourself, what you study, and what kind of help you are looking for..."
+                          placeholder="Tell freelancers about your project goals, requirements, and expected outcomes..."
                           required
-                          maxLength={500}
                           rows={5}
                           className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
                         />

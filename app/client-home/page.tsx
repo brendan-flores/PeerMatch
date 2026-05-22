@@ -41,7 +41,6 @@ import {
   URGENCY_OPTIONS,
 } from "../lib/communityPosts";
 import { useCommunityPostsContext } from "../lib/CommunityPostsContext";
-import { resolveAuthorAvatarUrl } from "../lib/communityPosts";
 import { FeaturedPostEditor } from "../components/client/FeaturedPostEditor";
 import {
   isCommunityPostWithinLast24Hours,
@@ -200,18 +199,21 @@ function ClientHomePageContent() {
     return `${Math.floor(diffMs / day)} day${Math.floor(diffMs / day) > 1 ? "s" : ""} ago`;
   };
 
-  const mapPostForUi = (post: {
-    id: string;
-    authorId: string;
-    authorName: string;
-    createdAt: string;
-    title: string;
-    content: string;
-    category: string;
-    priority: CommunityPostPriority;
-    budget?: number;
-    authorAvatarDataUrl?: string;
-  }): PostItem => ({
+  const mapPostForUi = (
+    post: {
+      id: string;
+      authorId: string;
+      authorName: string;
+      createdAt: string;
+      title: string;
+      content: string;
+      category: string;
+      priority: CommunityPostPriority;
+      budget?: number;
+      authorAvatarDataUrl?: string;
+    },
+    fallbackAvatar: string,
+  ): PostItem => ({
     id: post.id,
     authorId: post.authorId,
     author: post.authorName || "Client User",
@@ -222,11 +224,7 @@ function ClientHomePageContent() {
     category: post.category || "General",
     priority: post.priority,
     budget: typeof post.budget === "number" ? post.budget : 0,
-    avatar: resolveAuthorAvatarUrl({
-      authorAvatarDataUrl: post.authorAvatarDataUrl,
-      authorName: post.authorName,
-      authorId: post.authorId,
-    }),
+    avatar: post.authorAvatarDataUrl || fallbackAvatar,
   });
 
   useEffect(() => {
@@ -262,7 +260,11 @@ function ClientHomePageContent() {
     };
   }, [router]);
 
-  const posts = useMemo(() => approvedPosts.map((post) => mapPostForUi(post)), [approvedPosts]);
+  const fallbackAvatar = profilePhotoDataUrl || "https://api.dicebear.com/7.x/initials/svg?seed=Client";
+  const posts = useMemo(
+    () => approvedPosts.map((post) => mapPostForUi(post, fallbackAvatar)),
+    [approvedPosts, fallbackAvatar],
+  );
 
   const recentPosts = useMemo(
     () => posts.filter((post) => isCommunityPostWithinLast24Hours(post.createdAt)),

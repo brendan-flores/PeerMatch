@@ -41,14 +41,7 @@ export default function RegisterRolePage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const isClient = role === "client";
-
-    if (!email || !password) {
-      setStatusMessage("Please fill in every field.");
-      return;
-    }
-
-    if (!isClient && (!firstName || !lastName)) {
+    if (!username || !email || !password) {
       setStatusMessage("Please fill in every field.");
       return;
     }
@@ -121,38 +114,44 @@ export default function RegisterRolePage() {
             </div>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              {role !== "client" ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="firstName" className="mb-2 block text-sm font-medium text-zinc-700">
-                      First Name
-                    </label>
-                    <input
-                      id="firstName"
-                      name="firstName"
-                      type="text"
-                      value={firstName}
-                      onChange={(event) => setFirstName(event.target.value)}
-                      placeholder="First Name"
-                      className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="lastName" className="mb-2 block text-sm font-medium text-zinc-700">
-                      Last Name
-                    </label>
-                    <input
-                      id="lastName"
-                      name="lastName"
-                      type="text"
-                      value={lastName}
-                      onChange={(event) => setLastName(event.target.value)}
-                      placeholder="Last Name"
-                      className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
-                    />
-                  </div>
+              <div>
+                <label htmlFor="username" className="mb-2 block text-sm font-medium text-zinc-700">
+                  Username
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <circle cx="12" cy="12" r="9" stroke="#94A3B8" strokeWidth="1.5" />
+                      <circle cx="12" cy="10" r="2.5" stroke="#94A3B8" strokeWidth="1.5" />
+                      <path
+                        d="M7 18.5C7.8 15.9 9.7 14.5 12 14.5C14.3 14.5 16.2 15.9 17 18.5"
+                        stroke="#94A3B8"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    placeholder="Username"
+                    aria-invalid={showUsernameHint}
+                    className={`ui-input w-full rounded-3xl border bg-[#F8FAFC] py-4 pl-14 pr-4 text-sm text-[#0F172A] outline-none focus:ring-2 ${
+                      showUsernameHint
+                        ? "border-red-300 focus:border-red-500 focus:ring-red-200/50"
+                        : "border-zinc-200 focus:border-[#0069A8] focus:ring-[#66A5CC]/30"
+                    }`}
+                  />
                 </div>
-              ) : null}
+                {showUsernameHint ? (
+                  <p className="mt-2 text-xs text-red-600">{usernameError}</p>
+                ) : null}
+              </div>
 
               <div>
                 <label htmlFor="email" className="mb-2 block text-sm font-medium text-zinc-700">
