@@ -29,12 +29,16 @@ export const dashboardAsideFixedClass = "h-full max-h-full min-h-0 overflow-hidd
 export const dashboardCenterPanelClass =
   "flex min-h-0 flex-col rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] p-6 sm:p-8 lg:p-10";
 
+/** Community feed — match side column padding so headings align */
+export const dashboardCenterPanelFeedClass =
+  "flex min-h-0 flex-col rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] p-6";
+
 export const dashboardCenterPanelFixedClass = "h-full overflow-hidden";
 
 /** Community feed list spacing between post cards */
 export const dashboardFeedListClass = "space-y-4";
 
-export const dashboardFeedHeaderGapClass = "mt-5";
+export const dashboardFeedHeaderGapClass = "mt-4";
 
 export const dashboardFeedScrollClass =
   "feed-scroll-pane min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]";

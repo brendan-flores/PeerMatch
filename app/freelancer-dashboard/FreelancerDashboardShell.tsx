@@ -162,8 +162,7 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
   const isMessagesRoute = pathname === "/freelancer-dashboard/messages";
   const isFeedRoute =
     pathname === "/freelancer-dashboard" || pathname === "/freelancer-dashboard/browse";
-  const isFixedShellLayout = isMessagesRoute;
-  const pinnedSideColumnClass = isFeedRoute ? "lg:self-start" : "";
+  const isFixedShellLayout = isMessagesRoute || isFeedRoute;
 
   return (
     <FreelancerUserContext.Provider value={value}>
@@ -172,20 +171,20 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
           isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
         }`}
       >
-        <NotificationsDropdown
-          items={notifications}
-          onMarkAllRead={markAllRead}
-          onMarkOneRead={markOneRead}
-          className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
-        />
+        {!isFeedRoute ? (
+          <NotificationsDropdown
+            items={notifications}
+            onMarkAllRead={markAllRead}
+            onMarkOneRead={markOneRead}
+            className="absolute left-4 top-4 z-50 lg:left-[calc(260px+1.5rem)] lg:top-6 xl:left-[calc(280px+2rem)] xl:top-8"
+          />
+        ) : null}
         <div
           className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
             isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
           }`}
         >
-          <div
-            className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : pinnedSideColumnClass}`}
-          >
+          <div className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}>
             <FreelancerSidebar />
           </div>
           <div
@@ -197,9 +196,7 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
           >
             {children}
           </div>
-          <div
-            className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : pinnedSideColumnClass}`}
-          >
+          <div className={`min-h-0 lg:row-span-1 ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}>
             <FreelancerRightAside />
           </div>
         </div>

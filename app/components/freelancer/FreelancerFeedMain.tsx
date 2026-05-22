@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import {
   dashboardCenterPanelClass,
+  dashboardCenterPanelFeedClass,
   dashboardFeedHeaderGapClass,
   dashboardFeedScrollClass,
 } from "@/app/components/dashboard/dashboardShellClasses";
@@ -19,7 +20,7 @@ type FreelancerFeedMainProps = {
 export function FreelancerFeedMain({ children, scrollable, header, scroll }: FreelancerFeedMainProps) {
   if (scrollable && header != null && scroll != null) {
     return (
-      <main className={`${dashboardCenterPanelClass} h-full overflow-hidden`}>
+      <main className={`${dashboardCenterPanelFeedClass} h-full overflow-hidden`}>
         <div className="shrink-0">{header}</div>
         <div className={`${dashboardFeedScrollClass} ${dashboardFeedHeaderGapClass}`}>{scroll}</div>
       </main>

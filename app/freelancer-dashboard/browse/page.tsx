@@ -1,5 +1,6 @@
 "use client";
 
+import { FeedPageHeader } from "@/app/components/dashboard/FeedPageHeader";
 import { CommunityPostCard } from "@/app/components/freelancer/CommunityPostCard";
 import { FreelancerFeedMain } from "@/app/components/freelancer/FreelancerFeedMain";
 import { OfferHelpPanel } from "@/app/components/freelancer/OfferHelpPanel";
@@ -28,10 +29,10 @@ export default function FreelancerBrowsePage() {
     <FreelancerFeedMain
       scrollable
       header={
-        <>
+        <FeedPageHeader userId={user?.id ?? null}>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Browse Post</h1>
-          <p className="mt-2 text-sm text-zinc-500">Explore posts from the community.</p>
-        </>
+          <p className="mt-1 text-sm text-zinc-500">Explore posts from the community.</p>
+        </FeedPageHeader>
       }
       scroll={
         <div className="space-y-4">
