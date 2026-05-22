@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { migrateUsersWithoutUsername } = require('../utils/migrateUsers');
+const { migrateLegacyTasksToClientTasks } = require('../utils/migrateClientTasks');
 
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/peer-match';
@@ -9,6 +10,9 @@ const connectDB = async () => {
     console.log('MongoDB connected');
     await migrateUsersWithoutUsername().catch((err) => {
       console.error('Username migration warning:', err.message);
+    });
+    await migrateLegacyTasksToClientTasks().catch((err) => {
+      console.error('Client task migration warning:', err.message);
     });
   } catch (error) {
     console.error('MongoDB connection error:', error.message);

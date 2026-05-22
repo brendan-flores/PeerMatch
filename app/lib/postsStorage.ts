@@ -25,7 +25,7 @@ export type CommunityPost = {
   reviewSubmittedAt?: string;
 };
 
-export const COMMUNITY_POSTS_STORAGE_KEY = "peermatch_community_posts_v1";
+export const COMMUNITY_POSTS_STORAGE_KEY = "peermatch_community_posts_v2";
 export const COMMUNITY_POSTS_CHANGED_EVENT = "peermatch:posts-changed";
 
 const POSTS_KEY = COMMUNITY_POSTS_STORAGE_KEY;

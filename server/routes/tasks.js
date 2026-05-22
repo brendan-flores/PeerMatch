@@ -1,6 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const Task = require('../models/Task');
+const ClientTask = require('../models/ClientTask');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
 const { mapTaskToFeedPost, normalizeUrgency } = require('../utils/taskFeedDto');
@@ -12,6 +12,10 @@ const {
   notifyFreelancerTaskCompleted,
 } = require('../services/notificationService');
 const { recordTaskSubmitted } = require('../services/adminActivityService');
+const {
+  createFreelancerReview,
+  hasReviewForTask,
+} = require('../services/freelancerReviewService');
 
 const router = express.Router();
 
@@ -34,7 +38,7 @@ async function loadClientsForTasks(tasks) {
 /** Public feed: approved community posts open for offers */
 router.get('/', async (req, res) => {
   try {
-    const tasks = await Task.find({
+    const tasks = await ClientTask.find({
       status: 'approved',
       $or: [
         { hireStatus: { $in: ['open', null] } },
@@ -64,7 +68,7 @@ router.get('/mine', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
 
-    const tasks = await Task.find({ clientId: req.user.userId })
+    const tasks = await ClientTask.find({ clientId: req.user.userId })
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
@@ -165,7 +169,7 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: budgetResult.message });
     }
 
-    const task = await Task.create({
+    const task = await ClientTask.create({
       title,
       description,
       subjectCategory,
@@ -177,7 +181,7 @@ router.post('/', authMiddleware, async (req, res) => {
       flagged: urgency === 'high',
     });
 
-    const populated = await Task.findById(task._id)
+    const populated = await ClientTask.findById(task._id)
       .populate('clientId', 'name email accountType photoDataUrl')
       .lean();
 
@@ -224,7 +228,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only client accounts can update posts.' });
     }
 
-    const task = await Task.findOne({ _id: req.params.id, clientId: req.user.userId });
+    const task = await ClientTask.findOne({ _id: req.params.id, clientId: req.user.userId });
     if (!task) {
       return res.status(404).json({ message: 'Post not found or you do not have permission to update it.' });
     }
@@ -255,7 +259,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
     await task.save();
 
-    const populated = await Task.findById(task._id)
+    const populated = await ClientTask.findById(task._id)
       .populate('clientId', 'name email accountType photoDataUrl')
       .lean();
 
@@ -287,7 +291,7 @@ router.patch('/:id/complete', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only client accounts can complete tasks.' });
     }
 
-    const task = await Task.findOne({ _id: req.params.id, clientId: req.user.userId });
+    const task = await ClientTask.findOne({ _id: req.params.id, clientId: req.user.userId });
     if (!task) {
       return res.status(404).json({ message: 'Post not found or you do not have permission.' });
     }
@@ -300,7 +304,7 @@ router.patch('/:id/complete', authMiddleware, async (req, res) => {
     task.completedAt = new Date();
     await task.save();
 
-    const populated = await Task.findById(task._id)
+    const populated = await ClientTask.findById(task._id)
       .populate('clientId', 'name email accountType photoDataUrl')
       .populate('assignedFreelancerId', 'name')
       .lean();
@@ -362,7 +366,7 @@ router.patch('/:id/review', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Review text is required.' });
     }
 
-    const task = await Task.findOne({ _id: req.params.id, clientId: req.user.userId });
+    const task = await ClientTask.findOne({ _id: req.params.id, clientId: req.user.userId });
     if (!task) {
       return res.status(404).json({ message: 'Post not found or you do not have permission.' });
     }
@@ -370,40 +374,42 @@ router.patch('/:id/review', authMiddleware, async (req, res) => {
     if (hireStatus !== 'completed') {
       return res.status(400).json({ message: 'You can only review after the task is completed.' });
     }
-    if (task.reviewSubmittedAt) {
+    if (task.reviewSubmittedAt || (await hasReviewForTask(task._id))) {
       return res.status(409).json({ message: 'You have already submitted a review for this task.' });
     }
     if (!task.assignedFreelancerId) {
       return res.status(400).json({ message: 'No freelancer is assigned to this task.' });
     }
 
-    const freelancer = await User.findById(task.assignedFreelancerId);
+    const freelancer = await User.findById(task.assignedFreelancerId).select('_id accountType').lean();
     if (!freelancer) {
       return res.status(404).json({ message: 'Assigned freelancer not found.' });
     }
 
     const reviewerName = String(user.name || '').trim() || 'Client';
-    const profile =
-      freelancer.freelancerProfile && typeof freelancer.freelancerProfile === 'object'
-        ? { ...freelancer.freelancerProfile }
-        : {};
-    const reviews = Array.isArray(profile.reviews) ? [...profile.reviews] : [];
-    reviews.unshift({
-      reviewer: reviewerName,
-      text: reviewText,
-      rating,
-    });
-    profile.reviews = reviews.slice(0, 10);
-    freelancer.freelancerProfile = profile;
-    freelancer.markModified('freelancerProfile');
-    await freelancer.save();
+
+    try {
+      await createFreelancerReview({
+        freelancerId: task.assignedFreelancerId,
+        clientId: req.user.userId,
+        taskId: task._id,
+        reviewerName,
+        text: reviewText,
+        rating,
+      });
+    } catch (error) {
+      if (error?.code === 11000) {
+        return res.status(409).json({ message: 'You have already submitted a review for this task.' });
+      }
+      throw error;
+    }
 
     task.reviewRating = rating;
     task.reviewText = reviewText;
     task.reviewSubmittedAt = new Date();
     await task.save();
 
-    const populated = await Task.findById(task._id)
+    const populated = await ClientTask.findById(task._id)
       .populate('clientId', 'name email accountType photoDataUrl')
       .populate('assignedFreelancerId', 'name')
       .lean();
@@ -440,7 +446,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only client accounts can delete posts.' });
     }
 
-    const task = await Task.findOneAndDelete({ _id: req.params.id, clientId: req.user.userId });
+    const task = await ClientTask.findOneAndDelete({ _id: req.params.id, clientId: req.user.userId });
     if (!task) {
       return res.status(404).json({ message: 'Post not found or you do not have permission to delete it.' });
     }
