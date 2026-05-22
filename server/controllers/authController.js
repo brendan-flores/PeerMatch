@@ -5,24 +5,21 @@ const {
   attachAccessTokenCookieForReq,
   clearAccessTokenCookieForReq,
 } = require('../middleware/auth');
-
-function normalizeEmail(email) {
-  return String(email || '').trim().toLowerCase();
-}
+const { findUserByLoginIdentifier } = require('../utils/userAuth');
 
 /**
- * POST /api/auth/login — validates email/password, sets HTTP-only JWT (userId + role).
+ * POST /api/auth/login — validates institutional email or username + password.
  */
 async function login(req, res) {
   try {
     const { email, password } = req.body;
-    const normalizedEmail = normalizeEmail(email);
+    const identifier = String(email || '').trim();
 
-    if (!normalizedEmail || !password) {
-      return res.status(400).json({ message: 'Please provide email and password.' });
+    if (!identifier || !password) {
+      return res.status(400).json({ message: 'Please provide email or username and password.' });
     }
 
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await findUserByLoginIdentifier(identifier);
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
@@ -33,7 +30,10 @@ async function login(req, res) {
     }
 
     if (!user.verified) {
-      return res.status(403).json({ message: 'Please verify your email before logging in.' });
+      return res.status(403).json({
+        message: 'Please verify your email before logging in.',
+        email: user.email,
+      });
     }
 
     const token = signAccessToken(user);
@@ -42,6 +42,7 @@ async function login(req, res) {
     return res.json({
       user: {
         id: user._id,
+        username: user.username,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -62,7 +63,7 @@ function logout(req, res) {
 /** GET /api/auth/me — requires authMiddleware upstream */
 async function getMe(req, res) {
   try {
-    const user = await User.findById(req.user.userId).select('name email role verified accountType');
+    const user = await User.findById(req.user.userId).select('username name email role verified accountType');
     if (!user) {
       clearAccessTokenCookieForReq(req, res);
       return res.status(401).json({ message: 'Account not found.' });
@@ -70,6 +71,7 @@ async function getMe(req, res) {
     return res.json({
       user: {
         id: user._id,
+        username: user.username,
         name: user.name,
         email: user.email,
         role: user.role,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AuthPageHeader from "../components/AuthPageHeader";
 
 export const metadata = {
   title: "PeerMatch Home",
@@ -6,14 +7,13 @@ export const metadata = {
 
 export default function PeerMatchHome() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#E5F6F4] px-4 py-10">
+    <div className="min-h-screen bg-[#E5F6F4]">
+      <AuthPageHeader />
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
       <div className="ui-page-enter ui-surface w-full max-w-5xl rounded-[2.25rem] border border-zinc-200 bg-white p-10 shadow-xl shadow-zinc-200/40">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center lg:justify-items-center">
           <div>
-            <span className="inline-flex rounded-full bg-blue-100 px-4 py-1 text-xs font-semibold text-blue-800">
-              PeerMatch
-            </span>
-            <h1 className="mt-6 text-4xl font-semibold tracking-tight text-zinc-950 sm:text-5xl">
+            <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 sm:text-5xl">
               Request help.
               <br />
               Offer assistance.
@@ -48,6 +48,7 @@ export default function PeerMatchHome() {
             </ul>
           </aside>
         </div>
+      </div>
       </div>
     </div>
   );

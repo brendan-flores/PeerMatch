@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import SidebarBrand from "../components/SidebarBrand";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {

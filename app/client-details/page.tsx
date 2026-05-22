@@ -1,15 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Button from "../components/Button";
+import AuthPageHeader from "../components/AuthPageHeader";
+import { useRouter } from "next/navigation";
 import { apiPostJson, ApiError } from "../lib/api";
 
 const yearLevels = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 
 const courseOptions = [
-  // Engineering & Architecture
   "BS Architecture",
   "BS Chemical Engineering",
   "BS Civil Engineering",
@@ -19,8 +18,6 @@ const courseOptions = [
   "BS Industrial Engineering",
   "BS Mechanical Engineering",
   "BS Mining Engineering",
-
-  // Management, Business & Accountancy
   "BS Accountancy",
   "BS Accounting Information Systems",
   "BS Management Accounting",
@@ -29,8 +26,6 @@ const courseOptions = [
   "BS Tourism Management",
   "BS Office Administration",
   "Bachelor in Public Administration",
-
-  // Arts, Sciences & Education
   "AB Communication",
   "AB English with Applied Linguistics",
   "Bachelor of Elementary Education",
@@ -39,82 +34,99 @@ const courseOptions = [
   "BS Biology",
   "BS Math with Applied Industrial Mathematics",
   "BS Psychology",
-
-  // Computer Studies
   "BS Computer Science",
   "BS Information Technology",
-
-  // Health & Allied Health Sciences
   "BS Nursing",
   "BS Pharmacy",
   "BS Medical Technology",
-
-  // Criminal Justice
   "BS Criminology",
 ] as const;
 
 export default function ClientDetailsPage() {
   const router = useRouter();
+
   const [course, setCourse] = useState("");
   const [yearLevel, setYearLevel] = useState(yearLevels[0]);
-  const [skills, setSkills] = useState("");
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
   const [aboutMe, setAboutMe] = useState("");
+
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [photoPreview, setPhotoPreview] = useState(
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=ClientDetails"
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=ClientDetails",
   );
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!photoFile) return;
+
     const url = URL.createObjectURL(photoFile);
     setPhotoPreview(url);
+
     return () => URL.revokeObjectURL(url);
   }, [photoFile]);
 
-  const handleChoosePhoto = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+
     if (file) {
       setPhotoFile(file);
     }
   };
 
+  const handleChoosePhoto = () => {
+    fileInputRef.current?.click();
+  };
+
   const fileToDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
+
       reader.onerror = () => reject(new Error("Failed to read file"));
+
       reader.onload = () => resolve(String(reader.result || ""));
+
       reader.readAsDataURL(file);
     });
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     if (isSubmitting) return;
+
     void (async () => {
       setIsSubmitting(true);
       setStatusMessage("");
+
       try {
         const photoDataUrl = photoFile ? await fileToDataUrl(photoFile) : undefined;
+
         await apiPostJson("/api/auth/profile", {
           course,
           yearLevel,
-          skills,
+          firstName,
+          lastName,
           aboutMe,
           ...(photoDataUrl ? { photoDataUrl } : {}),
         });
+
         setShowConfirmation(true);
+
         window.setTimeout(() => {
           router.push("/client-home");
         }, 1600);
       } catch (err) {
-        const message = err instanceof ApiError ? err.message : "Could not save profile. Please try again.";
+        const message =
+          err instanceof ApiError ? err.message : "Could not save profile. Please try again.";
+
         setStatusMessage(message);
       } finally {
         setIsSubmitting(false);
@@ -125,24 +137,15 @@ export default function ClientDetailsPage() {
   return (
     <div className="min-h-screen bg-[#E5F6F4]">
       <div className="flex min-h-screen w-full flex-col">
-        <header className="sticky top-0 z-50 w-full">
-          <div className="w-full rounded-b-[2rem] border-b border-slate-200/70 bg-white/95 px-6 py-4 shadow-sm shadow-slate-200 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-            <div className="mx-auto flex w-full max-w-[1120px] items-center justify-center">
-              <div className="flex items-center gap-3 px-1 py-1">
-                <Image src="/peermatch-logo.png" alt="PeerMatch logo" width={28} height={28} className="h-7 w-7 object-contain" />
-                <div className="leading-tight">
-                  <p className="text-base font-semibold text-slate-950">PeerMatch</p>
-                  <p className="text-xs text-slate-500">Student Collaboration</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
+        <AuthPageHeader />
 
         <main className="flex flex-1 items-start justify-center px-4 py-12">
           <div className="w-full max-w-[1120px]">
             <div className="text-center">
-              <h1 className="text-4xl font-semibold tracking-tight text-slate-950">Complete Your Client Profile</h1>
+              <h1 className="text-4xl font-semibold tracking-tight text-slate-950">
+                Complete Your Client Profile
+              </h1>
+
               <p className="mt-2 text-sm text-slate-600">
                 Set up your client profile to connect with freelancers and peers
               </p>
@@ -152,7 +155,11 @@ export default function ClientDetailsPage() {
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex flex-col items-center gap-4">
                   <div className="relative h-24 w-24 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                    <img src={photoPreview} alt="Client profile preview" className="h-full w-full object-cover" />
+                    <img
+                      src={photoPreview}
+                      alt="Client profile preview"
+                      className="h-full w-full object-cover"
+                    />
                   </div>
 
                   <button
@@ -162,6 +169,7 @@ export default function ClientDetailsPage() {
                   >
                     Change Photo
                   </button>
+
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -174,8 +182,10 @@ export default function ClientDetailsPage() {
 
                   <div className="w-full rounded-xl bg-slate-50 px-4 py-3">
                     <p className="text-xs font-semibold text-slate-900">Tip</p>
+
                     <p className="mt-1 text-[11px] leading-5 text-slate-600">
-                      A complete client profile helps freelancers understand your needs and deliver better results.
+                      A complete client profile helps you attract better freelancers and build trust
+                      faster.
                     </p>
                   </div>
                 </div>
@@ -192,10 +202,13 @@ export default function ClientDetailsPage() {
                 >
                   <div
                     className={`px-4 py-3 text-emerald-900 transition-transform duration-500 ease-out ${
-                      showConfirmation ? "translate-y-0 scale-100" : "-translate-y-2 scale-[0.98]"
+                      showConfirmation
+                        ? "translate-y-0 scale-100"
+                        : "-translate-y-2 scale-[0.98]"
                     }`}
                   >
                     <p className="text-sm font-semibold">Profile saved successfully.</p>
+
                     <p className="mt-1 text-xs text-emerald-800/80">Taking you to your home page…</p>
                   </div>
                 </div>
@@ -206,8 +219,10 @@ export default function ClientDetailsPage() {
                       <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#0069A8] text-xs font-semibold text-white">
                         1
                       </span>
+
                       <div>
                         <p className="text-sm font-semibold text-slate-950">Academic Information</p>
+
                         <p className="mt-1 text-xs text-slate-500">Tell us about your current studies</p>
                       </div>
                     </div>
@@ -215,6 +230,7 @@ export default function ClientDetailsPage() {
                     <div className="mt-5 grid gap-4">
                       <label className="block">
                         <span className="text-xs font-medium text-slate-700">Course</span>
+
                         <select
                           value={course}
                           onChange={(e) => setCourse(e.target.value)}
@@ -224,6 +240,7 @@ export default function ClientDetailsPage() {
                           <option value="" disabled>
                             Select a course
                           </option>
+
                           {courseOptions.map((option) => (
                             <option key={option} value={option}>
                               {option}
@@ -234,6 +251,7 @@ export default function ClientDetailsPage() {
 
                       <label className="block">
                         <span className="text-xs font-medium text-slate-700">Academic Year</span>
+
                         <select
                           value={yearLevel}
                           onChange={(e) => setYearLevel(e.target.value)}
@@ -257,38 +275,58 @@ export default function ClientDetailsPage() {
                       <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#0069A8] text-xs font-semibold text-white">
                         2
                       </span>
+
                       <div>
                         <p className="text-sm font-semibold text-slate-950">Client Profile</p>
+
                         <p className="mt-1 text-xs text-slate-500">
-                          Describe what you need and share context for your project
+                          Share what you need help with and connect with the right peers
                         </p>
                       </div>
                     </div>
 
                     <div className="mt-5 grid gap-4">
-                      <label className="block">
-                        <span className="text-xs font-medium text-slate-700">Skills Needed</span>
-                        <input
-                          type="text"
-                          value={skills}
-                          onChange={(e) => setSkills(e.target.value)}
-                          placeholder="e.g. UI Design, Research, Programming"
-                          required
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
-                        />
-                      </label>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="text-xs font-medium text-slate-700">First Name</span>
+
+                          <input
+                            type="text"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            placeholder="First Name"
+                            required
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                          />
+                        </label>
+
+                        <label className="block">
+                          <span className="text-xs font-medium text-slate-700">Last Name</span>
+
+                          <input
+                            type="text"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            placeholder="Last Name"
+                            required
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                          />
+                        </label>
+                      </div>
 
                       <label className="block">
                         <span className="text-xs font-medium text-slate-700">Project Details</span>
+
                         <textarea
                           value={aboutMe}
                           onChange={(e) => setAboutMe(e.target.value)}
-                          placeholder="Tell freelancers about your project goals, requirements, and expected outcomes..."
+                          placeholder="Tell freelancers about your project..."
                           required
                           rows={5}
                           className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
                         />
                       </label>
+
                       <p className="text-[11px] text-slate-500">{aboutMe.length}/500 characters</p>
                     </div>
                   </div>
@@ -301,11 +339,13 @@ export default function ClientDetailsPage() {
                     >
                       {isSubmitting ? "Saving..." : "Continue"}
                     </Button>
+
                     {statusMessage ? (
                       <p className="mt-3 text-center text-sm text-red-600" role="alert">
                         {statusMessage}
                       </p>
                     ) : null}
+
                     <p className="mt-3 text-center text-[11px] text-slate-500">
                       You can update your client profile anytime in your settings
                     </p>
