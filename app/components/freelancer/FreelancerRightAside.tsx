@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { fetchApprovedCommunityPosts } from "@/app/lib/communityPosts";
 import {
@@ -24,7 +24,12 @@ function formatTimeAgo(value: string) {
 }
 
 export function FreelancerRightAside() {
+  const pathname = usePathname();
   const router = useRouter();
+  const isMessagesLayout = pathname === "/freelancer-dashboard/messages";
+  const isFeedLayout =
+    pathname === "/freelancer-dashboard" || pathname === "/freelancer-dashboard/browse";
+  const isPinnedColumn = isMessagesLayout || isFeedLayout;
   const [posts, setPosts] = useState<CommunityPost[]>([]);
 
   useEffect(() => {
@@ -51,8 +56,16 @@ export function FreelancerRightAside() {
   );
 
   return (
-    <aside className="flex h-full max-h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm">
-      <section className="mb-6 shrink-0">
+    <aside
+      className={`flex flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm ${
+        isMessagesLayout
+          ? "h-full max-h-full min-h-0 overflow-hidden"
+          : isFeedLayout
+            ? "sticky top-6 h-[calc(100vh-3rem)] max-h-[calc(100vh-3rem)] min-h-0 overflow-hidden"
+            : "gap-8"
+      }`}
+    >
+      <section className={isPinnedColumn ? "mb-6 shrink-0" : ""}>
         <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
         <div className="mt-3 rounded-xl border border-zinc-200 bg-white px-4 py-4 shadow-sm">
           <div className="flex items-start gap-3">
@@ -64,9 +77,11 @@ export function FreelancerRightAside() {
         </div>
       </section>
 
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <h3 className="shrink-0 text-sm font-semibold text-zinc-900">Recent Posts</h3>
-        <ul className="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-0.5">
+      <section className={isPinnedColumn ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}>
+        <h3 className={`text-sm font-semibold text-zinc-900 ${isPinnedColumn ? "shrink-0" : ""}`}>Recent Posts</h3>
+        <ul
+          className={`mt-3 space-y-3 ${isPinnedColumn ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5" : ""}`}
+        >
           {recentPosts.length === 0 ? (
             <li className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">
               No recent post

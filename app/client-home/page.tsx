@@ -578,7 +578,7 @@ function ClientHomePageContent() {
   };
 
   const isFeedView = pathname === "/client-home" && !activePanel;
-  const isFixedShellLayout = activePanel === "messages" || isFeedView;
+  const isFixedShellLayout = activePanel === "messages";
 
   return (
     <div
@@ -1134,10 +1134,14 @@ function ClientHomePageContent() {
 
         <aside
           className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
-            isFixedShellLayout ? "h-full overflow-hidden" : "gap-8"
+            isFixedShellLayout
+              ? "h-full overflow-hidden"
+              : isFeedView
+                ? "sticky top-6 h-[calc(100vh-3rem)] overflow-hidden"
+                : "gap-8"
           }`}
         >
-          <section className={isFixedShellLayout ? "mb-6 shrink-0" : ""}>
+          <section className={isFixedShellLayout || isFeedView ? "mb-6 shrink-0" : ""}>
             <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
             {notifications.length === 0 ? (
               <button
@@ -1175,10 +1179,20 @@ function ClientHomePageContent() {
             )}
           </section>
 
-          <section className={isFixedShellLayout ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}>
-            <h3 className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout ? "shrink-0" : ""}`}>Recent Posts</h3>
+          <section
+            className={isFixedShellLayout || isFeedView ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}
+          >
+            <h3
+              className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout || isFeedView ? "shrink-0" : ""}`}
+            >
+              Recent Posts
+            </h3>
             <div
-              className={`mt-3 space-y-3 ${isFixedShellLayout ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5" : ""}`}
+              className={`mt-3 space-y-3 ${
+                isFixedShellLayout || isFeedView
+                  ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5"
+                  : ""
+              }`}
             >
               {recentPosts.length === 0 ? (
                 <p className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">
