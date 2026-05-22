@@ -59,7 +59,10 @@ import {
 import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
 import { NavUnreadBadge } from "../components/NavUnreadBadge";
 import { fetchClientOffers, isOfferPending } from "../lib/offersApi";
-import type { NotificationItem } from "../lib/notifications";
+import { useCurrentUserProfile } from "../lib/CurrentUserProfileContext";
+import { persistProfilePhotoFromFile } from "../lib/profilePhoto";
+import { UserAvatar } from "../components/UserAvatar";
+import { dicebearInitialsAvatar } from "../lib/profilePhotoDisplay";
 import { useNotifications } from "../hooks/useNotifications";
 import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
 
@@ -168,7 +171,9 @@ function ClientHomePageContent() {
   const [profilePhotoDataUrl, setProfilePhotoDataUrl] = useState<string>("");
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [profilePhotoSaving, setProfilePhotoSaving] = useState(false);
   const [profileStatusMessage, setProfileStatusMessage] = useState<string>("");
+  const { photoDataUrl: globalPhotoDataUrl, syncProfile } = useCurrentUserProfile();
   const [meUserId, setMeUserId] = useState<string>("");
   const peerFromQuery = searchParams.get("with") || "";
   const [peerUserId, setPeerUserId] = useState<string>(peerFromQuery);
@@ -176,7 +181,8 @@ function ClientHomePageContent() {
   const [savedProfileSnapshot, setSavedProfileSnapshot] = useState<ProfileFormSnapshot | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [isPanelVisible, setIsPanelVisible] = useState(true);
-  const { approvedPosts, approvedLoading, approvedError, refreshAll } = useCommunityPostsContext();
+  const { approvedPosts, approvedLoading, approvedError, refreshAll, updateAuthorAvatarsLocally } =
+    useCommunityPostsContext();
   const [postCategoryInput, setPostCategoryInput] = useState("");
   const [postPriorityInput, setPostPriorityInput] = useState<CommunityPostPriority>("Normal");
   const [postSubmitting, setPostSubmitting] = useState(false);
@@ -225,20 +231,27 @@ function ClientHomePageContent() {
       budget?: number;
       authorAvatarDataUrl?: string;
     },
-    fallbackAvatar: string,
-  ): PostItem => ({
-    id: post.id,
-    authorId: post.authorId,
-    author: post.authorName || "Client User",
-    timeAgo: formatTimeAgo(post.createdAt),
-    createdAt: post.createdAt,
-    title: post.title,
-    content: post.content,
-    category: post.category || "General",
-    priority: post.priority,
-    budget: typeof post.budget === "number" ? post.budget : 0,
-    avatar: post.authorAvatarDataUrl || fallbackAvatar,
-  });
+    me: { id: string; photo: string },
+  ): PostItem => {
+    const isMine = Boolean(me.id && post.authorId && String(post.authorId) === String(me.id));
+    const avatar =
+      String(post.authorAvatarDataUrl || "").trim() ||
+      (isMine && me.photo ? me.photo : "") ||
+      dicebearInitialsAvatar(post.authorName || "Client");
+    return {
+      id: post.id,
+      authorId: post.authorId,
+      author: post.authorName || "Client User",
+      timeAgo: formatTimeAgo(post.createdAt),
+      createdAt: post.createdAt,
+      title: post.title,
+      content: post.content,
+      category: post.category || "General",
+      priority: post.priority,
+      budget: typeof post.budget === "number" ? post.budget : 0,
+      avatar,
+    };
+  };
 
   useEffect(() => {
     setPeerUserId(peerFromQuery);
@@ -273,10 +286,13 @@ function ClientHomePageContent() {
     };
   }, [router]);
 
-  const fallbackAvatar = profilePhotoDataUrl || "https://api.dicebear.com/7.x/initials/svg?seed=Client";
+  const displayProfilePhoto = globalPhotoDataUrl || profilePhotoDataUrl;
   const posts = useMemo(
-    () => approvedPosts.map((post) => mapPostForUi(post, fallbackAvatar)),
-    [approvedPosts, fallbackAvatar],
+    () =>
+      approvedPosts.map((post) =>
+        mapPostForUi(post, { id: meUserId, photo: displayProfilePhoto }),
+      ),
+    [approvedPosts, meUserId, displayProfilePhoto],
   );
 
   const recentPosts = useMemo(
@@ -430,7 +446,9 @@ function ClientHomePageContent() {
         setProfileLocationInput(String(user.location || "").trim());
         setProfileAboutInput(String(user.aboutMe || "").trim());
         setProfileSkillsInput(String(user.skills || "").trim());
-        setProfilePhotoDataUrl(String(user.photoDataUrl || "").trim());
+        const photo = String(user.photoDataUrl || "").trim();
+        setProfilePhotoDataUrl(photo);
+        if (user.id) syncProfile(String(user.id), photo);
         setSavedProfileSnapshot({
           name: String(user.name || "").trim(),
           course: String(user.course || "").trim(),
@@ -452,7 +470,7 @@ function ClientHomePageContent() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, syncProfile]);
 
   const handleLogout = async () => {
     try {
@@ -468,13 +486,6 @@ function ClientHomePageContent() {
     [posts, meUserId],
   );
   const profileName = profileNameInput || displayName || "Client User";
-  const profileInitials = profileName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("") || "CU";
-
   const hasUnsavedProfileChanges = useMemo(() => {
     if (!savedProfileSnapshot || !profileLoaded) return false;
     const s = savedProfileSnapshot;
@@ -504,11 +515,41 @@ function ClientHomePageContent() {
   const handleProfilePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setProfilePhotoDataUrl(String(reader.result || ""));
-    };
-    reader.readAsDataURL(file);
+    void (async () => {
+      setProfilePhotoSaving(true);
+      setProfileStatusMessage("Saving profile photo...");
+      try {
+        const { photoDataUrl: photo, userId } = await persistProfilePhotoFromFile(file, meUserId);
+        setProfilePhotoDataUrl(photo);
+        if (userId) {
+          setMeUserId(userId);
+          syncProfile(userId, photo);
+        }
+        setSavedProfileSnapshot((prev) =>
+          prev
+            ? { ...prev, photoDataUrl: photo }
+            : {
+                name: profileNameInput.trim(),
+                course: profileCourseInput.trim(),
+                yearLevel: profileYearLevelInput.trim(),
+                location: profileLocationInput.trim(),
+                aboutMe: profileAboutInput.trim(),
+                skills: profileSkillsInput.trim(),
+                photoDataUrl: photo,
+              },
+        );
+        updateAuthorAvatarsLocally(userId || meUserId, photo);
+        await refreshAll();
+        void refreshNotifications();
+        setProfileStatusMessage("Profile photo saved");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Could not save profile photo.";
+        setProfileStatusMessage(message);
+      } finally {
+        setProfilePhotoSaving(false);
+        event.target.value = "";
+      }
+    })();
   };
 
   const handleSaveProfile = async () => {
@@ -941,29 +982,31 @@ function ClientHomePageContent() {
               >
                 <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden xl:grid-cols-[260px_minmax(0,1fr)] xl:items-stretch">
                   <article className="h-fit w-full max-w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:max-w-none">
-                    <div className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-zinc-200 bg-[#E8EFEC]">
-                      {profilePhotoDataUrl ? (
-                        <img src={profilePhotoDataUrl} alt="Profile" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-zinc-800">
-                          {profileInitials}
-                        </div>
-                      )}
+                    <div className="mx-auto flex justify-center">
+                      <UserAvatar
+                        id={meUserId}
+                        name={profileName}
+                        photoDataUrl={displayProfilePhoto}
+                        size="2xl"
+                        alt="Profile"
+                        initialsClassName="bg-[#E8EFEC] text-zinc-800"
+                      />
                     </div>
                     <input
                       ref={profilePhotoInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.svg"
                       className="hidden"
                       onChange={handleProfilePhotoChange}
                     />
                     <button
                       type="button"
                       onClick={() => profilePhotoInputRef.current?.click()}
-                      className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                      disabled={profilePhotoSaving}
+                      className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       <Upload className="h-3.5 w-3.5" />
-                      Change photo
+                      {profilePhotoSaving ? "Saving photo..." : "Change photo"}
                     </button>
                     <h1 id="profile-heading" className="mt-3 text-center text-2xl font-bold tracking-tight text-zinc-900">
                       {profileName}
@@ -976,7 +1019,7 @@ function ClientHomePageContent() {
 
                   <div className={dashboardProfileScrollClass}>
                     {activePanel === "featured-post" ? (
-                      <FeaturedPostEditor authorId={meUserId} authorAvatar={profilePhotoDataUrl || undefined} />
+                      <FeaturedPostEditor authorId={meUserId} authorAvatar={displayProfilePhoto || undefined} />
                     ) : (
                       <>
                     <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">

@@ -41,7 +41,7 @@ async function searchUsers(req, res) {
     // If query is an exact ObjectId, return that user (if allowed).
     if (isObjectId) {
       const user = await User.findById(q)
-        .select('name')
+        .select('name photoDataUrl')
         .lean();
 
       if (!user) return res.json({ users: [] });
@@ -50,6 +50,7 @@ async function searchUsers(req, res) {
           {
             id: String(q),
             name: user.name,
+            photoDataUrl: typeof user.photoDataUrl === 'string' ? user.photoDataUrl : '',
           },
         ],
       });
@@ -63,7 +64,7 @@ async function searchUsers(req, res) {
       suspended: { $ne: true },
       ...nameQuery,
     })
-      .select('name')
+      .select('name photoDataUrl')
       .sort({ name: 1 })
       .limit(10)
       .lean();
@@ -72,6 +73,7 @@ async function searchUsers(req, res) {
       users: users.map((u) => ({
         id: String(u._id),
         name: u.name,
+        photoDataUrl: typeof u.photoDataUrl === 'string' ? u.photoDataUrl : '',
       })),
     });
   } catch (error) {

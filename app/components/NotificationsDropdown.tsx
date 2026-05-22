@@ -19,6 +19,7 @@ function NotificationAvatar({ item }: { item: NotificationItem }) {
   if (photo) {
     return (
       <img
+        key={photo.slice(-48)}
         src={photo}
         alt=""
         className="mt-0.5 h-10 w-10 shrink-0 rounded-full border border-zinc-200/80 object-cover shadow-sm"

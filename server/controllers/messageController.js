@@ -88,7 +88,7 @@ async function getConversation(req, res) {
  * with the authenticated user.
  *
  * Response:
- * { conversations: [{ otherUserId, otherName, lastMessagePreview, lastTimestamp, hasUnread }] }
+ * { conversations: [{ otherUserId, otherName, otherPhotoDataUrl, lastMessagePreview, lastTimestamp, hasUnread }] }
  */
 async function getConversations(req, res) {
   try {
@@ -142,6 +142,13 @@ async function getConversations(req, res) {
         $project: {
           otherUserId: '$_id',
           otherName: { $ifNull: ['$user.name', 'Unknown'] },
+          otherPhotoDataUrl: {
+            $cond: [
+              { $eq: [{ $type: '$user.photoDataUrl' }, 'string'] },
+              '$user.photoDataUrl',
+              '',
+            ],
+          },
           lastMessagePreview: 1,
           lastTimestamp: 1,
           hasUnread: {
@@ -167,6 +174,7 @@ async function getConversations(req, res) {
       conversations: conversations.map((c) => ({
         otherUserId: String(c.otherUserId),
         otherName: String(c.otherName || 'Unknown'),
+        otherPhotoDataUrl: String(c.otherPhotoDataUrl || '').trim(),
         lastMessagePreview: String(c.lastMessagePreview || ''),
         lastTimestamp: c.lastTimestamp ? new Date(c.lastTimestamp).toISOString() : null,
         hasUnread: Boolean(c.hasUnread),

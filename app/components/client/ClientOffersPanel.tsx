@@ -17,6 +17,7 @@ import {
   type ClientOffer,
 } from "@/app/lib/offersApi";
 import type { CommunityPost, TaskHireStatus } from "@/app/lib/postsStorage";
+import { UserAvatar } from "@/app/components/UserAvatar";
 
 function formatTimeAgo(value: string) {
   const ts = new Date(value).getTime();
@@ -432,17 +433,12 @@ export function ClientOffersPanel({
                       className={`rounded-xl border px-4 py-3 ${offerStatusClass(offer.status)}`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-[#E8EFEC] text-sm font-bold text-zinc-800">
-                          {offer.freelancerPhotoDataUrl ? (
-                            <img
-                              src={offer.freelancerPhotoDataUrl}
-                              alt=""
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            (offer.freelancerName || "F").slice(0, 2).toUpperCase()
-                          )}
-                        </div>
+                        <UserAvatar
+                          name={offer.freelancerName || "Freelancer"}
+                          photoDataUrl={offer.freelancerPhotoDataUrl}
+                          size="md"
+                          initialsClassName="bg-[#E8EFEC] text-zinc-800"
+                        />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <a

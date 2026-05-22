@@ -9,6 +9,7 @@ import {
   isCommunityPostWithinLast24Hours,
   type CommunityPost,
 } from "@/app/lib/postsStorage";
+import { resolvePostAuthorAvatar } from "@/app/lib/profilePhotoDisplay";
 
 function formatTimeAgo(value: string) {
   const ts = new Date(value).getTime();
@@ -75,7 +76,17 @@ export function FreelancerRightAside() {
                   }
                   className="w-full rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-left shadow-sm hover:bg-[#efe4dd]"
                 >
-                  <p className="text-sm font-semibold text-zinc-900">{post.authorName || "Client User"}</p>
+                  <div className="flex items-center gap-2.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={resolvePostAuthorAvatar(post)}
+                      alt=""
+                      className="h-8 w-8 shrink-0 rounded-full border border-zinc-200 object-cover"
+                    />
+                    <p className="min-w-0 truncate text-sm font-semibold text-zinc-900">
+                      {post.authorName || "Client User"}
+                    </p>
+                  </div>
                   <p className="mt-2 line-clamp-2 text-xs leading-snug text-zinc-700">{post.title}</p>
                   <p className="mt-3 text-xs text-zinc-500">{formatTimeAgo(post.createdAt)}</p>
                 </button>

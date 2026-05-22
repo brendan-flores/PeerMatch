@@ -63,7 +63,9 @@ function logout(req, res) {
 /** GET /api/auth/me — requires authMiddleware upstream */
 async function getMe(req, res) {
   try {
-    const user = await User.findById(req.user.userId).select('username name email role verified accountType');
+    const user = await User.findById(req.user.userId).select(
+      'username name email role verified accountType photoDataUrl',
+    );
     if (!user) {
       clearAccessTokenCookieForReq(req, res);
       return res.status(401).json({ message: 'Account not found.' });
@@ -77,6 +79,7 @@ async function getMe(req, res) {
         role: user.role,
         verified: user.verified,
         ...(user.accountType ? { accountType: user.accountType } : {}),
+        photoDataUrl: typeof user.photoDataUrl === 'string' ? user.photoDataUrl : '',
       },
     });
   } catch (error) {

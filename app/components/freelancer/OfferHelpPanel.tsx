@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, FileText, PhilippinePeso, Send } from "lucide-react";
 import type { CommunityPost } from "@/app/lib/postsStorage";
 import { formatTimeAgo } from "@/app/lib/formatTimeAgo";
+import { resolvePostAuthorAvatar } from "@/app/lib/profilePhotoDisplay";
 import { apiPostJson, ApiError } from "@/app/lib/api";
 import { buildOfferChatMessage } from "@/app/lib/offerChatMessage";
 import { sendChatMessageWithClientId } from "@/app/lib/socket";
@@ -49,6 +50,7 @@ export function OfferHelpPanel({
 
   const isUrgent = post.priority === "High";
   const tags = useMemo(() => [post.category].filter(Boolean), [post.category]);
+  const authorAvatarSrc = useMemo(() => resolvePostAuthorAvatar(post), [post]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -130,17 +132,12 @@ export function OfferHelpPanel({
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                {post.authorAvatarDataUrl ? (
-                  <img
-                    src={post.authorAvatarDataUrl}
-                    alt=""
-                    className="h-11 w-11 rounded-full border border-zinc-200 object-cover"
-                  />
-                ) : (
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3B82F6] text-sm font-semibold text-white">
-                    {getInitials(post.authorName)}
-                  </span>
-                )}
+                <img
+                  key={authorAvatarSrc.slice(-48)}
+                  src={authorAvatarSrc}
+                  alt=""
+                  className="h-11 w-11 rounded-full border border-zinc-200 object-cover"
+                />
                 <div>
                   <p className="font-semibold text-zinc-900">{post.authorName || "Client User"}</p>
                   <p className="text-xs text-zinc-500">Posted {formatTimeAgo(post.createdAt)}</p>
