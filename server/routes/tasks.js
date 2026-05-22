@@ -4,6 +4,10 @@ const Task = require('../models/Task');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
 const { mapTaskToFeedPost, normalizeUrgency } = require('../utils/taskFeedDto');
+const {
+  parseFeedFiltersFromQuery,
+  applyFeedFiltersToQuery,
+} = require('../utils/postFeedFilters');
 const { parseBudget } = require('../utils/budgetValidation');
 const { suggestBudgetWithOpenAI } = require('../services/suggestBudget');
 const {
@@ -34,13 +38,19 @@ async function loadClientsForTasks(tasks) {
 /** Public feed: approved community posts open for offers */
 router.get('/', async (req, res) => {
   try {
-    const tasks = await Task.find({
-      status: 'approved',
-      $or: [
-        { hireStatus: { $in: ['open', null] } },
-        { hireStatus: { $exists: false } },
-      ],
-    })
+    const filters = parseFeedFiltersFromQuery(req.query);
+    const taskQuery = applyFeedFiltersToQuery(
+      {
+        status: 'approved',
+        $or: [
+          { hireStatus: { $in: ['open', null] } },
+          { hireStatus: { $exists: false } },
+        ],
+      },
+      filters,
+    );
+
+    const tasks = await Task.find(taskQuery)
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
