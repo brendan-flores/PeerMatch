@@ -292,7 +292,7 @@ router.post('/profile', authMiddleware, async (req, res) => {
     if (typeof aboutMe === 'string') user.aboutMe = aboutMeStr;
     if (typeof skills === 'string') user.skills = skillsStr;
     if (typeof location === 'string') user.location = locationStr;
-    if (typeof photoDataUrl === 'string') user.photoDataUrl = photoStr;
+    if (typeof photoDataUrl === 'string' && photoStr) user.photoDataUrl = photoStr;
 
     user.profileCompleted = Boolean(
       String(user.course || '').trim() ||
