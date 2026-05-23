@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { MapPin, MessageCircle, UserCircle } from "lucide-react";
+import {
+  dashboardCenterPanelClass,
+  dashboardCenterPanelFixedClass,
+  dashboardPanelScrollClass,
+  dashboardPanelScrollInsetClass,
+} from "@/app/components/dashboard/dashboardShellClasses";
+import { UserAvatar } from "@/app/components/UserAvatar";
 import { ApiError, apiGetJson } from "@/app/lib/api";
 
 type ResolvedUser = {
@@ -10,6 +17,7 @@ type ResolvedUser = {
   name: string;
   email: string;
   accountType?: string | null;
+  photoDataUrl?: string;
 };
 
 type ResolveResponse = {
@@ -54,22 +62,9 @@ export default function FreelancerClientProfilePage() {
     };
   }, [clientId]);
 
-  const initials = useMemo(() => {
-    const name = String(client?.name || "").trim();
-    if (!name) return "CL";
-    return (
-      name
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() || "")
-        .join("") || "CL"
-    );
-  }, [client?.name]);
-
   return (
-    <main className="h-full rounded-2xl border border-zinc-100/80 bg-white p-6 shadow-[0_4px_32px_rgba(15,23,42,0.04)] sm:p-8 lg:p-10">
-      <div className="max-w-2xl">
+    <main className={`${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass}`}>
+      <div className={`${dashboardPanelScrollClass} ${dashboardPanelScrollInsetClass} max-w-2xl`}>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Client Profile</h1>
         <p className="mt-2 text-sm text-zinc-500">Review details about the client before starting a conversation.</p>
 
@@ -80,9 +75,13 @@ export default function FreelancerClientProfilePage() {
         {!loading && client ? (
           <section className="mt-6 rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-5 shadow-sm sm:p-6">
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-[#E8EFEC] text-lg font-bold text-zinc-800">
-                {initials}
-              </div>
+              <UserAvatar
+                id={client.id}
+                name={client.name}
+                photoDataUrl={client.photoDataUrl}
+                size="xl"
+                initialsClassName="bg-[#E8EFEC] text-zinc-800"
+              />
               <div>
                 <p className="text-xl font-semibold text-zinc-900">{client.name}</p>
                 <p className="text-sm text-zinc-500">{client.email}</p>

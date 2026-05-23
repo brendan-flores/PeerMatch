@@ -5,6 +5,8 @@ import Link from "next/link";
 import SidebarBrand from "@/app/components/SidebarBrand";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, LogOut, MessageCircle, Search, User } from "lucide-react";
+import { dashboardSidebarNavScrollClass } from "@/app/components/dashboard/dashboardShellClasses";
+import { NavUnreadBadge } from "@/app/components/NavUnreadBadge";
 import { apiPostJson } from "@/app/lib/api";
 import { disconnectSocket } from "@/app/lib/socket";
 import { clearFreelancerGreetingSession } from "@/app/lib/freelancerStorage";
@@ -15,7 +17,11 @@ const navActiveClass = "bg-[#FF6B35] text-white shadow-sm";
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 
-export function FreelancerSidebar() {
+type FreelancerSidebarProps = {
+  unreadMessageCount?: number;
+};
+
+export function FreelancerSidebar({ unreadMessageCount = 0 }: FreelancerSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -26,10 +32,7 @@ export function FreelancerSidebar() {
     { href: "/freelancer-dashboard/profile", label: "Profile", icon: <User className="h-5 w-5 shrink-0" strokeWidth={1.75} /> },
   ];
 
-  const isFixedLayout =
-    pathname === "/freelancer-dashboard/messages" ||
-    pathname === "/freelancer-dashboard" ||
-    pathname === "/freelancer-dashboard/browse";
+  const isFixedLayout = pathname.startsWith("/freelancer-dashboard");
 
   const isActive = (href: string) => {
     if (href === "/freelancer-dashboard") return pathname === "/freelancer-dashboard";
@@ -49,12 +52,12 @@ export function FreelancerSidebar() {
   return (
     <aside
       className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm ${
-        isFixedLayout ? "h-full" : "sticky top-6 h-[calc(100vh-3rem)]"
+        isFixedLayout ? "h-full overflow-hidden" : "sticky top-6 h-[calc(100vh-3rem)] max-h-[calc(100vh-3rem)]"
       }`}
     >
       <SidebarBrand />
 
-      <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
+      <nav className={dashboardSidebarNavScrollClass} aria-label="Main">
         {items.map((item) => {
           const active = isActive(item.href);
           return (
@@ -65,7 +68,10 @@ export function FreelancerSidebar() {
               className={`${navItemClass} ${active ? navActiveClass : ""}`}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span className="min-w-0 flex-1">{item.label}</span>
+              {item.href === "/freelancer-dashboard/messages" ? (
+                <NavUnreadBadge count={unreadMessageCount} active={active} />
+              ) : null}
             </Link>
           );
         })}

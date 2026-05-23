@@ -1,4 +1,5 @@
 import { apiGetJson, apiPostJson } from "./api";
+import { buildFeedQueryString, type CommunityPostFeedFilters } from "./postFilters";
 import type { CommunityPost, CommunityPostPriority } from "./postsStorage";
 
 export const POST_REVIEW_MESSAGE = "Your post is under review and waiting for approval.";
@@ -44,11 +45,19 @@ function mapFeedPosts(posts: ApiFeedPost[] | undefined): CommunityPost[] {
     budget: typeof post.budget === "number" ? post.budget : 0,
     createdAt: post.createdAt,
     status: post.status,
+    hireStatus: post.hireStatus,
+    assignedFreelancerId: post.assignedFreelancerId,
+    assignedFreelancerName: post.assignedFreelancerName,
+    completedAt: post.completedAt,
+    reviewSubmittedAt: post.reviewSubmittedAt,
   }));
 }
 
-export async function fetchApprovedCommunityPosts(): Promise<CommunityPost[]> {
-  const data = await apiGetJson<FeedResponse>("/api/tasks");
+export async function fetchApprovedCommunityPosts(
+  filters?: CommunityPostFeedFilters,
+): Promise<CommunityPost[]> {
+  const path = buildFeedQueryString(filters);
+  const data = await apiGetJson<FeedResponse>(path);
   return mapFeedPosts(data.posts);
 }
 

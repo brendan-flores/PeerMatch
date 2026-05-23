@@ -67,6 +67,28 @@ function fmt(n: number | undefined, loading: boolean) {
   return (n ?? 0).toLocaleString();
 }
 
+function activityBadgeLabel(item: ActivityItem) {
+  if (item.kind === "task_approved" || item.badge === "approved") return "Approved";
+  if (item.kind === "task_rejected" || item.badge === "rejected") return "Rejected";
+  return "Pending";
+}
+
+function activityBadgeClass(item: ActivityItem) {
+  if (item.kind === "task_approved" || item.badge === "approved") return "admin-badge--approved";
+  if (item.kind === "task_rejected" || item.badge === "rejected") return "admin-badge--rejected";
+  return "admin-badge--pending";
+}
+
+function activityRowClass(kind: ActivityItem["kind"]) {
+  if (kind === "task_approved") return " admin-activity-row--approved";
+  if (kind === "task_rejected") return " admin-activity-row--rejected";
+  return "";
+}
+
+function isTaskModeration(kind: ActivityItem["kind"]) {
+  return kind === "task_approved" || kind === "task_rejected";
+}
+
 export default function AdminDashboardContent() {
   const { stats, statsLoading, statsError, reloadStats } = useAdminLayoutStats();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -92,14 +114,9 @@ export default function AdminDashboardContent() {
     };
   }, []);
 
-  const flaggedLine =
-    stats && stats.flaggedPending > 0
-      ? `Review ${stats.flaggedPending} task${stats.flaggedPending === 1 ? "" : "s"} flagged for ethical compliance.`
-      : "No tasks are currently flagged for review.";
-
   return (
-    <>
-      <div className="admin-page-head">
+    <div className="admin-dashboard-page">
+      <div className="admin-page-head shrink-0">
         <div>
           <h1 className="admin-page-title">Dashboard Overview</h1>
           <p className="admin-page-sub">Monitor platform activity and key metrics</p>
@@ -115,12 +132,12 @@ export default function AdminDashboardContent() {
         </p>
       ) : null}
 
-      <div className="admin-metrics">
+      <div className="admin-metrics shrink-0">
         <article className="admin-metric-card">
           <div className="admin-metric-card__icon">
             <IconClipboard />
           </div>
-          <div>
+          <div className="admin-metric-card__content">
             <p className="admin-metric-card__label">Total Tasks</p>
             <p className="admin-metric-card__value">{fmt(stats?.totalTasks, statsLoading)}</p>
           </div>
@@ -129,7 +146,7 @@ export default function AdminDashboardContent() {
           <div className="admin-metric-card__icon">
             <IconHourglass />
           </div>
-          <div>
+          <div className="admin-metric-card__content">
             <p className="admin-metric-card__label">Pending Review</p>
             <p className="admin-metric-card__value">{fmt(stats?.pendingReview, statsLoading)}</p>
           </div>
@@ -138,7 +155,7 @@ export default function AdminDashboardContent() {
           <div className="admin-metric-card__icon">
             <IconPeople />
           </div>
-          <div>
+          <div className="admin-metric-card__content">
             <p className="admin-metric-card__label">Active Users</p>
             <p className="admin-metric-card__value">{fmt(stats?.activeUsers, statsLoading)}</p>
           </div>
@@ -147,57 +164,63 @@ export default function AdminDashboardContent() {
           <div className="admin-metric-card__icon admin-metric-card__icon--success">
             <IconCheckBox />
           </div>
-          <div>
+          <div className="admin-metric-card__content">
             <p className="admin-metric-card__label">Completed Tasks</p>
             <p className="admin-metric-card__value">{fmt(stats?.completedTasks, statsLoading)}</p>
           </div>
         </article>
       </div>
 
-      <section className="admin-card admin-card--padded-lg">
-        <div className="admin-card__head">
+      <section className="admin-card admin-card--padded-lg admin-activity-card">
+        <div className="admin-card__head shrink-0">
           <div>
             <h2 className="admin-card__title">Recent Activities</h2>
             <p className="admin-card__sub">Latest platform events</p>
           </div>
         </div>
-        {actError ? (
-          <p className="admin-inline-error" role="alert">
-            {actError}
-          </p>
-        ) : null}
-        {actLoading ? (
-          <p className="admin-empty">Loading activity…</p>
-        ) : activities.length === 0 ? (
-          <p className="admin-empty">No recent activity yet.</p>
-        ) : (
-          <ul className="admin-activity-list">
-            {activities.map((a) => (
-              <li key={a.id} className="admin-activity-row">
-                <div>
-                  <p className="admin-activity-row__title">{a.title}</p>
-                  <p className="admin-activity-row__sub">{a.sub}</p>
-                </div>
-                <div className="admin-activity-row__meta">
-                  <span className="admin-activity-row__time">{formatRelativeTime(a.at)}</span>
-                  <span className={`admin-badge admin-badge--${a.badge}`}>{a.badge}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="admin-activity-scroll panel-scroll-pane min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {actError ? (
+            <p className="admin-inline-error" role="alert">
+              {actError}
+            </p>
+          ) : null}
+          {actLoading ? (
+            <p className="admin-empty">Loading activity…</p>
+          ) : activities.length === 0 ? (
+            <p className="admin-empty">No recent activity yet.</p>
+          ) : (
+            <ul className="admin-activity-list">
+              {activities.map((a) => (
+                <li key={a.id} className={`admin-activity-row${activityRowClass(a.kind)}`}>
+                  <div className="admin-activity-row__body">
+                    <p className="admin-activity-row__title">{a.title}</p>
+                    {isTaskModeration(a.kind) ? (
+                      <>
+                        {a.taskTitle ? (
+                          <p className="admin-activity-row__task">{a.taskTitle}</p>
+                        ) : null}
+                        <p className="admin-activity-row__detail">
+                          {a.kind === "task_rejected" ? "Rejected by:" : "Approved by:"}{" "}
+                          <span>{a.moderatorName || "—"}</span>
+                        </p>
+                        <p className="admin-activity-row__detail">
+                          Client: <span>{a.clientName || "Unknown client"}</span>
+                        </p>
+                      </>
+                    ) : (
+                      <p className="admin-activity-row__sub">{a.sub}</p>
+                    )}
+                  </div>
+                  <div className="admin-activity-row__meta">
+                    <span className="admin-activity-row__time">{formatRelativeTime(a.at)}</span>
+                    <span className={`admin-badge ${activityBadgeClass(a)}`}>{activityBadgeLabel(a)}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
-
-      <div className="admin-banners">
-        <div className="admin-banner admin-banner--primary">
-          <h3 className="admin-banner__title">Tasks Needing Attention</h3>
-          <p className="admin-banner__sub">{statsLoading ? "Loading…" : flaggedLine}</p>
-        </div>
-        <div className="admin-banner admin-banner--accent">
-          <h3 className="admin-banner__title">System Reports</h3>
-          <p className="admin-banner__sub">Generate comprehensive platform analytics.</p>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }

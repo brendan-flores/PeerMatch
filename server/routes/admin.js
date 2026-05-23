@@ -1,11 +1,18 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const Task = require('../models/Task');
+const ClientTask = require('../models/ClientTask');
 const User = require('../models/User');
 const { authMiddleware, requireAdmin } = require('../middleware/auth');
 const authController = require('../controllers/authController');
 const { mapTaskToFeedPost } = require('../utils/taskFeedDto');
 const { emitToUser } = require('../socket/socketServer');
+const { notifyClientPostApproved } = require('../services/notificationService');
+const {
+  listRecentAdminActivities,
+  recordTaskApproved,
+  recordTaskRejected,
+} = require('../services/adminActivityService');
+const { getClientTaskByIdForAdmin, listClientTasksForAdmin } = require('../services/clientTaskStore');
 
 const router = express.Router();
 
@@ -54,22 +61,28 @@ router.get('/stats', async (req, res) => {
     const [
       totalTasks,
       pendingReview,
-      approvedTasks,
+      completedTasks,
       activeUsers,
       totalUsers,
       verifiedUsers,
       suspendedUsers,
       flaggedPending,
     ] = await Promise.all([
-      Task.countDocuments(),
-      Task.countDocuments({ status: 'pending' }),
-      Task.countDocuments({ status: 'approved' }),
+      ClientTask.countDocuments({ status: 'approved' }),
+      ClientTask.countDocuments({
+        $or: [{ status: 'pending' }, { status: { $exists: false } }, { status: null }],
+      }),
+      ClientTask.countDocuments({
+        status: 'approved',
+        hireStatus: 'completed',
+        reviewSubmittedAt: { $ne: null },
+      }),
       User.countDocuments({ role: 'user', suspended: { $ne: true } }),
       // Exclude admin accounts from these student/user aggregates.
       User.countDocuments({ role: 'user' }),
       User.countDocuments({ role: 'user', verified: true }),
       User.countDocuments({ role: 'user', suspended: true }),
-      Task.countDocuments({ flagged: true, status: 'pending' }),
+      ClientTask.countDocuments({ flagged: true, status: 'pending' }),
     ]);
 
     const verificationRate =
@@ -78,7 +91,7 @@ router.get('/stats', async (req, res) => {
     res.json({
       totalTasks,
       pendingReview,
-      completedTasks: approvedTasks,
+      completedTasks,
       activeUsers,
       totalUsers,
       verifiedUsers,
@@ -92,67 +105,11 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-async function buildRecentActivities(limit = 20) {
-  const [tasks, newUsers] = await Promise.all([
-    Task.find()
-      .populate('clientId', 'name')
-      .sort({ updatedAt: -1 })
-      .limit(30)
-      .lean(),
-    User.find({ role: 'user' })
-      .select('name createdAt verified')
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .lean(),
-  ]);
-
-  const fromTasks = tasks.map((t) => {
-    const name = t.clientId?.name || 'Unknown client';
-    let title;
-    let badge;
-    if (t.status === 'pending') {
-      if (t.flagged) {
-        title = 'Task flagged for review';
-        badge = 'warning';
-      } else {
-        title = 'New task submitted';
-        badge = 'pending';
-      }
-    } else if (t.status === 'approved') {
-      title = 'Task approved';
-      badge = 'completed';
-    } else {
-      title = 'Task rejected';
-      badge = 'warning';
-    }
-    const at = t.status === 'pending' ? t.createdAt : t.updatedAt;
-    return {
-      id: `task-${t._id}`,
-      title,
-      sub: name,
-      at: new Date(at).toISOString(),
-      badge,
-    };
-  });
-
-  const fromUsers = newUsers.map((u) => ({
-    id: `user-${u._id}`,
-    title: u.verified ? 'Account verified' : 'New user registered',
-    sub: u.name,
-    at: new Date(u.createdAt).toISOString(),
-    badge: u.verified ? 'completed' : 'pending',
-  }));
-
-  return [...fromTasks, ...fromUsers]
-    .sort((a, b) => new Date(b.at) - new Date(a.at))
-    .slice(0, limit);
-}
-
 router.get('/activities', async (req, res) => {
   try {
     const rawLimit = parseInt(String(req.query.limit || '20'), 10);
     const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 50) : 20;
-    const items = await buildRecentActivities(limit);
+    const items = await listRecentAdminActivities(limit);
     res.json({ items });
   } catch (error) {
     console.error(error);
@@ -162,24 +119,26 @@ router.get('/activities', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 }).lean();
+    const users = await User.find()
+      .select('name email role accountType verified suspended createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
 
-    const taskCounts = await Task.aggregate([
+    const taskCounts = await ClientTask.aggregate([
       { $group: { _id: '$clientId', count: { $sum: 1 } } },
     ]);
     const countByClient = new Map(taskCounts.map((x) => [String(x._id), x.count]));
 
     const payload = users.map((u) => ({
       id: String(u._id),
-      name: u.name,
-      email: u.email,
+      name: String(u.name || '').trim() || 'Unknown',
+      email: String(u.email || '').trim(),
       joinedAt: u.createdAt ? new Date(u.createdAt).toISOString() : null,
       accountType: u.accountType || null,
       role: u.role,
       verified: !!u.verified,
       suspended: !!u.suspended,
       tasksPosted: countByClient.get(String(u._id)) || 0,
-      rating: null,
     }));
 
     res.json({ users: payload });
@@ -191,30 +150,24 @@ router.get('/users', async (req, res) => {
 
 router.get('/tasks', async (req, res) => {
   try {
-    const [tasks, pendingTotal] = await Promise.all([
-      Task.find().populate('clientId', 'name email').sort({ createdAt: -1 }).lean(),
-      Task.countDocuments({ status: 'pending' }),
-    ]);
-
-    const payload = tasks.map((t) => ({
-      id: String(t._id),
-      title: t.title,
-      description: t.description || '',
-      subjectCategory: t.subjectCategory || '',
-      urgency: t.urgency || 'normal',
-      createdAt: t.createdAt ? new Date(t.createdAt).toISOString() : null,
-      updatedAt: t.updatedAt ? new Date(t.updatedAt).toISOString() : null,
-      flagged: !!t.flagged,
-      clientName: t.clientId?.name || 'Unknown',
-      budget: t.budget,
-      category: t.category,
-      status: t.status,
-    }));
-
-    res.json({ tasks: payload, pendingTotal });
+    const { tasks, pendingTotal } = await listClientTasksForAdmin();
+    res.json({ tasks, pendingTotal });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Could not load tasks.' });
+  }
+});
+
+router.get('/tasks/:id', async (req, res) => {
+  try {
+    const task = await getClientTaskByIdForAdmin(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found.' });
+    }
+    res.json({ task });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Could not load task details.' });
   }
 });
 
@@ -227,8 +180,20 @@ router.patch('/tasks/:id', async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid task id.' });
     }
-    const task = await Task.findByIdAndUpdate(req.params.id, { $set: { status } }, { new: true })
+    const adminId = req.user.userId;
+    let update;
+    if (status === 'approved') {
+      update = { $set: { status, approvedBy: adminId }, $unset: { rejectedBy: '' } };
+    } else if (status === 'rejected') {
+      update = { $set: { status, rejectedBy: adminId }, $unset: { approvedBy: '' } };
+    } else {
+      update = { $set: { status }, $unset: { approvedBy: '', rejectedBy: '' } };
+    }
+
+    const task = await ClientTask.findByIdAndUpdate(req.params.id, update, { new: true })
       .populate('clientId', 'name email accountType photoDataUrl')
+      .populate('approvedBy', 'name')
+      .populate('rejectedBy', 'name')
       .lean();
     if (!task) {
       return res.status(404).json({ message: 'Task not found.' });
@@ -236,10 +201,26 @@ router.patch('/tasks/:id', async (req, res) => {
 
     if (status === 'approved' && task.clientId) {
       const clientId = task.clientId._id ? String(task.clientId._id) : String(task.clientId);
+      const taskId = String(task._id);
       emitToUser(clientId, 'post_approved', {
         message: 'Your post has been approved.',
         post: mapTaskToFeedPost(task),
       });
+      try {
+        await notifyClientPostApproved({ clientId, taskId });
+      } catch (notifyErr) {
+        console.error('Notification dispatch failed after post approval:', notifyErr);
+      }
+    }
+
+    try {
+      if (status === 'approved') {
+        await recordTaskApproved(task, adminId);
+      } else if (status === 'rejected') {
+        await recordTaskRejected(task, adminId);
+      }
+    } catch (activityErr) {
+      console.error('Failed to record admin activity:', activityErr);
     }
 
     res.json({

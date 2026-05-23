@@ -88,7 +88,7 @@ async function getConversation(req, res) {
  * with the authenticated user.
  *
  * Response:
- * { conversations: [{ otherUserId, otherName, lastMessagePreview, lastTimestamp, hasUnread }] }
+ * { conversations: [{ otherUserId, otherName, otherPhotoDataUrl, lastMessagePreview, lastTimestamp, hasUnread }] }
  */
 async function getConversations(req, res) {
   try {
@@ -142,6 +142,13 @@ async function getConversations(req, res) {
         $project: {
           otherUserId: '$_id',
           otherName: { $ifNull: ['$user.name', 'Unknown'] },
+          otherPhotoDataUrl: {
+            $cond: [
+              { $eq: [{ $type: '$user.photoDataUrl' }, 'string'] },
+              '$user.photoDataUrl',
+              '',
+            ],
+          },
           lastMessagePreview: 1,
           lastTimestamp: 1,
           hasUnread: {
@@ -167,6 +174,7 @@ async function getConversations(req, res) {
       conversations: conversations.map((c) => ({
         otherUserId: String(c.otherUserId),
         otherName: String(c.otherName || 'Unknown'),
+        otherPhotoDataUrl: String(c.otherPhotoDataUrl || '').trim(),
         lastMessagePreview: String(c.lastMessagePreview || ''),
         lastTimestamp: c.lastTimestamp ? new Date(c.lastTimestamp).toISOString() : null,
         hasUnread: Boolean(c.hasUnread),
@@ -175,6 +183,32 @@ async function getConversations(req, res) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Could not load conversations.' });
+  }
+}
+
+/**
+ * GET /api/messages/unread-count
+ * Count of incoming messages not yet read by the authenticated user.
+ */
+async function getUnreadCount(req, res) {
+  try {
+    const myId = String(req.user.userId || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(myId)) {
+      return res.json({ count: 0 });
+    }
+
+    const myObjId = new mongoose.Types.ObjectId(myId);
+    const count = await Message.countDocuments({
+      receiverId: myObjId,
+      unsent: { $ne: true },
+      vanishedForUsers: { $nin: [myObjId] },
+      $or: [{ status: { $in: ['sent', 'delivered'] } }, { status: { $exists: false } }],
+    });
+
+    return res.json({ count });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Could not load unread count.' });
   }
 }
 
@@ -437,6 +471,7 @@ async function vanishIncomingMessageForViewer(req, res) {
 module.exports = {
   getConversation,
   getConversations,
+  getUnreadCount,
   markSeen,
   deleteMessage,
   deleteConversation,

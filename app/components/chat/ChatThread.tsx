@@ -7,6 +7,8 @@ import { ApiError, apiDeleteJson, apiGetJson, apiPostJson } from "@/app/lib/api"
 import type { ChatMessagePayload } from "@/app/lib/chatTypes";
 import { dedupeReactions, toggleMessageReaction } from "@/app/lib/reactionUtils";
 import { ChatMessageRow } from "@/app/components/chat/ChatMessageRow";
+import { UserAvatar } from "@/app/components/UserAvatar";
+import { dispatchUnreadMessagesRefresh } from "@/app/hooks/useUnreadMessageCount";
 import {
   connectSocket,
   emitMarkSeen,
@@ -24,6 +26,7 @@ type ChatThreadProps = {
   currentUserId: string;
   otherUserId: string;
   otherUserLabel?: string;
+  otherUserPhoto?: string;
   statusText?: string;
   allowUnsend?: boolean;
   onConversationUpdated?: (otherUserIdResolved: string, messages: ChatMessagePayload[]) => void;
@@ -39,6 +42,7 @@ export function ChatThread({
   currentUserId,
   otherUserId,
   otherUserLabel,
+  otherUserPhoto = "",
   statusText = "Online",
   allowUnsend = false,
   onConversationUpdated,
@@ -56,7 +60,7 @@ export function ChatThread({
   const [replyingTo, setReplyingTo] = useState<{ id: string; preview: string } | null>(null);
   const [forwardFrom, setForwardFrom] = useState<ChatMessagePayload | null>(null);
   const [forwardConversations, setForwardConversations] = useState<
-    { otherUserId: string; otherName: string }[]
+    { otherUserId: string; otherName: string; otherPhotoDataUrl?: string }[]
   >([]);
   const [forwardNote, setForwardNote] = useState("");
   const [forwardLoading, setForwardLoading] = useState(false);
@@ -194,7 +198,10 @@ export function ChatThread({
 
     emitMarkSeen(resolvedOtherId);
     // Fallback for non-socket receivers / legacy clients.
-    void apiPostJson("/api/messages/seen", { otherUserId: resolvedOtherId }).catch(() => undefined);
+    void apiPostJson("/api/messages/seen", { otherUserId: resolvedOtherId })
+      .then(() => dispatchUnreadMessagesRefresh())
+      .catch(() => undefined);
+    dispatchUnreadMessagesRefresh();
   }, [canChat, resolvedOtherId, messages, currentUserId]);
 
   useEffect(() => {
@@ -543,9 +550,9 @@ export function ChatThread({
   const loadForwardTargets = useCallback(async () => {
     setForwardLoading(true);
     try {
-      const data = await apiGetJson<{ conversations: { otherUserId: string; otherName: string }[] }>(
-        "/api/messages/conversations",
-      );
+      const data = await apiGetJson<{
+        conversations: { otherUserId: string; otherName: string; otherPhotoDataUrl?: string }[];
+      }>("/api/messages/conversations");
       setForwardConversations(data.conversations || []);
     } catch {
       setForwardConversations([]);
@@ -626,7 +633,16 @@ export function ChatThread({
     <div className={`flex h-full max-h-full min-h-0 flex-col overflow-hidden ${className}`}>
       <header className="shrink-0 min-h-[76px] border-b border-zinc-200 bg-white px-6 py-6">
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
+          {resolvedOtherId ? (
+            <UserAvatar
+              id={resolvedOtherId}
+              name={otherUserLabel || title}
+              photoDataUrl={otherUserPhoto}
+              size="md"
+              className="border-zinc-200"
+            />
+          ) : null}
+          <div className="min-w-0 flex-1">
             <p className="truncate leading-tight text-sm font-semibold text-zinc-900">{title}</p>
             <p
               className={`mt-1 text-xs font-medium leading-tight ${
@@ -805,10 +821,16 @@ export function ChatThread({
                   <li key={c.otherUserId}>
                     <button
                       type="button"
-                      className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-zinc-800 hover:bg-zinc-50"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-zinc-800 hover:bg-zinc-50"
                       onClick={() => submitForward(c.otherUserId)}
                     >
-                      <span className="truncate font-medium">{c.otherName}</span>
+                      <UserAvatar
+                        id={c.otherUserId}
+                        name={c.otherName}
+                        photoDataUrl={c.otherPhotoDataUrl}
+                        size="sm"
+                      />
+                      <span className="min-w-0 flex-1 truncate font-medium">{c.otherName}</span>
                       <span className="ml-2 shrink-0 text-xs text-zinc-400">Send</span>
                     </button>
                   </li>

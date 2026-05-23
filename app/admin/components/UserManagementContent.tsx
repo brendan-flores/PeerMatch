@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { apiGetJson, apiPatchJson, ApiError } from "@/app/lib/api";
 import { formatJoinedDate } from "../lib/formatTime";
 import type { AdminUserRow } from "../types";
-import { useAdminLayoutStats } from "./AdminLayout";
-
 type RouteTab = "allusers" | "clients" | "freelancers" | "admin";
 
 type DisplayRole = "Client" | "Freelancer" | "Admin" | "Student";
@@ -50,29 +48,6 @@ function IconMail() {
   );
 }
 
-function IconShield() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function IconBan() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M5 19L19 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function IconCrown() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -112,7 +87,7 @@ function apiToRow(u: AdminUserRow): UserRow {
     role: dr,
     status: u.suspended ? "Suspended" : "Active",
     tasks: u.tasksPosted,
-    rating: u.rating,
+    rating: dr === "Freelancer" ? (u.rating ?? null) : null,
   };
 }
 
@@ -124,7 +99,6 @@ function filterByRoute(list: UserRow[], t: RouteTab): UserRow[] {
 }
 
 export default function UserManagementContent() {
-  const { stats, statsLoading } = useAdminLayoutStats();
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -141,26 +115,29 @@ export default function UserManagementContent() {
         ? "freelancers"
         : "allusers";
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadUsers = useCallback(() => {
     setLoading(true);
     setError(null);
-    apiGetJson<{ users: AdminUserRow[] }>("/api/admin/users")
+    return apiGetJson<{ users: AdminUserRow[] }>("/api/admin/users")
       .then((data) => {
-        if (!cancelled) setRows((data.users || []).map(apiToRow));
+        setRows((data.users || []).map(apiToRow));
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof ApiError ? e.message : "Failed to load users.");
+        setRows([]);
+        setError(e instanceof ApiError ? e.message : "Failed to load users.");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
+  useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
+
   const visible = useMemo(() => filterByRoute(rows, activeTab), [rows, activeTab]);
+  const showRatingColumn = activeTab === "freelancers" || activeTab === "allusers";
+  const tableColSpan = showRatingColumn ? 7 : 6;
 
   const handlePromoteToAdmin = async (userId: string) => {
     setPromotingId(userId);
@@ -179,12 +156,6 @@ export default function UserManagementContent() {
     }
   };
 
-  const totalUsers = stats?.totalUsers ?? 0;
-  const verifiedUsers = stats?.verifiedUsers ?? 0;
-  const suspendedUsers = stats?.suspendedUsers ?? 0;
-  const verificationRate = stats?.verificationRate ?? 0;
-  const suspendedPct = totalUsers === 0 ? 0 : Math.round((suspendedUsers / totalUsers) * 10000) / 100;
-
   return (
     <>
       <div className="admin-page-head admin-page-head--split">
@@ -196,7 +167,10 @@ export default function UserManagementContent() {
 
       {error ? (
         <p className="admin-inline-error" role="alert">
-          {error}
+          {error}{" "}
+          <button type="button" className="admin-link-btn" onClick={() => void loadUsers()}>
+            Retry
+          </button>
         </p>
       ) : null}
 
@@ -225,14 +199,14 @@ export default function UserManagementContent() {
                 <th>Role</th>
                 <th>Status</th>
                 <th>Tasks</th>
-                <th>Rating</th>
+                {showRatingColumn ? <th>Rating</th> : null}
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={tableColSpan}>
                     <p className="admin-empty" style={{ margin: "1rem" }}>
                       Loading users…
                     </p>
@@ -240,7 +214,7 @@ export default function UserManagementContent() {
                 </tr>
               ) : visible.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={tableColSpan}>
                     <p className="admin-empty" style={{ margin: "1rem" }}>
                       No users in this view.
                     </p>
@@ -270,34 +244,32 @@ export default function UserManagementContent() {
                       </span>
                     </td>
                     <td>{u.tasks}</td>
-                    <td>
-                      {u.rating != null ? (
-                        <span className="admin-rating">
-                          {u.rating.toFixed(1)} <IconStar />
-                        </span>
-                      ) : (
-                        <span className="admin-muted-cell">—</span>
-                      )}
-                    </td>
+                    {showRatingColumn ? (
+                      <td>
+                        {u.role === "Freelancer" && u.rating != null ? (
+                          <span className="admin-rating">
+                            {u.rating.toFixed(1)} <IconStar />
+                          </span>
+                        ) : (
+                          <span className="admin-muted-cell">—</span>
+                        )}
+                      </td>
+                    ) : null}
                     <td>
                       <div className="admin-row-actions">
-                        <button type="button" className="admin-row-icon" aria-label={`View ${u.name}`}>
-                          <IconShield />
-                        </button>
-                        {u.role !== 'Admin' && (
+                        {u.role !== "Admin" ? (
                           <button
                             type="button"
                             className="admin-row-icon"
                             aria-label={`Promote ${u.name} to admin`}
-                            onClick={() => handlePromoteToAdmin(u.id)}
+                            onClick={() => void handlePromoteToAdmin(u.id)}
                             disabled={promotingId === u.id}
                           >
                             <IconCrown />
                           </button>
+                        ) : (
+                          <span className="admin-muted-cell">—</span>
                         )}
-                        <button type="button" className="admin-row-icon admin-row-icon--muted" aria-label="Suspend user">
-                          <IconBan />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -306,27 +278,6 @@ export default function UserManagementContent() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="admin-summary-row">
-        <article className="admin-summary-card">
-          <h3 className="admin-summary-card__label">Total Users</h3>
-          <p className="admin-summary-card__value">{statsLoading ? "…" : totalUsers.toLocaleString()}</p>
-        </article>
-        <article className="admin-summary-card">
-          <h3 className="admin-summary-card__label">Verified Students</h3>
-          <p className="admin-summary-card__value">{statsLoading ? "…" : verifiedUsers.toLocaleString()}</p>
-          <p className="admin-summary-card__hint admin-summary-card__hint--accent">
-            {statsLoading ? "…" : `${verificationRate}% verification rate`}
-          </p>
-        </article>
-        <article className="admin-summary-card">
-          <h3 className="admin-summary-card__label">Suspended Accounts</h3>
-          <p className="admin-summary-card__value admin-summary-card__value--danger">
-            {statsLoading ? "…" : suspendedUsers.toLocaleString()}
-          </p>
-          <p className="admin-summary-card__hint">{statsLoading ? "…" : `${suspendedPct}% of total users`}</p>
-        </article>
       </div>
     </>
   );

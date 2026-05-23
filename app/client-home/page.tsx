@@ -7,28 +7,21 @@ import { FreelancerFeedMain } from "../components/freelancer/FreelancerFeedMain"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bell,
   BookOpen,
   CalendarDays,
   ChevronDown,
   CircleDollarSign,
   CirclePlus,
-  Clock,
   FilePenLine,
   FileText,
   Handshake,
-  Heart,
-  MapPin,
   LayoutDashboard,
   Lightbulb,
   LogOut,
   MessageCircle,
-  MessageSquare,
-  MessageSquareQuote,
   ShieldAlert,
   Send,
   Sparkles,
-  Star,
   Upload,
   UserCircle,
   User,
@@ -43,6 +36,7 @@ import {
   URGENCY_OPTIONS,
 } from "../lib/communityPosts";
 import { useCommunityPostsContext } from "../lib/CommunityPostsContext";
+import { ClientOffersPanel } from "../components/client/ClientOffersPanel";
 import { FeaturedPostEditor } from "../components/client/FeaturedPostEditor";
 import {
   isCommunityPostWithinLast24Hours,
@@ -52,6 +46,25 @@ import {
 import { connectSocket, disconnectSocket, subscribePostApproved } from "../lib/socket";
 import { ChatLayout } from "../components/chat/ChatLayout";
 import { ClientPostToast, type ClientPostToastState } from "../components/ClientPostToast";
+import { DashboardCenterColumn } from "../components/dashboard/DashboardCenterColumn";
+import {
+  dashboardPanelScrollClass,
+  dashboardCenterPanelCompactPaddingClass,
+  dashboardCenterPanelHeadingClass,
+  dashboardPanelScrollInsetClass,
+  dashboardProfileScrollClass,
+  dashboardRightAsideListClass,
+  dashboardSidebarNavScrollClass,
+} from "../components/dashboard/dashboardShellClasses";
+import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
+import { NavUnreadBadge } from "../components/NavUnreadBadge";
+import { fetchClientOffers, isOfferPending } from "../lib/offersApi";
+import { useCurrentUserProfile } from "../lib/CurrentUserProfileContext";
+import { persistProfilePhotoFromFile } from "../lib/profilePhoto";
+import { UserAvatar } from "../components/UserAvatar";
+import { dicebearInitialsAvatar } from "../lib/profilePhotoDisplay";
+import { useNotifications } from "../hooks/useNotifications";
+import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
 
 type PostItem = {
   id: string;
@@ -146,6 +159,7 @@ function ClientHomePageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activePanel = searchParams.get("panel");
+  const highlightPost = searchParams.get("highlightPost");
   const [displayName, setDisplayName] = useState<string>("");
   const [displayEmail, setDisplayEmail] = useState<string>("");
   const [profileNameInput, setProfileNameInput] = useState<string>("");
@@ -157,7 +171,9 @@ function ClientHomePageContent() {
   const [profilePhotoDataUrl, setProfilePhotoDataUrl] = useState<string>("");
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [profilePhotoSaving, setProfilePhotoSaving] = useState(false);
   const [profileStatusMessage, setProfileStatusMessage] = useState<string>("");
+  const { photoDataUrl: globalPhotoDataUrl, syncProfile } = useCurrentUserProfile();
   const [meUserId, setMeUserId] = useState<string>("");
   const peerFromQuery = searchParams.get("with") || "";
   const [peerUserId, setPeerUserId] = useState<string>(peerFromQuery);
@@ -165,15 +181,16 @@ function ClientHomePageContent() {
   const [savedProfileSnapshot, setSavedProfileSnapshot] = useState<ProfileFormSnapshot | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [isPanelVisible, setIsPanelVisible] = useState(true);
-  const { approvedPosts, refreshAll } = useCommunityPostsContext();
+  const { approvedPosts, approvedLoading, approvedError, refreshAll, updateAuthorAvatarsLocally } =
+    useCommunityPostsContext();
   const [postCategoryInput, setPostCategoryInput] = useState("");
   const [postPriorityInput, setPostPriorityInput] = useState<CommunityPostPriority>("Normal");
   const [postSubmitting, setPostSubmitting] = useState(false);
+  const [pendingOffersCount, setPendingOffersCount] = useState(0);
   const [postTitleInput, setPostTitleInput] = useState("");
   const [postDescriptionInput, setPostDescriptionInput] = useState("");
   const [postBudgetInput, setPostBudgetInput] = useState("");
   const [postStatusMessage, setPostStatusMessage] = useState("");
-  const [notifications, setNotifications] = useState<string[]>([]);
   const [postToast, setPostToast] = useState<ClientPostToastState>(null);
   const knownApprovedPostIdsRef = useRef<Set<string>>(new Set());
 
@@ -214,20 +231,27 @@ function ClientHomePageContent() {
       budget?: number;
       authorAvatarDataUrl?: string;
     },
-    fallbackAvatar: string,
-  ): PostItem => ({
-    id: post.id,
-    authorId: post.authorId,
-    author: post.authorName || "Client User",
-    timeAgo: formatTimeAgo(post.createdAt),
-    createdAt: post.createdAt,
-    title: post.title,
-    content: post.content,
-    category: post.category || "General",
-    priority: post.priority,
-    budget: typeof post.budget === "number" ? post.budget : 0,
-    avatar: post.authorAvatarDataUrl || fallbackAvatar,
-  });
+    me: { id: string; photo: string },
+  ): PostItem => {
+    const isMine = Boolean(me.id && post.authorId && String(post.authorId) === String(me.id));
+    const avatar =
+      String(post.authorAvatarDataUrl || "").trim() ||
+      (isMine && me.photo ? me.photo : "") ||
+      dicebearInitialsAvatar(post.authorName || "Client");
+    return {
+      id: post.id,
+      authorId: post.authorId,
+      author: post.authorName || "Client User",
+      timeAgo: formatTimeAgo(post.createdAt),
+      createdAt: post.createdAt,
+      title: post.title,
+      content: post.content,
+      category: post.category || "General",
+      priority: post.priority,
+      budget: typeof post.budget === "number" ? post.budget : 0,
+      avatar,
+    };
+  };
 
   useEffect(() => {
     setPeerUserId(peerFromQuery);
@@ -262,10 +286,13 @@ function ClientHomePageContent() {
     };
   }, [router]);
 
-  const fallbackAvatar = profilePhotoDataUrl || "https://api.dicebear.com/7.x/initials/svg?seed=Client";
+  const displayProfilePhoto = globalPhotoDataUrl || profilePhotoDataUrl;
   const posts = useMemo(
-    () => approvedPosts.map((post) => mapPostForUi(post, fallbackAvatar)),
-    [approvedPosts, fallbackAvatar],
+    () =>
+      approvedPosts.map((post) =>
+        mapPostForUi(post, { id: meUserId, photo: displayProfilePhoto }),
+      ),
+    [approvedPosts, meUserId, displayProfilePhoto],
   );
 
   const recentPosts = useMemo(
@@ -273,22 +300,37 @@ function ClientHomePageContent() {
     [posts],
   );
 
+  const { items: notifications, markAllRead, markOneRead, refresh: refreshNotifications } =
+    useNotifications(meUserId || null);
+  const { count: unreadMessageCount } = useUnreadMessageCount(meUserId || null);
+
   const dismissPostToast = useCallback(() => setPostToast(null), []);
+
+  const handleNotificationClick = useCallback(
+    (item: NotificationItem) => {
+      if (item.type === "new_offer" && item.relatedTaskId) {
+        router.push(
+          `/client-home?panel=offers&highlightPost=${encodeURIComponent(item.relatedTaskId)}`,
+        );
+      }
+    },
+    [router],
+  );
+
+  const clearOfferHighlightFromUrl = useCallback(() => {
+    if (!highlightPost) return;
+    router.replace("/client-home?panel=offers");
+  }, [highlightPost, router]);
 
   const handlePostApproved = useCallback(
     (message?: string) => {
       const approvedMessage = String(message || "").trim() || POST_APPROVED_MESSAGE;
       setPostToast({ variant: "approved", message: approvedMessage });
-      setNotifications((prev) =>
-        [approvedMessage, ...prev.filter((item) => item !== POST_REVIEW_MESSAGE && item !== approvedMessage)].slice(
-          0,
-          5,
-        ),
-      );
       notifyCommunityPostsChanged();
       void refreshAll();
+      void refreshNotifications();
     },
-    [refreshAll],
+    [refreshAll, refreshNotifications],
   );
 
   useEffect(() => {
@@ -325,7 +367,8 @@ function ClientHomePageContent() {
   }, [meUserId]);
 
   const awaitingPostApproval =
-    postToast?.variant === "pending" || notifications.includes(POST_REVIEW_MESSAGE);
+    postToast?.variant === "pending" ||
+    notifications.some((item) => item.type === "post_review" && !item.read);
 
   useEffect(() => {
     if (!meUserId || !awaitingPostApproval) return;
@@ -365,6 +408,23 @@ function ClientHomePageContent() {
   }, [activePanel]);
 
   useEffect(() => {
+    if (!meUserId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await fetchClientOffers();
+        if (cancelled) return;
+        setPendingOffersCount(list.filter((offer) => isOfferPending(offer.status)).length);
+      } catch {
+        // ignore — offers panel will surface errors when opened
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [meUserId, notifications, activePanel]);
+
+  useEffect(() => {
     setPeerUserId(peerFromQuery);
   }, [peerFromQuery]);
 
@@ -386,7 +446,9 @@ function ClientHomePageContent() {
         setProfileLocationInput(String(user.location || "").trim());
         setProfileAboutInput(String(user.aboutMe || "").trim());
         setProfileSkillsInput(String(user.skills || "").trim());
-        setProfilePhotoDataUrl(String(user.photoDataUrl || "").trim());
+        const photo = String(user.photoDataUrl || "").trim();
+        setProfilePhotoDataUrl(photo);
+        if (user.id) syncProfile(String(user.id), photo);
         setSavedProfileSnapshot({
           name: String(user.name || "").trim(),
           course: String(user.course || "").trim(),
@@ -408,7 +470,7 @@ function ClientHomePageContent() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, syncProfile]);
 
   const handleLogout = async () => {
     try {
@@ -423,19 +485,7 @@ function ClientHomePageContent() {
     () => (meUserId ? posts.filter((post) => post.authorId === meUserId) : []),
     [posts, meUserId],
   );
-  const skillsAndExpertise: string[] = profileSkillsInput
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-  const recentReviews: Array<{ name: string; timeAgo: string; rating: number; comment: string }> = [];
   const profileName = profileNameInput || displayName || "Client User";
-  const profileInitials = profileName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("") || "CU";
-
   const hasUnsavedProfileChanges = useMemo(() => {
     if (!savedProfileSnapshot || !profileLoaded) return false;
     const s = savedProfileSnapshot;
@@ -465,11 +515,41 @@ function ClientHomePageContent() {
   const handleProfilePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setProfilePhotoDataUrl(String(reader.result || ""));
-    };
-    reader.readAsDataURL(file);
+    void (async () => {
+      setProfilePhotoSaving(true);
+      setProfileStatusMessage("Saving profile photo...");
+      try {
+        const { photoDataUrl: photo, userId } = await persistProfilePhotoFromFile(file, meUserId);
+        setProfilePhotoDataUrl(photo);
+        if (userId) {
+          setMeUserId(userId);
+          syncProfile(userId, photo);
+        }
+        setSavedProfileSnapshot((prev) =>
+          prev
+            ? { ...prev, photoDataUrl: photo }
+            : {
+                name: profileNameInput.trim(),
+                course: profileCourseInput.trim(),
+                yearLevel: profileYearLevelInput.trim(),
+                location: profileLocationInput.trim(),
+                aboutMe: profileAboutInput.trim(),
+                skills: profileSkillsInput.trim(),
+                photoDataUrl: photo,
+              },
+        );
+        updateAuthorAvatarsLocally(userId || meUserId, photo);
+        await refreshAll();
+        void refreshNotifications();
+        setProfileStatusMessage("Profile photo saved");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Could not save profile photo.";
+        setProfileStatusMessage(message);
+      } finally {
+        setProfilePhotoSaving(false);
+        event.target.value = "";
+      }
+    })();
   };
 
   const handleSaveProfile = async () => {
@@ -542,10 +622,8 @@ function ClientHomePageContent() {
         setPostDescriptionInput("");
         setPostBudgetInput("");
         setPostToast({ variant: "pending", message: POST_REVIEW_MESSAGE });
-        setNotifications((prev) =>
-          [POST_REVIEW_MESSAGE, ...prev.filter((item) => item !== POST_REVIEW_MESSAGE)].slice(0, 5),
-        );
         notifyCommunityPostsChanged();
+        void refreshNotifications();
         await refreshAll();
       } catch (err) {
         const message = err instanceof ApiError ? err.message : "Could not save your post. Please try again.";
@@ -568,6 +646,11 @@ function ClientHomePageContent() {
       label: "Message",
       icon: <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={1.75} />,
     },
+    {
+      href: "/client-home?panel=offers",
+      label: "Offers",
+      icon: <Handshake className="h-5 w-5 shrink-0" strokeWidth={1.75} />,
+    },
     { href: "/client-home?panel=profile", label: "Profile", icon: <User className="h-5 w-5 shrink-0" strokeWidth={1.75} /> },
   ];
 
@@ -578,27 +661,24 @@ function ClientHomePageContent() {
   };
 
   const isFeedView = pathname === "/client-home" && !activePanel;
-  const isFixedShellLayout = activePanel === "messages" || isFeedView;
+
+  const panelTransitionClass = `transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
+    isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
+  }`;
 
   return (
     <div
-      className={`bg-[#E5F6F4] px-4 py-6 sm:px-6 lg:px-8 lg:py-8 ${
-        isFixedShellLayout ? "h-[100dvh] overflow-hidden py-4 lg:py-4" : "min-h-screen"
-      }`}
+      className="h-[100dvh] overflow-hidden bg-[#E5F6F4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6"
     >
       <div
-        className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
-          isFixedShellLayout ? "h-full min-h-0" : "min-h-[calc(100vh-3rem)]"
-        }`}
+        className="mx-auto grid h-full min-h-0 w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px]"
       >
         <aside
-          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
-            isFixedShellLayout ? "h-full overflow-hidden" : "sticky top-6 h-[calc(100vh-3rem)]"
-          }`}
+          className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1"
         >
           <SidebarBrand />
 
-          <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-label="Main">
+          <nav className={dashboardSidebarNavScrollClass} aria-label="Main">
             {navItems.map((item) => {
               const active = isNavActive(item.href);
               return (
@@ -609,7 +689,13 @@ function ClientHomePageContent() {
                   className={`${navItemClass} ${active ? navActiveClass : ""}`}
                 >
                   {item.icon}
-                  <span>{item.label}</span>
+                  <span className="min-w-0 flex-1">{item.label}</span>
+                  {item.href.includes("panel=messages") ? (
+                    <NavUnreadBadge count={unreadMessageCount} active={active} />
+                  ) : null}
+                  {item.href.includes("panel=offers") ? (
+                    <NavUnreadBadge count={pendingOffersCount} active={active} />
+                  ) : null}
                 </Link>
               );
             })}
@@ -626,20 +712,24 @@ function ClientHomePageContent() {
         </aside>
 
         {isFeedView ? (
-          <div
-            className={`min-h-0 transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
-              isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
-            }`}
+          <DashboardCenterColumn
+            items={notifications}
+            onMarkAllRead={markAllRead}
+            onMarkOneRead={markOneRead}
+            onNotificationClick={handleNotificationClick}
+            contentClassName={panelTransitionClass}
           >
             <FreelancerFeedMain
               scrollable
               children={null}
-              header={
-                <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{postsHeading}</h2>
-              }
+              header={<FeedPageHeader title={postsHeading} />}
               scroll={
                 <section aria-labelledby="client-community-feed" className="space-y-4">
-                  {approvedPosts.length > 0 ? (
+                  {approvedLoading ? (
+                    <p className="text-sm text-zinc-500">Loading community posts...</p>
+                  ) : approvedError ? (
+                    <p className="text-sm text-red-600">{approvedError}</p>
+                  ) : approvedPosts.length > 0 ? (
                     approvedPosts.map((post) => (
                       <CommunityPostCard
                         key={post.id}
@@ -655,26 +745,36 @@ function ClientHomePageContent() {
                 </section>
               }
             />
-          </div>
+          </DashboardCenterColumn>
         ) : (
-        <main
-          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] ${
-            activePanel === "profile" || activePanel === "featured-post" || activePanel === "messages"
-              ? "p-4"
-              : "p-6 sm:p-8 lg:p-10"
-          } ${isFixedShellLayout ? "h-full overflow-hidden" : ""}`}
+        <DashboardCenterColumn
+          items={notifications}
+          onMarkAllRead={markAllRead}
+          onMarkOneRead={markOneRead}
+          onNotificationClick={handleNotificationClick}
+          contentClassName={panelTransitionClass}
         >
-          <div
-            className={`flex min-h-0 flex-1 flex-col transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
-              isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
-            }`}
-          >
+        <main
+          className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] ${
+            activePanel === "create-post" || activePanel === "offers" || activePanel === "messages"
+              ? dashboardCenterPanelCompactPaddingClass
+              : activePanel === "profile" || activePanel === "featured-post"
+                ? "p-4"
+                : "p-6 sm:p-8 lg:p-10"
+          }`}
+        >
+          <div className="flex h-full min-h-0 flex-1 flex-col">
             {activePanel === "create-post" ? (
-              <section aria-labelledby="create-post-heading">
-                <h1 id="create-post-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
-                  Create New Post
-                </h1>
-                <p className="mt-1.5 text-sm text-zinc-600">Share what you need help with and connect with peers</p>
+              <div className={dashboardPanelScrollClass}>
+              <section aria-labelledby="create-post-heading" className="min-w-0">
+                <div className={dashboardCenterPanelHeadingClass}>
+                  <h1 id="create-post-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
+                    Create New Post
+                  </h1>
+                  <p className="mt-1.5 text-sm text-zinc-600">
+                    Share what you need help with and connect with peers
+                  </p>
+                </div>
 
                 <div className="mt-7 grid gap-5 xl:grid-cols-[minmax(0,1fr)_230px]">
                   <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-5 shadow-sm sm:p-6">
@@ -852,6 +952,15 @@ function ClientHomePageContent() {
                   </div>
                 </div>
               </section>
+              </div>
+            ) : activePanel === "offers" ? (
+              <div className={dashboardPanelScrollClass}>
+                <ClientOffersPanel
+                  onPendingCountChange={setPendingOffersCount}
+                  highlightPostId={highlightPost}
+                  onHighlightComplete={clearOfferHighlightFromUrl}
+                />
+              </div>
             ) : activePanel === "messages" ? (
               <section
                 aria-labelledby="messages-heading"
@@ -869,33 +978,35 @@ function ClientHomePageContent() {
             ) : activePanel === "profile" || activePanel === "featured-post" ? (
               <section
                 aria-labelledby={activePanel === "featured-post" ? "featured-post-heading" : "profile-heading"}
-                className="flex min-h-0 flex-1 flex-col"
+                className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${dashboardPanelScrollInsetClass}`}
               >
-                <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)] xl:items-start">
-                  <article className="sticky top-4 z-10 h-fit w-full max-w-[320px] rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:max-w-none">
-                    <div className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-zinc-200 bg-[#E8EFEC]">
-                      {profilePhotoDataUrl ? (
-                        <img src={profilePhotoDataUrl} alt="Profile" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-zinc-800">
-                          {profileInitials}
-                        </div>
-                      )}
+                <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden xl:grid-cols-[260px_minmax(0,1fr)] xl:items-stretch">
+                  <article className="h-fit w-full max-w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:max-w-none">
+                    <div className="mx-auto flex justify-center">
+                      <UserAvatar
+                        id={meUserId}
+                        name={profileName}
+                        photoDataUrl={displayProfilePhoto}
+                        size="2xl"
+                        alt="Profile"
+                        initialsClassName="bg-[#E8EFEC] text-zinc-800"
+                      />
                     </div>
                     <input
                       ref={profilePhotoInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.svg"
                       className="hidden"
                       onChange={handleProfilePhotoChange}
                     />
                     <button
                       type="button"
                       onClick={() => profilePhotoInputRef.current?.click()}
-                      className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                      disabled={profilePhotoSaving}
+                      className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       <Upload className="h-3.5 w-3.5" />
-                      Change photo
+                      {profilePhotoSaving ? "Saving photo..." : "Change photo"}
                     </button>
                     <h1 id="profile-heading" className="mt-3 text-center text-2xl font-bold tracking-tight text-zinc-900">
                       {profileName}
@@ -904,48 +1015,11 @@ function ClientHomePageContent() {
                     <div className="mt-3 rounded-xl bg-white px-3 py-2 text-center">
                       <p className="text-xs font-semibold text-[#FF6B35]">Verified Peer Match Account</p>
                     </div>
-
-                    <div className="mt-4 space-y-2 border-t border-zinc-200 pt-4 text-xs text-zinc-700">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-                        <input
-                          type="text"
-                          value={profileLocationInput}
-                          onChange={(event) => setProfileLocationInput(event.target.value)}
-                          placeholder="Add location"
-                          className="h-8 w-full rounded-lg border border-zinc-300 bg-white px-2 text-xs text-zinc-800 focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/30"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-                        <span>Response time: &lt; 1 hour</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Star className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-                        <span>Member since 2026</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-[#FF6B35] text-xs font-semibold text-white hover:brightness-95"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        Message
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex h-9 items-center justify-center rounded-xl border border-zinc-300 bg-white text-xs text-zinc-700 hover:bg-zinc-50"
-                      >
-                        <Heart className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
                   </article>
 
-                  <div className="profile-scroll-pane max-h-[calc(100vh-3.5rem)] min-h-0 min-w-0 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] scroll-smooth">
+                  <div className={dashboardProfileScrollClass}>
                     {activePanel === "featured-post" ? (
-                      <FeaturedPostEditor authorId={meUserId} authorAvatar={profilePhotoDataUrl || undefined} />
+                      <FeaturedPostEditor authorId={meUserId} authorAvatar={displayProfilePhoto || undefined} />
                     ) : (
                       <>
                     <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
@@ -1057,54 +1131,6 @@ function ClientHomePageContent() {
                       )}
                     </Link>
 
-                    <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
-                      <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-                        <Handshake className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
-                        Helpers
-                      </h2>
-                      {skillsAndExpertise.length > 0 ? (
-                        <div className="mt-3 space-y-2.5">
-                          {skillsAndExpertise.map((helper, index) => (
-                            <div key={`${helper}-${index}`} className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex min-w-0 items-center gap-2.5">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E8EFEC] text-[11px] font-semibold text-zinc-700">
-                                    {helper.slice(0, 2).toUpperCase()}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="truncate text-xs font-semibold text-zinc-900">{helper}</p>
-                                    <p className="text-[10px] text-zinc-500">Helped recently</p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-[10px] leading-none text-[#FF6B35]">★★★★★</p>
-                                  <p className="mt-1 text-[10px] text-zinc-500">4.{(index % 5) + 5}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </article>
-
-                    <article className="rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm">
-                      <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-                        <MessageSquareQuote className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />
-                        Reviews
-                      </h2>
-                      {recentReviews.length > 0 ? (
-                        <div className="mt-3 space-y-3">
-                          {recentReviews.map((review) => (
-                            <div key={`${review.name}-${review.timeAgo}`} className="rounded-xl border border-zinc-200 bg-white p-3">
-                              <p className="text-sm font-semibold text-zinc-900">{review.name}</p>
-                              <p className="text-xs text-zinc-500">{review.comment}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="mt-3 min-h-20 rounded-xl border border-dashed border-zinc-300 bg-white" />
-                      )}
-                    </article>
                     <div className="flex items-center justify-between gap-3">
                       <p className={`text-xs ${profileStatusMessage.includes("Could not") ? "text-red-600" : "text-zinc-500"}`}>
                         {profileSaving ? "Saving profile..." : profileStatusMessage || "Make changes then click Save Updates."}
@@ -1130,56 +1156,13 @@ function ClientHomePageContent() {
             ) : null}
           </div>
         </main>
+        </DashboardCenterColumn>
         )}
 
-        <aside
-          className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1 ${
-            isFixedShellLayout ? "h-full overflow-hidden" : "gap-8"
-          }`}
-        >
-          <section className={isFixedShellLayout ? "mb-6 shrink-0" : ""}>
-            <h3 className="text-sm font-semibold text-zinc-900">Notifications</h3>
-            {notifications.length === 0 ? (
-              <button
-                type="button"
-                onClick={() => router.push("/client-home?panel=notifications")}
-                className="mt-3 w-full rounded-xl border border-zinc-200 bg-white px-4 py-4 text-left text-xs text-zinc-700 shadow-sm hover:bg-zinc-50"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <Bell aria-hidden="true" className="h-4 w-4 text-zinc-600" strokeWidth={1.6} />
-                  <span>Someone responded to your post</span>
-                </span>
-              </button>
-            ) : (
-              <div className="mt-3 space-y-2">
-                {notifications.map((notice) => (
-                  <button
-                    key={notice}
-                    type="button"
-                    onClick={() => router.push("/client-home?panel=notifications")}
-                    className={`w-full rounded-xl border px-4 py-4 text-left text-xs shadow-sm hover:brightness-[0.98] ${
-                      notice.includes("approved")
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                        : notice.includes("review")
-                          ? "border-[#FFD4C2] bg-[#FFF2EB] text-[#9A3412]"
-                          : "border-zinc-200 bg-white text-zinc-700"
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Bell aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.6} />
-                      <span>{notice}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className={isFixedShellLayout ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}>
-            <h3 className={`text-sm font-semibold text-zinc-900 ${isFixedShellLayout ? "shrink-0" : ""}`}>Recent Posts</h3>
-            <div
-              className={`mt-3 space-y-3 ${isFixedShellLayout ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5" : ""}`}
-            >
+        <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1">
+          <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <h3 className="shrink-0 text-sm font-semibold text-zinc-900">Recent Posts</h3>
+            <div className={dashboardRightAsideListClass}>
               {recentPosts.length === 0 ? (
                 <p className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">
                   No recent post

@@ -11,6 +11,11 @@ import {
 } from "react";
 import { fetchApprovedCommunityPosts, fetchMyCommunityPosts } from "./communityPosts";
 import {
+  normalizeUserId,
+  USER_PROFILE_PHOTO_UPDATED_EVENT,
+  type ProfilePhotoUpdatedDetail,
+} from "./profilePhoto";
+import {
   clearCommunityPostsStorage,
   COMMUNITY_POSTS_CHANGED_EVENT,
   notifyCommunityPostsChanged,
@@ -22,10 +27,12 @@ type CommunityPostsContextValue = {
   myPosts: CommunityPost[];
   approvedLoading: boolean;
   myPostsLoading: boolean;
+  approvedError: string | null;
   refreshApproved: () => Promise<void>;
   refreshMyPosts: () => Promise<void>;
   refreshAll: () => Promise<void>;
   updatePostLocally: (postId: string, patch: Partial<CommunityPost>) => void;
+  updateAuthorAvatarsLocally: (authorId: string, photoDataUrl: string) => void;
   removePostLocally: (postId: string) => void;
 };
 
@@ -36,14 +43,19 @@ export function CommunityPostsProvider({ children }: { children: ReactNode }) {
   const [myPosts, setMyPosts] = useState<CommunityPost[]>([]);
   const [approvedLoading, setApprovedLoading] = useState(true);
   const [myPostsLoading, setMyPostsLoading] = useState(true);
+  const [approvedError, setApprovedError] = useState<string | null>(null);
 
   const refreshApproved = useCallback(async () => {
     setApprovedLoading(true);
     try {
       const feed = await fetchApprovedCommunityPosts();
       setApprovedPosts(feed);
+      setApprovedError(null);
       clearCommunityPostsStorage();
-    } catch {
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not load community posts. Is the API server running?";
+      setApprovedError(message);
       setApprovedPosts([]);
     } finally {
       setApprovedLoading(false);
@@ -78,12 +90,47 @@ export function CommunityPostsProvider({ children }: { children: ReactNode }) {
     setMyPosts((prev) => prev.filter((post) => post.id !== postId));
   }, []);
 
+  const updateAuthorAvatarsLocally = useCallback((authorId: string, photoDataUrl: string) => {
+    const normalizedAuthorId = normalizeUserId(authorId);
+    if (!normalizedAuthorId) return;
+    const photo = String(photoDataUrl || "").trim();
+
+    setMyPosts((myPrev) => {
+      const myPostIds = new Set(myPrev.map((post) => post.id));
+      const patchPosts = (posts: CommunityPost[]) =>
+        posts.map((post) => {
+          const matchAuthor = normalizeUserId(post.authorId) === normalizedAuthorId;
+          const matchMine = myPostIds.has(post.id);
+          if (!matchAuthor && !matchMine) return post;
+          return {
+            ...post,
+            authorAvatarDataUrl: photo || undefined,
+            authorId: post.authorId || normalizedAuthorId,
+          };
+        });
+
+      const nextMy = patchPosts(myPrev);
+      setApprovedPosts((prevApproved) => patchPosts(prevApproved));
+      return nextMy;
+    });
+  }, []);
+
   useEffect(() => {
     void refreshAll();
     const onRefresh = () => void refreshAll();
+    const onPhotoUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<ProfilePhotoUpdatedDetail>).detail;
+      const userId = normalizeUserId(detail?.userId);
+      if (!userId) return;
+      updateAuthorAvatarsLocally(userId, detail.photoDataUrl || "");
+    };
     window.addEventListener(COMMUNITY_POSTS_CHANGED_EVENT, onRefresh);
-    return () => window.removeEventListener(COMMUNITY_POSTS_CHANGED_EVENT, onRefresh);
-  }, [refreshAll]);
+    window.addEventListener(USER_PROFILE_PHOTO_UPDATED_EVENT, onPhotoUpdated);
+    return () => {
+      window.removeEventListener(COMMUNITY_POSTS_CHANGED_EVENT, onRefresh);
+      window.removeEventListener(USER_PROFILE_PHOTO_UPDATED_EVENT, onPhotoUpdated);
+    };
+  }, [refreshAll, updateAuthorAvatarsLocally]);
 
   const value = useMemo(
     () => ({
@@ -91,10 +138,12 @@ export function CommunityPostsProvider({ children }: { children: ReactNode }) {
       myPosts,
       approvedLoading,
       myPostsLoading,
+      approvedError,
       refreshApproved,
       refreshMyPosts,
       refreshAll,
       updatePostLocally,
+      updateAuthorAvatarsLocally,
       removePostLocally,
     }),
     [
@@ -102,10 +151,12 @@ export function CommunityPostsProvider({ children }: { children: ReactNode }) {
       myPosts,
       approvedLoading,
       myPostsLoading,
+      approvedError,
       refreshApproved,
       refreshMyPosts,
       refreshAll,
       updatePostLocally,
+      updateAuthorAvatarsLocally,
       removePostLocally,
     ],
   );

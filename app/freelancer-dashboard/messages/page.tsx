@@ -2,6 +2,10 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import {
+  dashboardCenterPanelClass,
+  dashboardCenterPanelFixedClass,
+} from "@/app/components/dashboard/dashboardShellClasses";
 import { ChatLayout } from "@/app/components/chat/ChatLayout";
 import { useFreelancerDashboardUser } from "../FreelancerDashboardShell";
 
@@ -20,7 +24,7 @@ function FreelancerMessagesPageContent() {
   }
 
   return (
-    <main className="flex h-full max-h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_4px_32px_rgba(15,23,42,0.04)]">
+    <main className={`${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass} max-h-full p-4`}>
       <div className="h-full max-h-full min-h-0 flex-1 overflow-hidden">
         <ChatLayout
           currentUserId={user.id}

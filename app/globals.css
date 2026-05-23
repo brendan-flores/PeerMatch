@@ -34,6 +34,29 @@
   animation: fadeInUp 0.35s ease-out both;
 }
 
+@keyframes notificationHighlightPop {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.55);
+    transform: scale(1);
+  }
+  35% {
+    box-shadow: 0 0 0 10px rgba(255, 107, 53, 0.15);
+    transform: scale(1.015);
+  }
+  70% {
+    box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.35);
+    transform: scale(1.005);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0);
+    transform: scale(1);
+  }
+}
+
+.animate-notification-highlight {
+  animation: notificationHighlightPop 1.1s ease-out 1;
+}
+
 @keyframes routeFadeIn {
   from {
     opacity: 0;
@@ -105,7 +128,8 @@ textarea:disabled,
 @media (prefers-reduced-motion: reduce) {
   .ui-route-enter,
   .ui-page-enter,
-  .animate-fade-in-up {
+  .animate-fade-in-up,
+  .animate-notification-highlight {
     animation: none;
   }
 }
@@ -146,6 +170,33 @@ body {
 .profile-scroll-pane::-webkit-scrollbar-thumb,
 .profile-scroll-pane::-webkit-scrollbar-track,
 .profile-scroll-pane::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Dashboard scroll panes: hidden scrollbar, scroll still works */
+.feed-scroll-pane,
+.panel-scroll-pane {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-color: transparent transparent;
+}
+
+.feed-scroll-pane::-webkit-scrollbar,
+.panel-scroll-pane::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+
+.feed-scroll-pane::-webkit-scrollbar-thumb,
+.feed-scroll-pane::-webkit-scrollbar-track,
+.feed-scroll-pane::-webkit-scrollbar-button,
+.panel-scroll-pane::-webkit-scrollbar-thumb,
+.panel-scroll-pane::-webkit-scrollbar-track,
+.panel-scroll-pane::-webkit-scrollbar-button {
   display: none !important;
   width: 0 !important;
   height: 0 !important;

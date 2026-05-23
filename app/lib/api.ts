@@ -14,9 +14,10 @@ export class ApiError extends Error {
   }
 }
 
+import { getApiBaseUrl as resolveApiBaseUrl } from "@/app/lib/siteUrls";
+
 function getApiBaseUrl() {
-  // Only NEXT_PUBLIC_ vars are exposed to the browser in Next.js.
-  return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+  return resolveApiBaseUrl();
 }
 
 export async function apiPostJson<TResponse>(

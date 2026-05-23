@@ -2,7 +2,12 @@
 
 import type { ReactNode } from "react";
 import { CommunityPostsProvider } from "@/app/lib/CommunityPostsContext";
+import { CurrentUserProfileProvider } from "@/app/lib/CurrentUserProfileContext";
 
 export function Providers({ children }: { children: ReactNode }) {
-  return <CommunityPostsProvider>{children}</CommunityPostsProvider>;
+  return (
+    <CurrentUserProfileProvider>
+      <CommunityPostsProvider>{children}</CommunityPostsProvider>
+    </CurrentUserProfileProvider>
+  );
 }

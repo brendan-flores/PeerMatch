@@ -1,15 +1,16 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const PendingRegistration = require('../models/PendingRegistration');
 const { sendVerificationEmail } = require('../utils/mailer');
 const { authMiddleware, signAccessToken, attachAccessTokenCookie } = require('../middleware/auth');
 const authController = require('../controllers/authController');
+const { listFreelancerReviews } = require('../services/freelancerReviewService');
 const {
   normalizeEmail,
   normalizeUsername,
   validateUsername,
 } = require('../utils/userAuth');
+const { sanitizePhotoDataUrl, INVALID_PHOTO_MESSAGE } = require('../utils/profilePhoto');
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ function isInstitutionalEmail(email) {
 
 function serializeProfileUser(user) {
   return {
-    id: user._id,
+    id: String(user._id),
     username: user.username,
     name: user.name,
     email: user.email,
@@ -45,7 +46,7 @@ function serializeProfileUser(user) {
     ...(user.aboutMe ? { aboutMe: user.aboutMe } : {}),
     ...(user.skills ? { skills: user.skills } : {}),
     ...(user.location ? { location: user.location } : {}),
-    ...(user.photoDataUrl ? { photoDataUrl: user.photoDataUrl } : {}),
+    photoDataUrl: typeof user.photoDataUrl === 'string' ? user.photoDataUrl : '',
     profileCompleted: user.profileCompleted,
   };
 }
@@ -88,15 +89,6 @@ function sanitizeFreelancerProfile(input) {
     }))
     .filter((item) => item.title || item.description);
 
-  const reviews = normalizeArray(profile.reviews)
-    .slice(0, 10)
-    .map((item) => ({
-      reviewer: safeString(item?.reviewer, 60),
-      text: safeString(item?.text, 280),
-      rating: Math.max(1, Math.min(5, safeInt(item?.rating, 5))),
-    }))
-    .filter((item) => item.reviewer || item.text);
-
   return {
     course: safeString(profile.course, 120),
     yearLevel: safeString(profile.yearLevel, 80),
@@ -112,7 +104,6 @@ function sanitizeFreelancerProfile(input) {
     skills,
     languages,
     portfolio,
-    reviews,
   };
 }
 
@@ -143,18 +134,13 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Please use your institutional Outlook email (e.g., name@cit.edu).' });
     }
 
-    const existingUser = await User.findOne({
-      $or: [{ email: normalizedEmail }, { username: normalizedUsername }],
-    });
-    if (existingUser) {
-      if (existingUser.email === normalizedEmail) {
-        return res.status(409).json({ message: 'Email is already registered.' });
-      }
-      return res.status(409).json({ message: 'Username is already taken.' });
+    const userByEmail = await User.findOne({ email: normalizedEmail });
+    if (userByEmail?.verified) {
+      return res.status(409).json({ message: 'Email is already registered.' });
     }
 
-    const usernameTaken = await PendingRegistration.findOne({ username: normalizedUsername });
-    if (usernameTaken && usernameTaken.email !== normalizedEmail) {
+    const userByUsername = await User.findOne({ username: normalizedUsername });
+    if (userByUsername && userByUsername.email !== normalizedEmail) {
       return res.status(409).json({ message: 'Username is already taken.' });
     }
 
@@ -163,23 +149,24 @@ router.post('/register', async (req, res) => {
     const verificationCode = generateVerificationCode();
     const expiresAt = getVerificationExpiration();
 
-    // IMPORTANT: Do not create a real `User` until verification succeeds.
-    // If the user tries to register again with the same email, rotate the code and resend.
-    let pending = await PendingRegistration.findOne({ email: normalizedEmail });
+    let pending = userByEmail;
 
     if (pending) {
       pending.username = normalizedUsername;
       pending.name = displayName;
       pending.password = hashedPassword;
       pending.accountType = accountType;
+      pending.verified = false;
       pending.verification = { code: verificationCode, expiresAt };
       await pending.save();
     } else {
-      pending = await PendingRegistration.create({
+      pending = await User.create({
         username: normalizedUsername,
         name: displayName,
         email: normalizedEmail,
         password: hashedPassword,
+        role: 'user',
+        verified: false,
         ...(accountType ? { accountType } : {}),
         verification: { code: verificationCode, expiresAt },
       });
@@ -188,14 +175,14 @@ router.post('/register', async (req, res) => {
     try {
       await sendVerificationEmail(pending.email, pending.name, verificationCode);
     } catch (mailError) {
-      await PendingRegistration.deleteOne({ _id: pending._id });
+      await User.deleteOne({ _id: pending._id, verified: false });
       return res.status(502).json({
         message: `Registration failed because verification email could not be delivered: ${mailError.message}`,
       });
     }
 
     return res.status(201).json({
-      message: 'Verification code sent to email. Enter the code to create your account.',
+      message: 'Verification code sent to email. Enter the code to verify your account.',
       email: pending.email,
     });
   } catch (error) {
@@ -213,13 +200,15 @@ router.post('/verify', async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and verification code.' });
     }
 
-    const alreadyUser = await User.findOne({ email: normalizedEmail });
-    if (alreadyUser) {
-      return res.status(409).json({ message: 'Email is already registered. Please log in.', email: normalizedEmail });
-    }
-
-    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+    const pending = await User.findOne({ email: normalizedEmail, verified: false });
     if (!pending) {
+      const existing = await User.findOne({ email: normalizedEmail, verified: true });
+      if (existing) {
+        return res.status(409).json({
+          message: 'Email is already registered. Please log in.',
+          email: normalizedEmail,
+        });
+      }
       return res.status(404).json({ message: 'No pending registration found. Please register again.' });
     }
 
@@ -231,32 +220,23 @@ router.post('/verify', async (req, res) => {
       return res.status(400).json({ message: 'Verification code has expired.' });
     }
 
-    const createdUser = await User.create({
-      username: pending.username,
-      name: pending.name,
-      email: pending.email,
-      password: pending.password,
-      role: 'user',
-      ...(pending.accountType ? { accountType: pending.accountType } : {}),
-      verified: true,
-      createdAt: new Date(),
-    });
+    pending.verified = true;
+    pending.verification = undefined;
+    pending.markModified('verification');
+    await pending.save();
 
-    await PendingRegistration.deleteOne({ _id: pending._id });
-
-    // Log the user in immediately so they can complete their profile.
-    const token = signAccessToken(createdUser);
+    const token = signAccessToken(pending);
     attachAccessTokenCookie(res, token);
 
     return res.json({
-      message: 'Email verified successfully. Account created.',
+      message: 'Email verified successfully.',
       user: {
-        id: createdUser._id,
-        username: createdUser.username,
-        name: createdUser.name,
-        email: createdUser.email,
-        role: createdUser.role,
-        ...(createdUser.accountType ? { accountType: createdUser.accountType } : {}),
+        id: pending._id,
+        username: pending.username,
+        name: pending.name,
+        email: pending.email,
+        role: pending.role,
+        ...(pending.accountType ? { accountType: pending.accountType } : {}),
       },
     });
   } catch (error) {
@@ -267,7 +247,8 @@ router.post('/verify', async (req, res) => {
 
 router.post('/profile', authMiddleware, async (req, res) => {
   try {
-    const { name, course, yearLevel, aboutMe, skills, location, photoDataUrl } = req.body || {};
+    const { name, firstName, lastName, course, yearLevel, aboutMe, skills, location, photoDataUrl } =
+      req.body || {};
 
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -278,21 +259,31 @@ router.post('/profile', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Please verify your email before completing your profile.' });
     }
 
-    const nameStr = typeof name === 'string' ? String(name).trim() : '';
+    const firstStr = typeof firstName === 'string' ? String(firstName).trim() : '';
+    const lastStr = typeof lastName === 'string' ? String(lastName).trim() : '';
+    const combinedName = [firstStr, lastStr].filter(Boolean).join(' ');
+    const nameStr =
+      typeof name === 'string'
+        ? String(name).trim()
+        : combinedName;
     const courseStr = typeof course === 'string' ? String(course).trim() : '';
     const yearLevelStr = typeof yearLevel === 'string' ? String(yearLevel).trim() : '';
     const aboutMeStr = typeof aboutMe === 'string' ? String(aboutMe).trim() : '';
     const skillsStr = typeof skills === 'string' ? String(skills).trim() : '';
     const locationStr = typeof location === 'string' ? String(location).trim() : '';
-    const photoStr = typeof photoDataUrl === 'string' ? photoDataUrl : '';
-
-    if (typeof name === 'string') user.name = nameStr || user.name;
+    if (nameStr) user.name = nameStr;
     if (typeof course === 'string') user.course = courseStr;
     if (typeof yearLevel === 'string') user.yearLevel = yearLevelStr;
     if (typeof aboutMe === 'string') user.aboutMe = aboutMeStr;
     if (typeof skills === 'string') user.skills = skillsStr;
     if (typeof location === 'string') user.location = locationStr;
-    if (typeof photoDataUrl === 'string') user.photoDataUrl = photoStr;
+    if (typeof photoDataUrl === 'string') {
+      const photoStr = sanitizePhotoDataUrl(photoDataUrl);
+      if (photoDataUrl.trim() && photoStr === null) {
+        return res.status(400).json({ message: INVALID_PHOTO_MESSAGE });
+      }
+      user.photoDataUrl = photoStr;
+    }
 
     user.profileCompleted = Boolean(
       String(user.course || '').trim() ||
@@ -304,9 +295,12 @@ router.post('/profile', authMiddleware, async (req, res) => {
 
     await user.save();
 
+    const savedUser = await User.findById(req.user.userId);
+
     return res.json({
       message: 'Profile saved.',
-      user: serializeProfileUser(user),
+      photoDataUrl: typeof savedUser?.photoDataUrl === 'string' ? savedUser.photoDataUrl : '',
+      user: serializeProfileUser(savedUser || user),
     });
   } catch (error) {
     console.error(error);
@@ -336,6 +330,9 @@ router.get('/profile', authMiddleware, async (req, res) => {
             .slice(0, 10),
     };
 
+    const reviews =
+      user.accountType === 'freelancer' ? await listFreelancerReviews(user._id) : [];
+
     return res.json({
       user: serializeProfileUser(user),
       profile: {
@@ -344,11 +341,57 @@ router.get('/profile', authMiddleware, async (req, res) => {
         accountType: safeString(user.accountType, 24),
         photoDataUrl: typeof user.photoDataUrl === 'string' ? user.photoDataUrl : '',
         ...merged,
+        reviews,
       },
     });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error loading profile.' });
+  }
+});
+
+/** Save profile photo only (client or freelancer) */
+router.patch('/profile/photo', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    if (!user.verified) {
+      return res.status(403).json({ message: 'Please verify your email before updating your profile photo.' });
+    }
+
+    if (typeof req.body?.photoDataUrl !== 'string') {
+      return res.status(400).json({ message: 'Profile photo is required.' });
+    }
+
+    const photoStr = sanitizePhotoDataUrl(req.body.photoDataUrl);
+    if (req.body.photoDataUrl.trim() && photoStr === null) {
+      return res.status(400).json({ message: INVALID_PHOTO_MESSAGE });
+    }
+
+    user.photoDataUrl = photoStr;
+    user.profileCompleted = Boolean(
+      String(user.course || '').trim() ||
+      String(user.yearLevel || '').trim() ||
+      String(user.aboutMe || '').trim() ||
+      String(user.skills || '').trim() ||
+      String(user.photoDataUrl || '').trim()
+    );
+    await user.save();
+
+    const fresh = await User.findById(req.user.userId);
+    const photoDataUrl = typeof fresh?.photoDataUrl === 'string' ? fresh.photoDataUrl : '';
+
+    return res.json({
+      message: 'Profile photo saved.',
+      user: serializeProfileUser(fresh || user),
+      photoDataUrl,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error saving profile photo.' });
   }
 });
 
@@ -360,7 +403,6 @@ router.put('/profile', authMiddleware, async (req, res) => {
     }
 
     const nextName = safeString(req.body?.name, 120);
-    const nextPhotoDataUrl = typeof req.body?.photoDataUrl === 'string' ? req.body.photoDataUrl : '';
     const nextProfile = sanitizeFreelancerProfile(req.body?.profile || {});
 
     user.name = nextName || user.name;
@@ -369,11 +411,21 @@ router.put('/profile', authMiddleware, async (req, res) => {
     user.course = nextProfile.course;
     user.yearLevel = nextProfile.yearLevel;
     user.location = nextProfile.location;
-    user.photoDataUrl = nextPhotoDataUrl;
+
+    if (typeof req.body?.photoDataUrl === 'string') {
+      const photoStr = sanitizePhotoDataUrl(req.body.photoDataUrl);
+      if (req.body.photoDataUrl.trim() && photoStr === null) {
+        return res.status(400).json({ message: INVALID_PHOTO_MESSAGE });
+      }
+      user.photoDataUrl = photoStr;
+    }
     user.freelancerProfile = nextProfile;
     user.markModified('freelancerProfile');
 
     await user.save();
+
+    const reviews =
+      user.accountType === 'freelancer' ? await listFreelancerReviews(user._id) : [];
 
     return res.json({
       message: 'Profile updated successfully.',
@@ -383,6 +435,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
         accountType: user.accountType || '',
         photoDataUrl: user.photoDataUrl || '',
         ...nextProfile,
+        reviews,
       },
     });
   } catch (error) {
@@ -405,12 +458,12 @@ router.post('/resend', async (req, res) => {
       return res.status(400).json({ message: 'Please use your institutional Outlook email (e.g., name@cit.edu).' });
     }
 
-    const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
+    const verifiedUser = await User.findOne({ email: normalizedEmail, verified: true });
+    if (verifiedUser) {
       return res.status(200).json({ message: 'User already verified.', email: normalizedEmail });
     }
 
-    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+    const pending = await User.findOne({ email: normalizedEmail, verified: false });
     if (!pending) {
       return res.status(404).json({ message: 'No pending registration found. Please register again.' });
     }

@@ -2,6 +2,8 @@ export type CommunityPostPriority = "Low" | "Normal" | "High";
 
 export type CommunityPostStatus = "pending" | "approved" | "rejected";
 
+export type TaskHireStatus = "open" | "assigned" | "completed";
+
 export type CommunityPost = {
   id: string;
   authorId: string;
@@ -16,9 +18,14 @@ export type CommunityPost = {
   budget: number;
   createdAt: string;
   status?: CommunityPostStatus;
+  hireStatus?: TaskHireStatus;
+  assignedFreelancerId?: string;
+  assignedFreelancerName?: string;
+  completedAt?: string;
+  reviewSubmittedAt?: string;
 };
 
-export const COMMUNITY_POSTS_STORAGE_KEY = "peermatch_community_posts_v1";
+export const COMMUNITY_POSTS_STORAGE_KEY = "peermatch_community_posts_v2";
 export const COMMUNITY_POSTS_CHANGED_EVENT = "peermatch:posts-changed";
 
 const POSTS_KEY = COMMUNITY_POSTS_STORAGE_KEY;

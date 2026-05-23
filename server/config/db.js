@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { dropObsoleteCollections } = require('../utils/dropObsoleteCollections');
 const { migrateUsersWithoutUsername } = require('../utils/migrateUsers');
 
 const connectDB = async () => {
@@ -7,13 +8,15 @@ const connectDB = async () => {
   try {
     await mongoose.connect(uri);
     console.log('MongoDB connected');
+    const dropped = await dropObsoleteCollections(mongoose.connection.db);
+    if (dropped.length > 0) {
+      console.log(`Dropped obsolete collections: ${dropped.join(', ')}`);
+    }
     await migrateUsersWithoutUsername().catch((err) => {
       console.error('Username migration warning:', err.message);
     });
   } catch (error) {
     console.error('MongoDB connection error:', error.message);
-    // Keep the API process alive and retry so the app recovers
-    // automatically once MongoDB becomes available.
     setTimeout(connectDB, 5000);
   }
 };

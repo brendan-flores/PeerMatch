@@ -12,6 +12,10 @@ router.get('/conversations', authMiddleware, (req, res) =>
   void messageController.getConversations(req, res),
 );
 
+router.get('/unread-count', authMiddleware, (req, res) =>
+  void messageController.getUnreadCount(req, res),
+);
+
 router.post('/seen', authMiddleware, (req, res) =>
   void messageController.markSeen(req, res),
 );

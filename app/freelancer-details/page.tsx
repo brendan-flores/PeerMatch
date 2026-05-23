@@ -5,6 +5,11 @@ import Button from "../components/Button";
 import AuthPageHeader from "../components/AuthPageHeader";
 import { useRouter } from "next/navigation";
 import { apiPostJson, ApiError } from "../lib/api";
+import {
+  applySavedProfilePhoto,
+  readImageFileAsDataUrl,
+  type ProfileSaveResponse,
+} from "../lib/profilePhoto";
 
 const yearLevels = [
   "1st Year",
@@ -108,19 +113,6 @@ export default function FreelancerDetailsPage() {
     fileInputRef.current?.click();
   };
 
-  const fileToDataUrl = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onerror = () =>
-        reject(new Error("Failed to read file"));
-
-      reader.onload = () =>
-        resolve(String(reader.result || ""));
-
-      reader.readAsDataURL(file);
-    });
-
   const handleSubmit = (
     event: React.FormEvent<HTMLFormElement>
   ) => {
@@ -133,18 +125,20 @@ export default function FreelancerDetailsPage() {
       setStatusMessage("");
 
       try {
-        const photoDataUrl = photoFile
-          ? await fileToDataUrl(photoFile)
-          : undefined;
+        const photoDataUrl = photoFile ? await readImageFileAsDataUrl(photoFile) : undefined;
+        const fullName = `${firstName} ${lastName}`.trim();
 
-        await apiPostJson("/api/auth/profile", {
-          course,
-          yearLevel,
+        const saved = await apiPostJson<ProfileSaveResponse>("/api/auth/profile", {
+          name: fullName,
           firstName,
           lastName,
+          course,
+          yearLevel,
           aboutMe,
           ...(photoDataUrl ? { photoDataUrl } : {}),
         });
+
+        applySavedProfilePhoto(saved, photoDataUrl || "");
 
         setShowConfirmation(true);
 
@@ -204,7 +198,7 @@ export default function FreelancerDetailsPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.svg"
                     className="hidden"
                     onChange={handleFileChange}
                   />

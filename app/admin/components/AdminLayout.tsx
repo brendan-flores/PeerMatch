@@ -11,6 +11,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import SidebarBrand from "@/app/components/SidebarBrand";
 import { apiGetJson, ApiError } from "@/app/lib/api";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import type { AdminOutletContext, AdminStats } from "../types";
@@ -101,47 +102,6 @@ function IconUsers({ className }: { className?: string }) {
   );
 }
 
-function IconSearch({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function IconBell({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7M13.73 21a2 2 0 01-3.46 0"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function IconSettings({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function IconLogout({ className }: { className?: string }) {
   return (
     <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -165,13 +125,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <div className="admin-app">
       <aside className="admin-sidebar">
         <div className="admin-brand">
-          <div className="admin-brand__logo" aria-hidden>
-            PM
-          </div>
-          <div className="admin-brand__text">
-            <span className="admin-brand__title">PeerMatch</span>
-            <span className="admin-brand__subtitle">Admin Portal</span>
-          </div>
+          <SidebarBrand />
         </div>
 
         <nav className="admin-nav" aria-label="Main">
@@ -205,22 +159,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       <div className="admin-main">
         <header className="admin-topbar">
-          <div className="admin-search">
-            <IconSearch className="admin-search__icon" />
-            <input
-              type="search"
-              className="admin-search__input"
-              placeholder="Search tasks or users..."
-              aria-label="Search tasks or users"
-            />
-          </div>
           <div className="admin-topbar__actions">
-            <button type="button" className="admin-icon-btn" aria-label="Notifications">
-              <IconBell />
-            </button>
-            <button type="button" className="admin-icon-btn" aria-label="Settings">
-              <IconSettings />
-            </button>
             <button
               type="button"
               className="admin-icon-btn"

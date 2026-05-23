@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { apiGetJson, apiPatchJson, ApiError } from "@/app/lib/api";
 import { formatRelativeTime } from "../lib/formatTime";
 import type { AdminTaskRow } from "../types";
+import { AdminTaskDetailModal } from "./AdminTaskDetailModal";
 import { useAdminLayoutStats } from "./AdminLayout";
 
 type TaskRouteTab = "pending" | "approved" | "declined";
@@ -56,8 +57,9 @@ const tabs: { id: TaskRouteTab; label: string; path: string }[] = [
 ];
 
 function apiToRow(t: AdminTaskRow): TaskRow {
+  const raw = String(t.status || "pending").toLowerCase();
   const status: RowStatus =
-    t.status === "pending" ? "Pending" : t.status === "approved" ? "Approved" : "Rejected";
+    raw === "approved" ? "Approved" : raw === "rejected" ? "Rejected" : "Pending";
   return {
     id: t.id,
     title: t.title,
@@ -93,6 +95,9 @@ export default function TaskModerationContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [detailTask, setDetailTask] = useState<AdminTaskRow | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const loadTasks = useCallback(async () => {
     setError(null);
@@ -112,6 +117,26 @@ export default function TaskModerationContent() {
   }, [loadTasks]);
 
   const visible = useMemo(() => filterRows(rows, tab), [rows, tab]);
+
+  const openTaskDetail = async (id: string) => {
+    setDetailLoading(true);
+    setDetailError(null);
+    setDetailTask(null);
+    try {
+      const data = await apiGetJson<{ task: AdminTaskRow }>(`/api/admin/tasks/${encodeURIComponent(id)}`);
+      setDetailTask(data.task);
+    } catch (e) {
+      setDetailError(e instanceof ApiError ? e.message : "Could not load task details.");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeTaskDetail = () => {
+    setDetailTask(null);
+    setDetailError(null);
+    setDetailLoading(false);
+  };
 
   const setStatus = async (id: string, status: "approved" | "rejected") => {
     setBusyId(id);
@@ -215,7 +240,12 @@ export default function TaskModerationContent() {
                     </td>
                     <td>
                       <div className="admin-row-actions">
-                        <button type="button" className="admin-row-icon" aria-label={`View ${r.title}`}>
+                        <button
+                          type="button"
+                          className="admin-row-icon"
+                          aria-label={`View ${r.title}`}
+                          onClick={() => void openTaskDetail(r.id)}
+                        >
                           <IconEye />
                         </button>
                         {r.status === "Pending" ? (
@@ -263,6 +293,13 @@ export default function TaskModerationContent() {
           </div>
         </div>
       </div>
+
+      <AdminTaskDetailModal
+        task={detailTask}
+        loading={detailLoading}
+        error={detailError}
+        onClose={closeTaskDetail}
+      />
     </>
   );
 }

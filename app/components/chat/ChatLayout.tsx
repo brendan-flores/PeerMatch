@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MoreVertical, Search, Trash2 } from "lucide-react";
 import type { ChatMessagePayload } from "@/app/lib/chatTypes";
+import { dispatchUnreadMessagesRefresh } from "@/app/hooks/useUnreadMessageCount";
 import { apiDeleteJson, apiGetJson } from "@/app/lib/api";
 import {
   connectSocket,
@@ -14,23 +15,17 @@ import {
 import type { UserSearchResult } from "@/app/lib/userSearch";
 import { searchUsersByQuery } from "@/app/lib/userSearch";
 import { ChatThread } from "@/app/components/chat/ChatThread";
+import { UserAvatar } from "@/app/components/UserAvatar";
+import { dashboardCenterPanelHeadingClass } from "@/app/components/dashboard/dashboardShellClasses";
 
 type Conversation = {
   otherUserId: string;
   otherName: string;
+  otherPhotoDataUrl?: string;
   lastMessagePreview: string;
   lastTimestamp: string | null; // ISO
   hasUnread?: boolean;
 };
-
-function getInitials(name: string) {
-  const parts = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  const letters = parts.slice(0, 2).map((p) => p[0]?.toUpperCase()).filter(Boolean);
-  return letters.join("") || "U";
-}
 
 function messagesBelongToPeer(me: string, other: string, msgs: ChatMessagePayload[]) {
   if (!msgs.length) return true;
@@ -85,6 +80,7 @@ export function ChatLayout({
 
   const [activeUserId, setActiveUserId] = useState<string>("");
   const [activeUserName, setActiveUserName] = useState<string>("");
+  const [activeUserPhoto, setActiveUserPhoto] = useState<string>("");
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const [lastActiveByUserId, setLastActiveByUserId] = useState<Record<string, string>>({});
   const [statusNowTick, setStatusNowTick] = useState(0);
@@ -93,6 +89,7 @@ export function ChatLayout({
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
   const userNameByIdRef = useRef<Record<string, string>>({});
+  const userPhotoByIdRef = useRef<Record<string, string>>({});
   const lastSidebarUpdateByUserIdRef = useRef<Record<string, { lastId?: string; lastTimestamp?: string }>>({});
 
   const conversationsLoadedRef = useRef(false);
@@ -106,14 +103,17 @@ export function ChatLayout({
 
     (async () => {
       try {
-        const data = await apiGetJson<{ user?: { id: string; name: string } }>(
+        const data = await apiGetJson<{ user?: { id: string; name: string; photoDataUrl?: string } }>(
           `/api/users/resolve?q=${encodeURIComponent(raw)}`,
         );
         if (cancelled) return;
         const user = data.user;
         if (user?.id) {
+          const photo = String(user.photoDataUrl || "").trim();
           setActiveUserId(user.id);
           setActiveUserName(user.name || "");
+          setActiveUserPhoto(photo);
+          userPhotoByIdRef.current[user.id] = photo;
           setSearchText(user.name || "");
         }
       } catch {
@@ -192,33 +192,38 @@ export function ChatLayout({
     return () => window.removeEventListener("pointerdown", onPointerDown);
   }, [menuOpenId]);
 
+  const loadConversations = useCallback(async () => {
+    if (!currentUserId) return;
+    try {
+      const data = await apiGetJson<{ conversations: Conversation[] }>(`/api/messages/conversations`);
+      const list = data.conversations || [];
+      setConversations(list);
+      for (const c of list) {
+        userNameByIdRef.current[c.otherUserId] = c.otherName;
+        userPhotoByIdRef.current[c.otherUserId] = String(c.otherPhotoDataUrl || "").trim();
+      }
+      conversationsLoadedRef.current = true;
+    } catch {
+      setConversations([]);
+      conversationsLoadedRef.current = true;
+    }
+  }, [currentUserId]);
+
   // Load persisted conversations from MongoDB messages.
   useEffect(() => {
     if (!currentUserId) return;
     if (conversationsLoadedRef.current) return;
+    void loadConversations();
+  }, [currentUserId, loadConversations]);
 
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await apiGetJson<{ conversations: Conversation[] }>(`/api/messages/conversations`);
-        if (cancelled) return;
-        const list = data.conversations || [];
-        setConversations(list);
-        for (const c of list) {
-          userNameByIdRef.current[c.otherUserId] = c.otherName;
-        }
-        conversationsLoadedRef.current = true;
-      } catch {
-        if (cancelled) return;
-        setConversations([]);
-        conversationsLoadedRef.current = true;
-      }
-    })();
-
-    return () => {
-      cancelled = true;
+  useEffect(() => {
+    if (!currentUserId) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void loadConversations();
     };
-  }, [currentUserId]);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [currentUserId, loadConversations]);
 
   useEffect(() => {
     if (!currentUserId) {
@@ -301,6 +306,8 @@ export function ChatLayout({
         const nextItem: Conversation = {
           otherUserId: otherId,
           otherName: existing?.otherName || knownName,
+          otherPhotoDataUrl:
+            existing?.otherPhotoDataUrl || userPhotoByIdRef.current[otherId] || "",
           lastMessagePreview: msg.unsent ? "Deleted message" : msg.message || "",
           lastTimestamp: msg.timestamp || null,
           hasUnread,
@@ -316,6 +323,10 @@ export function ChatLayout({
           return bt - at;
         });
       });
+
+      if (senderId !== currentUserId) {
+        dispatchUnreadMessagesRefresh();
+      }
     });
 
     return unsub;
@@ -388,22 +399,56 @@ export function ChatLayout({
   }, [activeUserId, activeUserConnected, lastActiveByUserId, activeConversationLastTimestamp, statusNowTick]);
   const handleSelectUserFromSearch = (u: UserSearchResult) => {
     // Temporary selection only.
+    const photo = String(u.photoDataUrl || "").trim();
     setActiveUserId(u.id);
     setActiveUserName(u.name);
+    setActiveUserPhoto(photo);
     userNameByIdRef.current[u.id] = u.name;
+    userPhotoByIdRef.current[u.id] = photo;
     setSearchText("");
     setUserResults([]);
     setSearchFocused(false);
     setDropdownOpen(false);
   };
 
+  const resolvePeerPhoto = async (userId: string) => {
+    const cached = String(userPhotoByIdRef.current[userId] || "").trim();
+    if (cached) return cached;
+    try {
+      const data = await apiGetJson<{ user?: { photoDataUrl?: string } }>(
+        `/api/users/resolve?q=${encodeURIComponent(userId)}`,
+      );
+      const photo = String(data.user?.photoDataUrl || "").trim();
+      userPhotoByIdRef.current[userId] = photo;
+      return photo;
+    } catch {
+      return "";
+    }
+  };
+
   const handleSelectConversationFromSidebar = (c: Conversation) => {
+    const photo = String(c.otherPhotoDataUrl || userPhotoByIdRef.current[c.otherUserId] || "").trim();
     setActiveUserId(c.otherUserId);
     setActiveUserName(c.otherName);
+    setActiveUserPhoto(photo);
     userNameByIdRef.current[c.otherUserId] = c.otherName;
+    userPhotoByIdRef.current[c.otherUserId] = photo;
+    if (!photo) {
+      void resolvePeerPhoto(c.otherUserId).then((resolved) => {
+        if (!resolved) return;
+        setActiveUserPhoto((prev) => prev || resolved);
+        userPhotoByIdRef.current[c.otherUserId] = resolved;
+        setConversations((prevList) =>
+          prevList.map((item) =>
+            item.otherUserId === c.otherUserId ? { ...item, otherPhotoDataUrl: resolved } : item,
+          ),
+        );
+      });
+    }
     setConversations((prev) =>
       prev.map((item) => (item.otherUserId === c.otherUserId ? { ...item, hasUnread: false } : item)),
     );
+    dispatchUnreadMessagesRefresh();
     setDropdownOpen(false);
     setSearchFocused(false);
     setSearchText("");
@@ -413,6 +458,7 @@ export function ChatLayout({
   const handleNewChat = () => {
     setActiveUserId("");
     setActiveUserName("");
+    setActiveUserPhoto("");
     setDropdownOpen(false);
     setUserResults([]);
     setSearchText("");
@@ -428,6 +474,7 @@ export function ChatLayout({
       if (activeUserId === otherUserId) {
         setActiveUserId("");
         setActiveUserName("");
+        setActiveUserPhoto("");
       }
       
       setMenuOpenId(null);
@@ -440,7 +487,7 @@ export function ChatLayout({
     <div className={`flex h-full max-h-full min-h-0 w-full min-w-0 overflow-hidden bg-[#F5F5F5] ${className}`}>
       {/* Left sidebar */}
       <aside className="flex h-full max-h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden border-r border-zinc-200 bg-white">
-        <div className="shrink-0 px-4 pt-6 pb-4">
+        <div className={`shrink-0 px-4 pt-3 pb-3 ${dashboardCenterPanelHeadingClass}`}>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Messages</h1>
 
           <div ref={dropdownWrapRef} className="relative mt-4">
@@ -484,9 +531,12 @@ export function ChatLayout({
                             active ? "bg-[#FFF2EB]" : "hover:bg-zinc-50"
                           }`}
                         >
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FF6B35] text-xs font-semibold text-white">
-                            {getInitials(u.name)}
-                          </span>
+                          <UserAvatar
+                            id={u.id}
+                            name={u.name}
+                            photoDataUrl={u.photoDataUrl}
+                            size="xs"
+                          />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-semibold text-zinc-900">{u.name}</span>
                           </span>
@@ -515,9 +565,12 @@ export function ChatLayout({
                     }`}
                   >
                     <div className="flex items-start gap-2">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FF6B35] text-xs font-semibold text-white">
-                        {getInitials(c.otherName)}
-                      </div>
+                      <UserAvatar
+                        id={c.otherUserId}
+                        name={c.otherName}
+                        photoDataUrl={c.otherPhotoDataUrl}
+                        size="sm"
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <p
@@ -604,6 +657,7 @@ export function ChatLayout({
           currentUserId={currentUserId}
           otherUserId={activeUserId}
           otherUserLabel={activeUserName}
+          otherUserPhoto={activeUserPhoto}
           statusText={activeUserStatusText}
           allowUnsend={allowUnsend}
           onConversationUpdated={(otherId, msgs: ChatMessagePayload[]) => {
@@ -626,12 +680,17 @@ export function ChatLayout({
               const nextItem: Conversation = {
                 otherUserId: otherId,
                 otherName: name,
+                otherPhotoDataUrl:
+                  existing?.otherPhotoDataUrl ||
+                  userPhotoByIdRef.current[otherId] ||
+                  activeUserPhoto ||
+                  "",
                 lastMessagePreview: last.unsent ? "Deleted message" : last.message || "",
                 lastTimestamp: last.timestamp || null,
               };
 
               const merged = existing
-                ? prevList.map((c) => (c.otherUserId === otherId ? nextItem : c))
+                ? prevList.map((c) => (c.otherUserId === otherId ? { ...c, ...nextItem } : c))
                 : [nextItem, ...prevList];
 
               return merged.sort((a, b) => {
