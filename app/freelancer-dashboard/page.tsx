@@ -29,8 +29,8 @@ function FreelancerDashboardPageContent() {
     if (loading) return;
     if (!consumeHighlightOnce(postId)) return;
 
-    let animTimeout: ReturnType<typeof window.setTimeout> | undefined;
-    let clearQueryTimeout: ReturnType<typeof window.setTimeout> | undefined;
+    let animTimeout: number | undefined;
+    let clearQueryTimeout: number | undefined;
     let cancelled = false;
     let attempts = 0;
 

@@ -181,9 +181,9 @@ export function ClientOffersPanel({
     const postId = String(highlightPostId || "").trim();
     if (!postId || initialLoading) return;
 
-    let animTimeout: ReturnType<typeof window.setTimeout> | undefined;
-    let notifyTimeout: ReturnType<typeof window.setTimeout> | undefined;
-    let retryTimeout: ReturnType<typeof window.setTimeout> | undefined;
+    let animTimeout: number | undefined;
+    let notifyTimeout: number | undefined;
+    let retryTimeout: number | undefined;
 
     const trigger = () => {
       const el = postRefs.current[postId];

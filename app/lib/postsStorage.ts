@@ -169,11 +169,7 @@ export function updateCommunityPost(
     content: patch.content !== undefined ? String(patch.content).trim().slice(0, 1200) : current.content,
     category: patch.category !== undefined ? String(patch.category).trim().slice(0, 80) : current.category,
     priority:
-      patch.priority !== undefined
-        ? patch.priority === "Important"
-          ? "Important"
-          : "Normal"
-        : current.priority,
+      patch.priority !== undefined ? normalizeStoredPriority(patch.priority) : current.priority,
   };
 
   if (!updated.title || !updated.content) return null;
