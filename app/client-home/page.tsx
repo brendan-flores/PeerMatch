@@ -1,6 +1,6 @@
 "use client";
 
-import type { NotificationItem } from "@/app/lib/notifications";
+import type { NotificationItem } from "../lib/notifications";
 import Link from "next/link";
 import SidebarBrand from "../components/SidebarBrand";
 import { CommunityPostCard } from "../components/freelancer/CommunityPostCard";
