@@ -1,8 +1,9 @@
+import { getApiBaseUrl } from "@/app/lib/siteUrls";
 import { io, type Socket } from "socket.io-client";
 import type { ChatMessagePayload } from "./chatTypes";
 
 function getSocketUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+  return getApiBaseUrl();
 }
 
 let socket: Socket | null = null;
