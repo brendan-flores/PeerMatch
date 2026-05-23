@@ -37,6 +37,7 @@ import {
 } from "../lib/communityPosts";
 import { useCommunityPostsContext } from "../lib/CommunityPostsContext";
 import { ClientOffersPanel } from "../components/client/ClientOffersPanel";
+import { ClientRightAside } from "../components/client/ClientRightAside";
 import { FeaturedPostEditor } from "../components/client/FeaturedPostEditor";
 import {
   isCommunityPostWithinLast24Hours,
@@ -50,10 +51,9 @@ import { DashboardCenterColumn } from "../components/dashboard/DashboardCenterCo
 import {
   dashboardPanelScrollClass,
   dashboardCenterPanelCompactPaddingClass,
-  dashboardCenterPanelHeadingClass,
+  dashboardFeedPageHeadingClass,
   dashboardPanelScrollInsetClass,
   dashboardProfileScrollClass,
-  dashboardRightAsideListClass,
   dashboardSidebarNavScrollClass,
 } from "../components/dashboard/dashboardShellClasses";
 import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
@@ -717,6 +717,7 @@ function ClientHomePageContent() {
             onMarkAllRead={markAllRead}
             onMarkOneRead={markOneRead}
             onNotificationClick={handleNotificationClick}
+            showBell={false}
             contentClassName={panelTransitionClass}
           >
             <FreelancerFeedMain
@@ -752,6 +753,7 @@ function ClientHomePageContent() {
           onMarkAllRead={markAllRead}
           onMarkOneRead={markOneRead}
           onNotificationClick={handleNotificationClick}
+          showBell={false}
           contentClassName={panelTransitionClass}
         >
         <main
@@ -767,7 +769,7 @@ function ClientHomePageContent() {
             {activePanel === "create-post" ? (
               <div className={dashboardPanelScrollClass}>
               <section aria-labelledby="create-post-heading" className="min-w-0">
-                <div className={dashboardCenterPanelHeadingClass}>
+                <div className={dashboardFeedPageHeadingClass}>
                   <h1 id="create-post-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
                     Create New Post
                   </h1>
@@ -1159,31 +1161,16 @@ function ClientHomePageContent() {
         </DashboardCenterColumn>
         )}
 
-        <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1">
-          <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <h3 className="shrink-0 text-sm font-semibold text-zinc-900">Recent Posts</h3>
-            <div className={dashboardRightAsideListClass}>
-              {recentPosts.length === 0 ? (
-                <p className="rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-xs text-zinc-500 shadow-sm">
-                  No recent post
-                </p>
-              ) : (
-                recentPosts.map((post) => (
-                  <button
-                    key={post.id}
-                    type="button"
-                    onClick={() => router.push(`/client-home?post=${encodeURIComponent(post.id)}`)}
-                    className="w-full rounded-xl border border-[#E8DDD6] bg-[#F4EBE4] px-4 py-3 text-left shadow-sm hover:bg-[#efe4dd]"
-                  >
-                    <p className="text-sm font-semibold text-zinc-900">{post.author}</p>
-                    <p className="mt-2 line-clamp-2 text-xs leading-snug text-zinc-700">{post.title}</p>
-                    <p className="mt-3 text-xs text-zinc-500">{post.timeAgo}</p>
-                  </button>
-                ))
-              )}
-            </div>
-          </section>
-        </aside>
+        <ClientRightAside
+          recentPosts={recentPosts}
+          notifications={notifications}
+          onMarkAllRead={markAllRead}
+          onMarkOneRead={markOneRead}
+          onNotificationClick={handleNotificationClick}
+          onRecentPostClick={(postId) =>
+            router.push(`/client-home?post=${encodeURIComponent(postId)}`)
+          }
+        />
       </div>
       <ClientPostToast toast={postToast} onDismiss={dismissPostToast} />
     </div>
