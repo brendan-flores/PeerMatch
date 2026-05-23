@@ -17,14 +17,29 @@ export function getAdminSiteUrl(): string {
 }
 
 /**
- * API base URL for browser fetch / Socket.IO.
- * - If NEXT_PUBLIC_API_BASE_URL is set → use it (direct call to Render, etc.).
- * - Else on deployed site → same origin (Vercel rewrites proxy /api to API_PROXY_URL).
- * - Else local dev → http://localhost:5000
+ * Base URL for browser fetch().
+ * - Production: `""` → relative `/api/...` (proxied at runtime by app/api/[[...path]]).
+ * - NEXT_PUBLIC_API_BASE_URL: direct calls to API (needs CORS).
+ * - Local: http://localhost:5000
  */
 export function getApiBaseUrl(): string {
-  const fromEnv = trimOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
-  if (fromEnv) return fromEnv;
+  const direct = trimOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
+  if (direct) return direct;
+
+  if (typeof window !== "undefined") {
+    if (!isLocalHostname(window.location.hostname)) {
+      return "";
+    }
+    return "http://localhost:5000";
+  }
+
+  return "http://localhost:5000";
+}
+
+/** Socket.IO URL (same-origin on Vercel when using API_PROXY_URL + rewrites). */
+export function getSocketBaseUrl(): string {
+  const direct = trimOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
+  if (direct) return direct;
 
   if (typeof window !== "undefined") {
     if (!isLocalHostname(window.location.hostname)) {

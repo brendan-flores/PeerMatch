@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
-/** Backend for /api and /socket.io rewrites (set API_PROXY_URL on Vercel). */
+/**
+ * Socket.IO still uses rewrites to the backend.
+ * HTTP /api/* is handled by app/api/[[...path]]/route.ts (reads API_PROXY_URL at runtime).
+ */
 function getApiBackendOrigin(): string {
   const raw =
     process.env.API_PROXY_URL ||
@@ -14,10 +17,6 @@ const apiBackend = getApiBackendOrigin();
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
-      {
-        source: "/api/:path*",
-        destination: `${apiBackend}/api/:path*`,
-      },
       {
         source: "/socket.io/:path*",
         destination: `${apiBackend}/socket.io/:path*`,

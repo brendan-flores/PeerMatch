@@ -1,9 +1,9 @@
-import { getApiBaseUrl } from "@/app/lib/siteUrls";
+import { getSocketBaseUrl } from "@/app/lib/siteUrls";
 import { io, type Socket } from "socket.io-client";
 import type { ChatMessagePayload } from "./chatTypes";
 
 function getSocketUrl(): string {
-  return getApiBaseUrl();
+  return getSocketBaseUrl();
 }
 
 let socket: Socket | null = null;

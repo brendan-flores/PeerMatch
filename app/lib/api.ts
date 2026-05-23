@@ -39,7 +39,14 @@ export async function apiPostJson<TResponse>(
       ...init,
     });
   } catch {
-    throw new ApiError("Cannot connect to the server. Please make sure the API is running and try again.", 0);
+    const hint =
+      typeof window !== "undefined" && !getApiBaseUrl()
+        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        : "";
+    throw new ApiError(
+      `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
+      0,
+    );
   }
 
   const contentType = res.headers.get("content-type") || "";
@@ -78,7 +85,14 @@ export async function apiPutJson<TResponse>(
       ...init,
     });
   } catch {
-    throw new ApiError("Cannot connect to the server. Please make sure the API is running and try again.", 0);
+    const hint =
+      typeof window !== "undefined" && !getApiBaseUrl()
+        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        : "";
+    throw new ApiError(
+      `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
+      0,
+    );
   }
 
   const contentType = res.headers.get("content-type") || "";
@@ -112,7 +126,14 @@ export async function apiGetJson<TResponse>(
       ...init,
     });
   } catch {
-    throw new ApiError("Cannot connect to the server. Please make sure the API is running and try again.", 0);
+    const hint =
+      typeof window !== "undefined" && !getApiBaseUrl()
+        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        : "";
+    throw new ApiError(
+      `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
+      0,
+    );
   }
 
   const contentType = res.headers.get("content-type") || "";
@@ -151,7 +172,14 @@ export async function apiPatchJson<TResponse>(
       ...init,
     });
   } catch {
-    throw new ApiError("Cannot connect to the server. Please make sure the API is running and try again.", 0);
+    const hint =
+      typeof window !== "undefined" && !getApiBaseUrl()
+        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        : "";
+    throw new ApiError(
+      `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
+      0,
+    );
   }
 
   const contentType = res.headers.get("content-type") || "";
@@ -186,7 +214,14 @@ export async function apiSend(
       ...init,
     });
   } catch {
-    throw new ApiError("Cannot connect to the server. Please make sure the API is running and try again.", 0);
+    const hint =
+      typeof window !== "undefined" && !getApiBaseUrl()
+        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        : "";
+    throw new ApiError(
+      `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
+      0,
+    );
   }
 
   if (!res.ok) {
@@ -215,7 +250,14 @@ export async function apiDeleteJson<TResponse>(
       ...init,
     });
   } catch {
-    throw new ApiError("Cannot connect to the server. Please make sure the API is running and try again.", 0);
+    const hint =
+      typeof window !== "undefined" && !getApiBaseUrl()
+        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        : "";
+    throw new ApiError(
+      `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
+      0,
+    );
   }
 
   const contentType = res.headers.get("content-type") || "";
