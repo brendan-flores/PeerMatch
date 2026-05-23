@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Handshake, Star } from "lucide-react";
-import { dashboardCenterPanelHeadingClass } from "@/app/components/dashboard/dashboardShellClasses";
+import { dashboardFeedPageHeadingClass } from "@/app/components/dashboard/dashboardShellClasses";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/app/lib/api";
 import { formatPhpBudget } from "@/app/lib/communityPosts";
@@ -278,7 +278,7 @@ export function ClientOffersPanel({
 
   return (
     <section aria-labelledby="offers-heading" className="space-y-6">
-      <div className={dashboardCenterPanelHeadingClass}>
+      <div className={dashboardFeedPageHeadingClass}>
         <h1 id="offers-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
           Offers
         </h1>
