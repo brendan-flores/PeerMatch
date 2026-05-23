@@ -1,13 +1,22 @@
 const AdminActivity = require('../models/AdminActivity');
 const User = require('../models/User');
 
+function normalizeActivityBadge(doc) {
+  const kind = doc.kind || 'default';
+  const raw = String(doc.badge || '').trim().toLowerCase();
+  if (kind === 'task_approved' || raw === 'completed') return 'approved';
+  if (kind === 'task_rejected' || raw === 'warning') return 'rejected';
+  if (raw === 'approved' || raw === 'rejected' || raw === 'pending') return raw;
+  return 'pending';
+}
+
 function toActivityDto(doc) {
   return {
     id: String(doc._id),
     title: doc.title,
     sub: doc.sub || '',
     at: doc.occurredAt ? new Date(doc.occurredAt).toISOString() : new Date().toISOString(),
-    badge: doc.badge,
+    badge: normalizeActivityBadge(doc),
     kind: doc.kind || 'default',
     ...(doc.kind === 'task_approved' || doc.kind === 'task_rejected'
       ? {
@@ -64,7 +73,7 @@ async function recordTaskApproved(task, adminUserId) {
   return recordAdminActivity({
     title: 'Task Approved',
     sub: task.title || 'Untitled task',
-    badge: 'completed',
+    badge: 'approved',
     kind: 'task_approved',
     occurredAt: task.updatedAt || new Date(),
     clientName,
@@ -80,7 +89,7 @@ async function recordTaskRejected(task, adminUserId) {
   return recordAdminActivity({
     title: 'Task Rejected',
     sub: task.title || 'Untitled task',
-    badge: 'warning',
+    badge: 'rejected',
     kind: 'task_rejected',
     occurredAt: task.updatedAt || new Date(),
     clientName,

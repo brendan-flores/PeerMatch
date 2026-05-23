@@ -28,6 +28,19 @@ export const dashboardCenterTitleOffsetClass = "min-w-0 pl-12 sm:pl-14";
 /** Centered page title block (create post, offers, messages sidebar header) */
 export const dashboardCenterPanelHeadingClass = "min-w-0 text-center";
 
+/** Left-aligned feed / browse titles in the center panel */
+export const dashboardFeedPageHeadingClass = "min-w-0 text-left";
+
+/** Right aside — panel root; avoid overflow-hidden here so the notification menu can stack above content */
+export const dashboardRightAsideWrapClass = "relative flex min-h-0 flex-col";
+
+/** Header row: title + bell; sits above scrollable recent posts */
+export const dashboardRightAsideHeaderClass =
+  "relative z-30 flex shrink-0 items-start justify-between gap-3";
+
+export const dashboardRightAsideBellClass =
+  "relative shrink-0 [&_button]:rounded-full [&_button]:shadow-md [&_button]:ring-2 [&_button]:ring-white/90";
+
 /** Scroll panels inside the center column (bell clearance is on titles via dashboardCenterTitleOffsetClass) */
 export const dashboardPanelScrollInsetClass = "min-w-0";
 
@@ -96,7 +109,7 @@ export const dashboardSidebarNavClass =
 
 /** Right column — Recent Posts */
 export const dashboardRightAsideSectionClass =
-  "flex min-h-0 flex-1 flex-col overflow-hidden";
+  "relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden";
 
 export const dashboardRightAsideListClass =
   "panel-scroll-pane mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-0.5";

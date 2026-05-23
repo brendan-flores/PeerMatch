@@ -10,6 +10,7 @@ const {
   normalizeUsername,
   validateUsername,
 } = require('../utils/userAuth');
+const { sanitizePhotoDataUrl, INVALID_PHOTO_MESSAGE } = require('../utils/profilePhoto');
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ function isInstitutionalEmail(email) {
 
 function serializeProfileUser(user) {
   return {
-    id: user._id,
+    id: String(user._id),
     username: user.username,
     name: user.name,
     email: user.email,
@@ -45,7 +46,7 @@ function serializeProfileUser(user) {
     ...(user.aboutMe ? { aboutMe: user.aboutMe } : {}),
     ...(user.skills ? { skills: user.skills } : {}),
     ...(user.location ? { location: user.location } : {}),
-    ...(user.photoDataUrl ? { photoDataUrl: user.photoDataUrl } : {}),
+    photoDataUrl: typeof user.photoDataUrl === 'string' ? user.photoDataUrl : '',
     profileCompleted: user.profileCompleted,
   };
 }
@@ -246,7 +247,8 @@ router.post('/verify', async (req, res) => {
 
 router.post('/profile', authMiddleware, async (req, res) => {
   try {
-    const { name, course, yearLevel, aboutMe, skills, location, photoDataUrl } = req.body || {};
+    const { name, firstName, lastName, course, yearLevel, aboutMe, skills, location, photoDataUrl } =
+      req.body || {};
 
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -257,21 +259,31 @@ router.post('/profile', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Please verify your email before completing your profile.' });
     }
 
-    const nameStr = typeof name === 'string' ? String(name).trim() : '';
+    const firstStr = typeof firstName === 'string' ? String(firstName).trim() : '';
+    const lastStr = typeof lastName === 'string' ? String(lastName).trim() : '';
+    const combinedName = [firstStr, lastStr].filter(Boolean).join(' ');
+    const nameStr =
+      typeof name === 'string'
+        ? String(name).trim()
+        : combinedName;
     const courseStr = typeof course === 'string' ? String(course).trim() : '';
     const yearLevelStr = typeof yearLevel === 'string' ? String(yearLevel).trim() : '';
     const aboutMeStr = typeof aboutMe === 'string' ? String(aboutMe).trim() : '';
     const skillsStr = typeof skills === 'string' ? String(skills).trim() : '';
     const locationStr = typeof location === 'string' ? String(location).trim() : '';
-    const photoStr = typeof photoDataUrl === 'string' ? photoDataUrl : '';
-
-    if (typeof name === 'string') user.name = nameStr || user.name;
+    if (nameStr) user.name = nameStr;
     if (typeof course === 'string') user.course = courseStr;
     if (typeof yearLevel === 'string') user.yearLevel = yearLevelStr;
     if (typeof aboutMe === 'string') user.aboutMe = aboutMeStr;
     if (typeof skills === 'string') user.skills = skillsStr;
     if (typeof location === 'string') user.location = locationStr;
-    if (typeof photoDataUrl === 'string') user.photoDataUrl = photoStr;
+    if (typeof photoDataUrl === 'string') {
+      const photoStr = sanitizePhotoDataUrl(photoDataUrl);
+      if (photoDataUrl.trim() && photoStr === null) {
+        return res.status(400).json({ message: INVALID_PHOTO_MESSAGE });
+      }
+      user.photoDataUrl = photoStr;
+    }
 
     user.profileCompleted = Boolean(
       String(user.course || '').trim() ||
@@ -283,9 +295,12 @@ router.post('/profile', authMiddleware, async (req, res) => {
 
     await user.save();
 
+    const savedUser = await User.findById(req.user.userId);
+
     return res.json({
       message: 'Profile saved.',
-      user: serializeProfileUser(user),
+      photoDataUrl: typeof savedUser?.photoDataUrl === 'string' ? savedUser.photoDataUrl : '',
+      user: serializeProfileUser(savedUser || user),
     });
   } catch (error) {
     console.error(error);
@@ -335,6 +350,51 @@ router.get('/profile', authMiddleware, async (req, res) => {
   }
 });
 
+/** Save profile photo only (client or freelancer) */
+router.patch('/profile/photo', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    if (!user.verified) {
+      return res.status(403).json({ message: 'Please verify your email before updating your profile photo.' });
+    }
+
+    if (typeof req.body?.photoDataUrl !== 'string') {
+      return res.status(400).json({ message: 'Profile photo is required.' });
+    }
+
+    const photoStr = sanitizePhotoDataUrl(req.body.photoDataUrl);
+    if (req.body.photoDataUrl.trim() && photoStr === null) {
+      return res.status(400).json({ message: INVALID_PHOTO_MESSAGE });
+    }
+
+    user.photoDataUrl = photoStr;
+    user.profileCompleted = Boolean(
+      String(user.course || '').trim() ||
+      String(user.yearLevel || '').trim() ||
+      String(user.aboutMe || '').trim() ||
+      String(user.skills || '').trim() ||
+      String(user.photoDataUrl || '').trim()
+    );
+    await user.save();
+
+    const fresh = await User.findById(req.user.userId);
+    const photoDataUrl = typeof fresh?.photoDataUrl === 'string' ? fresh.photoDataUrl : '';
+
+    return res.json({
+      message: 'Profile photo saved.',
+      user: serializeProfileUser(fresh || user),
+      photoDataUrl,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error saving profile photo.' });
+  }
+});
+
 router.put('/profile', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
@@ -343,7 +403,6 @@ router.put('/profile', authMiddleware, async (req, res) => {
     }
 
     const nextName = safeString(req.body?.name, 120);
-    const nextPhotoDataUrl = typeof req.body?.photoDataUrl === 'string' ? req.body.photoDataUrl : '';
     const nextProfile = sanitizeFreelancerProfile(req.body?.profile || {});
 
     user.name = nextName || user.name;
@@ -352,7 +411,14 @@ router.put('/profile', authMiddleware, async (req, res) => {
     user.course = nextProfile.course;
     user.yearLevel = nextProfile.yearLevel;
     user.location = nextProfile.location;
-    user.photoDataUrl = nextPhotoDataUrl;
+
+    if (typeof req.body?.photoDataUrl === 'string') {
+      const photoStr = sanitizePhotoDataUrl(req.body.photoDataUrl);
+      if (req.body.photoDataUrl.trim() && photoStr === null) {
+        return res.status(400).json({ message: INVALID_PHOTO_MESSAGE });
+      }
+      user.photoDataUrl = photoStr;
+    }
     user.freelancerProfile = nextProfile;
     user.markModified('freelancerProfile');
 

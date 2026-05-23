@@ -6,7 +6,7 @@ const adminActivitySchema = new mongoose.Schema(
     sub: { type: String, trim: true, default: '' },
     badge: {
       type: String,
-      enum: ['pending', 'completed', 'warning'],
+      enum: ['pending', 'approved', 'rejected', 'completed', 'warning'],
       required: true,
     },
     kind: {

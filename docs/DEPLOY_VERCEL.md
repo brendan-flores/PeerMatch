@@ -1,0 +1,75 @@
+# Deploy PeerMatch on Vercel (main + admin on different domains)
+
+The app is one Next.js repo: main routes (`/`, `/login`, `/client-home`, …) and admin routes (`/admin/...`). The API is a separate Node server (`server/`) — deploy it to Render, Railway, Fly.io, etc.
+
+## Architecture
+
+| Service | Example URL | Role |
+|--------|-------------|------|
+| Main Next.js | `https://app.yourdomain.com` | Students / clients / freelancers |
+| Admin Next.js | `https://admin.yourdomain.com` | Admin dashboard |
+| API | `https://api.yourdomain.com` | MongoDB, auth cookies, Socket.IO |
+
+Both frontends call the same `NEXT_PUBLIC_API_BASE_URL` with `credentials: "include"`. Admin uses a separate cookie name (`peermatch_admin_token`).
+
+---
+
+## Option A — One Vercel project, two domains (simplest)
+
+1. Import the repo in Vercel (Framework: Next.js).
+2. **Settings → Domains**: add `app.yourdomain.com` and `admin.yourdomain.com`.
+3. **Settings → Environment Variables** (Production):
+
+   ```
+   NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com
+   NEXT_PUBLIC_MAIN_SITE_URL=https://app.yourdomain.com
+   NEXT_PUBLIC_ADMIN_SITE_URL=https://admin.yourdomain.com
+   MAIN_SITE_HOSTS=app.yourdomain.com
+   ADMIN_SITE_HOSTS=admin.yourdomain.com
+   ```
+
+4. Deploy the API with:
+
+   ```
+   CORS_ORIGINS=https://app.yourdomain.com,https://admin.yourdomain.com
+   JWT_COOKIE_SAMESITE=none
+   JWT_COOKIE_SECURE=true
+   TRUST_PROXY=1
+   ```
+
+5. `middleware.ts` will:
+   - On **admin** host: `/` → `/admin/dashboard`, block main-app paths, keep `/admin/*`.
+   - On **main** host: `/admin/*` → redirect to `NEXT_PUBLIC_ADMIN_SITE_URL`.
+
+Local dev (optional): run admin on port 3001 and set `ADMIN_SITE_HOSTS=localhost:3001`, `MAIN_SITE_HOSTS=localhost:3000`.
+
+---
+
+## Option B — Two Vercel projects (same repo)
+
+Useful if you want separate env/build settings.
+
+| Project | Domain | Extra env |
+|---------|--------|-----------|
+| `peermatch-web` | `app.yourdomain.com` | `MAIN_SITE_HOSTS=app.yourdomain.com` |
+| `peermatch-admin` | `admin.yourdomain.com` | `ADMIN_SITE_HOSTS=admin.yourdomain.com` |
+
+Set the **same** `NEXT_PUBLIC_*` URLs on both projects so redirects and API calls stay correct.
+
+---
+
+## API checklist
+
+- [ ] `CORS_ORIGINS` lists both frontend origins (comma-separated, no trailing slashes).
+- [ ] HTTPS in production; cookies use `JWT_COOKIE_SAMESITE=none` and `JWT_COOKIE_SECURE=true` when frontends and API are on different sites.
+- [ ] Do **not** set `COOKIE_DOMAIN` unless both sites share a parent domain (e.g. `.yourdomain.com`).
+- [ ] Seed admin: `npm run seed:admin` with `SEED_ADMIN_PASSWORD` set.
+
+---
+
+## Verify after deploy
+
+1. Open main domain → login as client/freelancer works.
+2. Open admin domain → `/admin/login` works; `/admin` on main domain redirects to admin URL.
+3. Admin login does not log you into the main app (separate cookie).
+4. Notifications / real-time: Socket.IO origin must be allowed on the API (same `CORS_ORIGINS`).

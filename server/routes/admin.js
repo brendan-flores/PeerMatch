@@ -12,7 +12,7 @@ const {
   recordTaskApproved,
   recordTaskRejected,
 } = require('../services/adminActivityService');
-const { listClientTasksForAdmin } = require('../services/clientTaskStore');
+const { getClientTaskByIdForAdmin, listClientTasksForAdmin } = require('../services/clientTaskStore');
 
 const router = express.Router();
 
@@ -61,18 +61,22 @@ router.get('/stats', async (req, res) => {
     const [
       totalTasks,
       pendingReview,
-      approvedTasks,
+      completedTasks,
       activeUsers,
       totalUsers,
       verifiedUsers,
       suspendedUsers,
       flaggedPending,
     ] = await Promise.all([
-      ClientTask.countDocuments(),
+      ClientTask.countDocuments({ status: 'approved' }),
       ClientTask.countDocuments({
         $or: [{ status: 'pending' }, { status: { $exists: false } }, { status: null }],
       }),
-      ClientTask.countDocuments({ status: 'approved' }),
+      ClientTask.countDocuments({
+        status: 'approved',
+        hireStatus: 'completed',
+        reviewSubmittedAt: { $ne: null },
+      }),
       User.countDocuments({ role: 'user', suspended: { $ne: true } }),
       // Exclude admin accounts from these student/user aggregates.
       User.countDocuments({ role: 'user' }),
@@ -87,7 +91,7 @@ router.get('/stats', async (req, res) => {
     res.json({
       totalTasks,
       pendingReview,
-      completedTasks: approvedTasks,
+      completedTasks,
       activeUsers,
       totalUsers,
       verifiedUsers,
@@ -115,7 +119,10 @@ router.get('/activities', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 }).lean();
+    const users = await User.find()
+      .select('name email role accountType verified suspended createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
 
     const taskCounts = await ClientTask.aggregate([
       { $group: { _id: '$clientId', count: { $sum: 1 } } },
@@ -124,15 +131,14 @@ router.get('/users', async (req, res) => {
 
     const payload = users.map((u) => ({
       id: String(u._id),
-      name: u.name,
-      email: u.email,
+      name: String(u.name || '').trim() || 'Unknown',
+      email: String(u.email || '').trim(),
       joinedAt: u.createdAt ? new Date(u.createdAt).toISOString() : null,
       accountType: u.accountType || null,
       role: u.role,
       verified: !!u.verified,
       suspended: !!u.suspended,
       tasksPosted: countByClient.get(String(u._id)) || 0,
-      rating: u.accountType === 'freelancer' ? null : undefined,
     }));
 
     res.json({ users: payload });
@@ -149,6 +155,19 @@ router.get('/tasks', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Could not load tasks.' });
+  }
+});
+
+router.get('/tasks/:id', async (req, res) => {
+  try {
+    const task = await getClientTaskByIdForAdmin(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found.' });
+    }
+    res.json({ task });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Could not load task details.' });
   }
 });
 

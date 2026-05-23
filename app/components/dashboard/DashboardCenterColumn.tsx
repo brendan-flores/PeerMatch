@@ -15,6 +15,8 @@ type DashboardCenterColumnProps = {
   onMarkOneRead: (id: string) => void | Promise<void>;
   onNotificationClick?: (item: NotificationItem) => void;
   contentClassName?: string;
+  /** When false, bell is omitted (e.g. freelancer bell is on the right aside). */
+  showBell?: boolean;
 };
 
 export function DashboardCenterColumn({
@@ -24,15 +26,18 @@ export function DashboardCenterColumn({
   onMarkOneRead,
   onNotificationClick,
   contentClassName = "",
+  showBell = true,
 }: DashboardCenterColumnProps) {
   return (
     <div className={dashboardCenterColumnWrapClass}>
-      <DashboardCenterBell
-        items={items}
-        onMarkAllRead={onMarkAllRead}
-        onMarkOneRead={onMarkOneRead}
-        onNotificationClick={onNotificationClick}
-      />
+      {showBell ? (
+        <DashboardCenterBell
+          items={items}
+          onMarkAllRead={onMarkAllRead}
+          onMarkOneRead={onMarkOneRead}
+          onNotificationClick={onNotificationClick}
+        />
+      ) : null}
       <div className={`${dashboardCenterColumnContentClass} ${contentClassName}`.trim()}>{children}</div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { apiGetJson, apiPatchJson, ApiError } from "@/app/lib/api";
 import { formatJoinedDate } from "../lib/formatTime";
@@ -44,29 +44,6 @@ function IconMail() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function IconShield() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function IconBan() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M5 19L19 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
@@ -138,24 +115,25 @@ export default function UserManagementContent() {
         ? "freelancers"
         : "allusers";
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadUsers = useCallback(() => {
     setLoading(true);
     setError(null);
-    apiGetJson<{ users: AdminUserRow[] }>("/api/admin/users")
+    return apiGetJson<{ users: AdminUserRow[] }>("/api/admin/users")
       .then((data) => {
-        if (!cancelled) setRows((data.users || []).map(apiToRow));
+        setRows((data.users || []).map(apiToRow));
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof ApiError ? e.message : "Failed to load users.");
+        setRows([]);
+        setError(e instanceof ApiError ? e.message : "Failed to load users.");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
 
   const visible = useMemo(() => filterByRoute(rows, activeTab), [rows, activeTab]);
   const showRatingColumn = activeTab === "freelancers" || activeTab === "allusers";
@@ -189,7 +167,10 @@ export default function UserManagementContent() {
 
       {error ? (
         <p className="admin-inline-error" role="alert">
-          {error}
+          {error}{" "}
+          <button type="button" className="admin-link-btn" onClick={() => void loadUsers()}>
+            Retry
+          </button>
         </p>
       ) : null}
 
@@ -276,23 +257,19 @@ export default function UserManagementContent() {
                     ) : null}
                     <td>
                       <div className="admin-row-actions">
-                        <button type="button" className="admin-row-icon" aria-label={`View ${u.name}`}>
-                          <IconShield />
-                        </button>
-                        {u.role !== 'Admin' && (
+                        {u.role !== "Admin" ? (
                           <button
                             type="button"
                             className="admin-row-icon"
                             aria-label={`Promote ${u.name} to admin`}
-                            onClick={() => handlePromoteToAdmin(u.id)}
+                            onClick={() => void handlePromoteToAdmin(u.id)}
                             disabled={promotingId === u.id}
                           >
                             <IconCrown />
                           </button>
+                        ) : (
+                          <span className="admin-muted-cell">—</span>
                         )}
-                        <button type="button" className="admin-row-icon admin-row-icon--muted" aria-label="Suspend user">
-                          <IconBan />
-                        </button>
                       </div>
                     </td>
                   </tr>

@@ -19,6 +19,7 @@ function NotificationAvatar({ item }: { item: NotificationItem }) {
   if (photo) {
     return (
       <img
+        key={photo.slice(-48)}
         src={photo}
         alt=""
         className="mt-0.5 h-10 w-10 shrink-0 rounded-full border border-zinc-200/80 object-cover shadow-sm"
@@ -49,6 +50,9 @@ type NotificationsDropdownProps = {
   onMarkOneRead: (id: string) => void | Promise<void>;
   onNotificationClick?: (item: NotificationItem) => void;
   className?: string;
+  menuAlign?: "left" | "right";
+  /** Use on right aside so the panel scroll area does not paint over the menu */
+  menuElevated?: boolean;
 };
 
 function contextIcon(type: NotificationType) {
@@ -79,6 +83,8 @@ export function NotificationsDropdown({
   onMarkOneRead,
   onNotificationClick,
   className = "",
+  menuAlign = "left",
+  menuElevated = false,
 }: NotificationsDropdownProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -126,7 +132,9 @@ export function NotificationsDropdown({
         <div
           role="dialog"
           aria-label="Notifications"
-          className="absolute left-0 top-full z-50 mt-3 w-[min(100vw-2rem,380px)] overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]"
+          className={`absolute top-full mt-3 w-[min(100vw-2rem,380px)] overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)] ${
+            menuAlign === "right" ? "right-0" : "left-0"
+          } ${menuElevated ? "z-[200]" : "z-50"}`}
         >
           <header className="flex items-center gap-2.5 border-b border-zinc-100 px-4 py-3.5">
             <Bell className="h-5 w-5 shrink-0 text-zinc-700" strokeWidth={1.6} />

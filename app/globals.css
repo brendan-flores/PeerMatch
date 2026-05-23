@@ -54,7 +54,7 @@
 }
 
 .animate-notification-highlight {
-  animation: notificationHighlightPop 1.1s ease-out 2;
+  animation: notificationHighlightPop 1.1s ease-out 1;
 }
 
 @keyframes routeFadeIn {

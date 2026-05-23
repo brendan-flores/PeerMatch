@@ -11,9 +11,21 @@ import { useUnreadMessageCount } from "@/app/hooks/useUnreadMessageCount";
 import { apiGetJson, ApiError } from "@/app/lib/api";
 import { normalizeAuthUser, persistFreelancerFromMe } from "@/app/lib/freelancerStorage";
 import type { CommunityPost } from "@/app/lib/postsStorage";
+<<<<<<< HEAD
+import { resetHighlightConsumption } from "@/app/lib/notificationHighlight";
+=======
+import { USER_PROFILE_PHOTO_UPDATED_EVENT, type ProfilePhotoUpdatedDetail } from "@/app/lib/profilePhoto";
+>>>>>>> 2533af0fadfa975a0d7c550f747b67cc34899204
 import { connectSocket, disconnectSocket } from "@/app/lib/socket";
 
-type MeUser = { id: string; name: string; email: string; role: string; accountType?: string };
+type MeUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  accountType?: string;
+  photoDataUrl?: string;
+};
 
 type MeResponse = { user: MeUser };
 
@@ -22,6 +34,7 @@ type FreelancerUserContextValue = {
   loading: boolean;
   selectedPost: CommunityPost | null;
   setSelectedPost: (post: CommunityPost | null) => void;
+  clearSelectedPost: () => void;
 };
 
 const FreelancerUserContext = createContext<FreelancerUserContextValue | null>(null);
@@ -42,7 +55,7 @@ export function useFreelancerSelectedPost() {
   return {
     selectedPost: ctx.selectedPost,
     setSelectedPost: ctx.setSelectedPost,
-    clearSelectedPost: () => ctx.setSelectedPost(null),
+    clearSelectedPost: ctx.clearSelectedPost,
   };
 }
 
@@ -59,6 +72,7 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
   const [user, setUser] = useState<MeUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
+  const clearSelectedPost = useCallback(() => setSelectedPost(null), []);
   const [isRouteContentVisible, setIsRouteContentVisible] = useState(true);
   const { items: notifications, markAllRead, markOneRead } = useNotifications(user?.id ?? null);
   const { count: unreadMessageCount } = useUnreadMessageCount(user?.id ?? null);
@@ -66,12 +80,14 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
   const handleNotificationClick = useCallback(
     (item: NotificationItem) => {
       if (item.type === "new_task" && item.relatedTaskId) {
+        setSelectedPost(null);
+        resetHighlightConsumption(item.relatedTaskId);
         router.push(
-          `/freelancer-dashboard?post=${encodeURIComponent(item.relatedTaskId)}&fromNotification=1`,
+          `/freelancer-dashboard?highlightPost=${encodeURIComponent(item.relatedTaskId)}`,
         );
       }
     },
-    [router],
+    [router, setSelectedPost],
   );
 
   useEffect(() => {
@@ -82,10 +98,12 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
         if (cancelled) return;
         const raw = me.user as Record<string, unknown>;
         const base = normalizeAuthUser(me.user);
+        const photoDataUrl = String(raw.photoDataUrl || "").trim();
         const nextUser: MeUser = {
           ...base,
           role: typeof raw.role === "string" ? raw.role : "",
           ...(typeof raw.accountType === "string" ? { accountType: raw.accountType } : {}),
+          ...(photoDataUrl ? { photoDataUrl } : {}),
         };
         persistFreelancerFromMe(base);
         setUser(nextUser);
@@ -104,6 +122,19 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
       cancelled = true;
     };
   }, [router]);
+
+  useEffect(() => {
+    const onPhotoUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<ProfilePhotoUpdatedDetail>).detail;
+      const userId = String(detail?.userId || "").trim();
+      if (!userId) return;
+      setUser((prev) =>
+        prev && String(prev.id) === userId ? { ...prev, photoDataUrl: detail.photoDataUrl } : prev,
+      );
+    };
+    window.addEventListener(USER_PROFILE_PHOTO_UPDATED_EVENT, onPhotoUpdated);
+    return () => window.removeEventListener(USER_PROFILE_PHOTO_UPDATED_EVENT, onPhotoUpdated);
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -129,15 +160,23 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
   }, [pathname]);
 
   useEffect(() => {
-    const postsRoutes = ["/freelancer-dashboard", "/freelancer-dashboard/browse"];
-    if (!postsRoutes.includes(pathname)) {
-      setSelectedPost(null);
+    const search = window.location.search;
+    const openingPostFromQuery = search.includes("openPost");
+    if (!openingPostFromQuery) {
+      clearSelectedPost();
     }
-  }, [pathname]);
+    if (
+      pathname !== "/freelancer-dashboard" &&
+      pathname !== "/freelancer-dashboard/browse" &&
+      (search.includes("highlightPost") || search.includes("openPost"))
+    ) {
+      router.replace(pathname);
+    }
+  }, [pathname, clearSelectedPost, router]);
 
   const value = useMemo(
-    () => ({ user, loading, selectedPost, setSelectedPost }),
-    [user, loading, selectedPost],
+    () => ({ user, loading, selectedPost, setSelectedPost, clearSelectedPost }),
+    [user, loading, selectedPost, clearSelectedPost],
   );
 
   if (loading) {
@@ -187,14 +226,20 @@ export function FreelancerDashboardShell({ children }: { children: React.ReactNo
             onMarkAllRead={markAllRead}
             onMarkOneRead={markOneRead}
             onNotificationClick={handleNotificationClick}
+            showBell={false}
             contentClassName={`transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
               isRouteContentVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
             }`}
           >
             {children}
           </DashboardCenterColumn>
-          <div className="h-full min-h-0 overflow-hidden lg:row-span-1">
-            <FreelancerRightAside />
+          <div className="relative z-10 h-full min-h-0 lg:row-span-1">
+            <FreelancerRightAside
+              notifications={notifications}
+              onMarkAllRead={markAllRead}
+              onMarkOneRead={markOneRead}
+              onNotificationClick={handleNotificationClick}
+            />
           </div>
         </div>
       </div>

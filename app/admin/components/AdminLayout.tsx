@@ -102,19 +102,6 @@ function IconUsers({ className }: { className?: string }) {
   );
 }
 
-function IconSearch({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function IconLogout({ className }: { className?: string }) {
   return (
     <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -172,15 +159,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       <div className="admin-main">
         <header className="admin-topbar">
-          <div className="admin-search">
-            <IconSearch className="admin-search__icon" />
-            <input
-              type="search"
-              className="admin-search__input"
-              placeholder="Search tasks or users..."
-              aria-label="Search tasks or users"
-            />
-          </div>
           <div className="admin-topbar__actions">
             <button
               type="button"

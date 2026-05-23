@@ -23,7 +23,7 @@ export type ActivityItem = {
   title: string;
   sub: string;
   at: string;
-  badge: "pending" | "completed" | "warning";
+  badge: "pending" | "approved" | "rejected";
   kind?: "default" | "task_approved" | "task_rejected";
   moderatorName?: string;
   clientName?: string;
@@ -47,13 +47,29 @@ export type AdminUserRow = {
 export type AdminTaskRow = {
   id: string;
   title: string;
+  description?: string;
+  subjectCategory?: string;
+  urgency?: string;
   createdAt: string | null;
   updatedAt: string | null;
   flagged: boolean;
+  clientId?: string;
   clientName: string;
+  clientEmail?: string;
+  clientAccountType?: string | null;
+  clientCourse?: string;
+  clientYearLevel?: string;
   budget: number;
   category: "academic" | "non-academic";
   status: "pending" | "approved" | "rejected";
+  hireStatus?: string;
+  assignedFreelancerName?: string;
+  assignedFreelancerEmail?: string;
+  approvedByName?: string;
+  rejectedByName?: string;
+  completedAt?: string | null;
+  reviewSubmittedAt?: string | null;
+  reviewRating?: number | null;
 };
 
 export type AdminOutletContext = {

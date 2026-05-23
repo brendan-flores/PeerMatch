@@ -1,14 +1,27 @@
 "use client";
 
-import type { CommunityPost } from "@/app/lib/postsStorage";
+import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
 import { formatTimeAgo } from "@/app/lib/formatTimeAgo";
+import { resolvePostAuthorAvatar } from "@/app/lib/profilePhotoDisplay";
+import type { CommunityPost } from "@/app/lib/postsStorage";
 
 type CommunityPostCardProps = {
   post: CommunityPost;
   onSelect: (post: CommunityPost) => void;
+  highlight?: boolean;
 };
 
+<<<<<<< HEAD
+export function CommunityPostCard({ post, onSelect, highlight = false }: CommunityPostCardProps) {
+=======
 export function CommunityPostCard({ post, onSelect }: CommunityPostCardProps) {
+  const { userId, photoDataUrl, photoVersion } = useCurrentUserProfile();
+  const avatarSrc = resolvePostAuthorAvatar(
+    post,
+    userId && photoDataUrl ? { id: userId, photoDataUrl } : null,
+  );
+
+>>>>>>> 2533af0fadfa975a0d7c550f747b67cc34899204
   const getPriorityStyles = () => {
     switch (post.priority) {
       case "High":
@@ -37,15 +50,15 @@ export function CommunityPostCard({ post, onSelect }: CommunityPostCardProps) {
           onSelect(post);
         }
       }}
-      className="cursor-pointer rounded-2xl border border-zinc-100 bg-zinc-50 p-5 transition hover:border-[#FF6B35]/30 hover:bg-white hover:shadow-[0_4px_24px_rgba(15,23,42,0.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B35]/40 lg:p-7"
+      className={`cursor-pointer rounded-2xl border border-zinc-100 bg-zinc-50 p-5 transition hover:border-[#FF6B35]/30 hover:bg-white hover:shadow-[0_4px_24px_rgba(15,23,42,0.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B35]/40 lg:p-7 ${
+        highlight ? "animate-notification-highlight ring-2 ring-[#FF6B35]/80" : ""
+      }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <img
-            src={
-              post.authorAvatarDataUrl ||
-              `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(post.authorName || "Client")}`
-            }
+            key={`${post.id}-${avatarSrc.slice(-48)}-${photoVersion}`}
+            src={avatarSrc}
             alt=""
             className="h-10 w-10 rounded-full border border-zinc-300 object-cover"
           />

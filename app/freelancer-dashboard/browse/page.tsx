@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { FeedPageHeader } from "@/app/components/dashboard/FeedPageHeader";
 import { BrowsePostFilters } from "@/app/components/freelancer/BrowsePostFilters";
 import { CommunityPostCard } from "@/app/components/freelancer/CommunityPostCard";
@@ -15,6 +15,7 @@ import {
 } from "@/app/lib/postFilters";
 import type { CommunityPost } from "@/app/lib/postsStorage";
 import { useFreelancerDashboardUser, useFreelancerSelectedPost } from "../FreelancerDashboardShell";
+import { useOpenPostFromQuery } from "../useOpenPostFromQuery";
 
 const defaultFilters: CommunityPostFeedFilters = {
   urgency: FILTER_ALL,
@@ -22,7 +23,7 @@ const defaultFilters: CommunityPostFeedFilters = {
   rateMax: "",
 };
 
-export default function FreelancerBrowsePage() {
+function FreelancerBrowsePageContent() {
   const { user } = useFreelancerDashboardUser();
   const { selectedPost, setSelectedPost, clearSelectedPost } = useFreelancerSelectedPost();
   const [filters, setFilters] = useState<CommunityPostFeedFilters>(defaultFilters);
@@ -57,6 +58,8 @@ export default function FreelancerBrowsePage() {
   useEffect(() => {
     void loadPosts();
   }, [loadPosts]);
+
+  useOpenPostFromQuery(posts, loading, setSelectedPost, "/freelancer-dashboard/browse");
 
   if (selectedPost && user) {
     return (
@@ -106,5 +109,19 @@ export default function FreelancerBrowsePage() {
         </div>
       }
     />
+  );
+}
+
+export default function FreelancerBrowsePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <p className="text-sm text-zinc-500">Loading…</p>
+        </div>
+      }
+    >
+      <FreelancerBrowsePageContent />
+    </Suspense>
   );
 }
