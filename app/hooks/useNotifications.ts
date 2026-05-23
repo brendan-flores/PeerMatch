@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { NotificationItem } from "@/app/lib/notifications";
+
+export type { NotificationItem };
 import {
   fetchNotifications,
   mapApiNotification,

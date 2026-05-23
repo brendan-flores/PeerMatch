@@ -1,6 +1,5 @@
 "use client";
 
-import type { NotificationItem } from "@/app/lib/notifications";
 import Link from "next/link";
 import SidebarBrand from "../components/SidebarBrand";
 import { CommunityPostCard } from "../components/freelancer/CommunityPostCard";
@@ -64,7 +63,7 @@ import { useCurrentUserProfile } from "../lib/CurrentUserProfileContext";
 import { persistProfilePhotoFromFile } from "../lib/profilePhoto";
 import { UserAvatar } from "../components/UserAvatar";
 import { dicebearInitialsAvatar } from "../lib/profilePhotoDisplay";
-import { useNotifications } from "../hooks/useNotifications";
+import { useNotifications, type NotificationItem } from "@/app/hooks/useNotifications";
 import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
 
 type PostItem = {
