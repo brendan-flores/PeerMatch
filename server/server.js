@@ -14,9 +14,14 @@ const notificationsRoutes = require('./routes/notifications');
 const offersRoutes = require('./routes/offers');
 const { attachSocketServer } = require('./socket/socketServer');
 const path = require('path');
+const fs = require('fs');
 
 // Load .env from root directory
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+const envPath = path.resolve(__dirname, '../.env');
+console.log('Loading .env from:', envPath);
+console.log('.env file exists:', fs.existsSync(envPath));
+
+dotenv.config({ path: envPath });
 
 // Debug: Check if environment variables are loaded
 console.log('Environment variables loaded:');
