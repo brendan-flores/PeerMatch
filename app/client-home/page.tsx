@@ -687,7 +687,7 @@ function ClientHomePageContent() {
                     type="button"
                     onClick={() => router.push("/client-home")}
                     aria-current={active ? "page" : undefined}
-                    className={`${navItemClass} ${active ? navActiveClass : ""}`}
+                    className={`${navItemClass} text-left ${active ? navActiveClass : ""}`}
                   >
                     {item.icon}
                     <span className="min-w-0 flex-1">{item.label}</span>
