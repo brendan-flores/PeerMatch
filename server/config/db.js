@@ -6,7 +6,14 @@ const connectDB = async () => {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/peer-match';
 
   try {
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, {
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      retryWrites: true,
+      retryReads: true,
+    });
     console.log('MongoDB connected');
     const dropped = await dropObsoleteCollections(mongoose.connection.db);
     if (dropped.length > 0) {
