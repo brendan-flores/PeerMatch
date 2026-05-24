@@ -4,11 +4,11 @@ The app is one Next.js repo: main routes (`/`, `/login`, `/client-home`, …) an
 
 ## Architecture
 
-| Service | Example URL | Role |
+| Service | Your URL | Role |
 |--------|-------------|------|
-| Main Next.js | `https://app.yourdomain.com` | Students / clients / freelancers |
-| Admin Next.js | `https://admin.yourdomain.com` | Admin dashboard |
-| API | `https://api.yourdomain.com` | MongoDB, auth cookies, Socket.IO |
+| Main Next.js | `https://peermatch.vercel.app` | Students / clients / freelancers |
+| Admin Next.js | `https://peermatch-admin.vercel.app` | Admin dashboard |
+| API | `https://peermatch-api.onrender.com` | MongoDB, auth cookies, Socket.IO |
 
 Both frontends call the same `NEXT_PUBLIC_API_BASE_URL` with `credentials: "include"`. Admin uses a separate cookie name (`peermatch_admin_token`).
 
@@ -17,21 +17,21 @@ Both frontends call the same `NEXT_PUBLIC_API_BASE_URL` with `credentials: "incl
 ## Option A — One Vercel project, two domains (simplest)
 
 1. Import the repo in Vercel (Framework: Next.js).
-2. **Settings → Domains**: add `app.yourdomain.com` and `admin.yourdomain.com`.
+2. **Settings → Domains**: add `peermatch.vercel.app` and `peermatch-admin.vercel.app`.
 3. **Settings → Environment Variables** (Production):
 
    ```
-   NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com
-   NEXT_PUBLIC_MAIN_SITE_URL=https://app.yourdomain.com
-   NEXT_PUBLIC_ADMIN_SITE_URL=https://admin.yourdomain.com
-   MAIN_SITE_HOSTS=app.yourdomain.com
-   ADMIN_SITE_HOSTS=admin.yourdomain.com
+   NEXT_PUBLIC_API_BASE_URL=https://peermatch-api.onrender.com
+   NEXT_PUBLIC_MAIN_SITE_URL=https://peermatch.vercel.app
+   NEXT_PUBLIC_ADMIN_SITE_URL=https://peermatch-admin.vercel.app
+   MAIN_SITE_HOSTS=peermatch.vercel.app
+   ADMIN_SITE_HOSTS=peermatch-admin.vercel.app
    ```
 
 4. Deploy the API with:
 
    ```
-   CORS_ORIGINS=https://app.yourdomain.com,https://admin.yourdomain.com
+   CORS_ORIGINS=https://peermatch.vercel.app,https://peermatch-admin.vercel.app
    JWT_COOKIE_SAMESITE=none
    JWT_COOKIE_SECURE=true
    TRUST_PROXY=1
@@ -51,8 +51,8 @@ Useful if you want separate env/build settings.
 
 | Project | Domain | Extra env |
 |---------|--------|-----------|
-| `peermatch-web` | `app.yourdomain.com` | `MAIN_SITE_HOSTS=app.yourdomain.com` |
-| `peermatch-admin` | `admin.yourdomain.com` | `ADMIN_SITE_HOSTS=admin.yourdomain.com` |
+| `peermatch-web` | `peermatch.vercel.app` | `MAIN_SITE_HOSTS=peermatch.vercel.app` |
+| `peermatch-admin` | `peermatch-admin.vercel.app` | `ADMIN_SITE_HOSTS=peermatch-admin.vercel.app` |
 
 Set the **same** `NEXT_PUBLIC_*` URLs on both projects so redirects and API calls stay correct.
 
