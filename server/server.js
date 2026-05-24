@@ -18,6 +18,12 @@ const path = require('path');
 // Load .env from root directory
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+// Debug: Check if environment variables are loaded
+console.log('Environment variables loaded:');
+console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
+console.log('SUPABASE_SERVICE_KEY:', process.env.SUPABASE_SERVICE_KEY ? 'SET' : 'NOT SET');
+
 const rawOrigins =
   process.env.CORS_ORIGINS || 'http://localhost:3000';
 const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
