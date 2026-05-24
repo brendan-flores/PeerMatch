@@ -49,28 +49,18 @@ router.get('/mine', authMiddleware, async (req, res) => {
     }
 
     const offers = await Offer.find({ clientId: req.user.userId })
+      .populate('freelancerId', 'photoDataUrl')
       .sort({ createdAt: -1 })
       .limit(200)
       .lean();
 
-    const freelancerIds = [
-      ...new Set(offers.map((offer) => String(offer.freelancerId)).filter(Boolean)),
-    ];
-    const photoByFreelancerId = new Map();
-    if (freelancerIds.length > 0) {
-      const freelancers = await User.find({ _id: { $in: freelancerIds } })
-        .select('photoDataUrl')
-        .lean();
-      freelancers.forEach((freelancer) => {
-        const photo = String(freelancer.photoDataUrl || '').trim();
-        if (photo) photoByFreelancerId.set(String(freelancer._id), photo);
-      });
-    }
-
     res.json({
-      offers: offers.map((offer) =>
-        mapOfferDto(offer, photoByFreelancerId.get(String(offer.freelancerId))),
-      ),
+      offers: offers.map((offer) => {
+        const freelancerPhoto = offer.freelancerId?.photoDataUrl 
+          ? String(offer.freelancerId.photoDataUrl).trim() 
+          : undefined;
+        return mapOfferDto(offer, freelancerPhoto);
+      }),
     });
   } catch (error) {
     console.error(error);
