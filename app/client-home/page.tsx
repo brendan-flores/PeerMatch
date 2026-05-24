@@ -315,7 +315,7 @@ function ClientHomePageContent() {
           `/client-home?panel=offers&highlightPost=${encodeURIComponent(item.relatedTaskId)}`,
         );
       }
-      if (item.type === "post_review" && item.relatedTaskId) {
+      if ((item.type === "post_review" || item.type === "post_approved") && item.relatedTaskId) {
         router.push(`/client-home?post=${encodeURIComponent(item.relatedTaskId)}`);
       }
     },

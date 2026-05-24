@@ -313,7 +313,7 @@ export default function ClientDetailsPage() {
                       </div>
 
                       <label className="block">
-                        <span className="text-xs font-medium text-slate-700">Project Details</span>
+                        <span className="text-xs font-medium text-slate-700">About Me</span>
 
                         <textarea
                           value={aboutMe}
