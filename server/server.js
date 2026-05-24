@@ -1,4 +1,5 @@
 const http = require('http');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -14,7 +15,13 @@ const notificationsRoutes = require('./routes/notifications');
 const offersRoutes = require('./routes/offers');
 const { attachSocketServer } = require('./socket/socketServer');
 
-dotenv.config();
+const envPath = path.resolve(__dirname, '..', '.env');
+const dotenvResult = dotenv.config({ path: envPath });
+if (dotenvResult.error) {
+  console.warn(`Failed to load .env from ${envPath}: ${dotenvResult.error.message}`);
+} else {
+  console.log(`Loaded environment variables from ${envPath}`);
+}
 
 const rawOrigins =
   process.env.CORS_ORIGINS || 'http://localhost:3000';

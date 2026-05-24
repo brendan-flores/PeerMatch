@@ -5,6 +5,12 @@ const { migrateUsersWithoutUsername } = require('../utils/migrateUsers');
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/peer-match';
 
+  if (!process.env.MONGODB_URI) {
+    console.warn(
+      'MONGODB_URI is not set. Falling back to local MongoDB at mongodb://127.0.0.1:27017/peer-match.',
+    );
+  }
+
   try {
     await mongoose.connect(uri, {
       maxPoolSize: 10,
@@ -24,6 +30,7 @@ const connectDB = async () => {
     });
   } catch (error) {
     console.error('MongoDB connection error:', error.message);
+    console.error('Attempted URI:', uri);
     setTimeout(connectDB, 5000);
   }
 };
