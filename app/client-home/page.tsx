@@ -29,7 +29,6 @@ import {
 import { apiGetJson, apiPostJson, ApiError } from "../lib/api";
 import {
   formatPhpBudget,
-  POST_APPROVED_MESSAGE,
   POST_REVIEW_MESSAGE,
   urgencyBadgeClass,
   URGENCY_OPTIONS,
