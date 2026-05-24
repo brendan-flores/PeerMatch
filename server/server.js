@@ -13,8 +13,10 @@ const tasksRoutes = require('./routes/tasks');
 const notificationsRoutes = require('./routes/notifications');
 const offersRoutes = require('./routes/offers');
 const { attachSocketServer } = require('./socket/socketServer');
+const path = require('path');
 
-dotenv.config();
+// Load .env from root directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const rawOrigins =
   process.env.CORS_ORIGINS || 'http://localhost:3000';
