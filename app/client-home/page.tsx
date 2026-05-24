@@ -679,22 +679,35 @@ function ClientHomePageContent() {
           <nav className={dashboardSidebarNavScrollClass} aria-label="Main">
             {navItems.map((item) => {
               const active = isNavActive(item.href);
+              const isDashboard = item.href === "/client-home";
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`${navItemClass} ${active ? navActiveClass : ""}`}
-                >
-                  {item.icon}
-                  <span className="min-w-0 flex-1">{item.label}</span>
-                  {item.href.includes("panel=messages") ? (
-                    <NavUnreadBadge count={unreadMessageCount} active={active} />
-                  ) : null}
-                  {item.href.includes("panel=offers") ? (
-                    <NavUnreadBadge count={pendingOffersCount} active={active} />
-                  ) : null}
-                </Link>
+                isDashboard ? (
+                  <button
+                    key={item.href}
+                    onClick={() => router.push("/client-home")}
+                    aria-current={active ? "page" : undefined}
+                    className={`${navItemClass} ${active ? navActiveClass : ""}`}
+                  >
+                    {item.icon}
+                    <span className="min-w-0 flex-1">{item.label}</span>
+                  </button>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`${navItemClass} ${active ? navActiveClass : ""}`}
+                  >
+                    {item.icon}
+                    <span className="min-w-0 flex-1">{item.label}</span>
+                    {item.href.includes("panel=messages") ? (
+                      <NavUnreadBadge count={unreadMessageCount} active={active} />
+                    ) : null}
+                    {item.href.includes("panel=offers") ? (
+                      <NavUnreadBadge count={pendingOffersCount} active={active} />
+                    ) : null}
+                  </Link>
+                )
               );
             })}
           </nav>
