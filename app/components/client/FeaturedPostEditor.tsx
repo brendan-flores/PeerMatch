@@ -10,7 +10,11 @@ import {
 import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
 import { UserAvatar } from "@/app/components/UserAvatar";
 import { formatPhpBudget } from "@/app/lib/communityPosts";
-import type { CommunityPost, CommunityPostPriority } from "@/app/lib/postsStorage";
+import {
+  isEligibleFeaturedPost,
+  type CommunityPost,
+  type CommunityPostPriority,
+} from "@/app/lib/postsStorage";
 
 type FeaturedPostEditorProps = {
   authorId: string;
@@ -59,7 +63,10 @@ export function FeaturedPostEditor({ authorId, authorAvatar }: FeaturedPostEdito
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const myAuthorPosts = useMemo(
-    () => (authorId ? myPosts.filter((post) => post.authorId === authorId) : myPosts),
+    () =>
+      authorId
+        ? myPosts.filter((post) => post.authorId === authorId && isEligibleFeaturedPost(post))
+        : myPosts.filter(isEligibleFeaturedPost),
     [myPosts, authorId],
   );
 

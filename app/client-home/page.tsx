@@ -41,6 +41,7 @@ import { ClientRightAside } from "../components/client/ClientRightAside";
 import { FeaturedPostEditor } from "../components/client/FeaturedPostEditor";
 import {
   isCommunityPostWithinLast24Hours,
+  isEligibleFeaturedPost,
   notifyCommunityPostsChanged,
   type CommunityPostPriority,
 } from "../lib/postsStorage";
@@ -181,7 +182,7 @@ function ClientHomePageContent() {
   const [savedProfileSnapshot, setSavedProfileSnapshot] = useState<ProfileFormSnapshot | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [isPanelVisible, setIsPanelVisible] = useState(true);
-  const { approvedPosts, approvedLoading, approvedError, refreshAll, updateAuthorAvatarsLocally } =
+  const { approvedPosts, myPosts, approvedLoading, approvedError, refreshAll, updateAuthorAvatarsLocally } =
     useCommunityPostsContext();
   const [postCategoryInput, setPostCategoryInput] = useState("");
   const [postPriorityInput, setPostPriorityInput] = useState<CommunityPostPriority>("Normal");
@@ -482,8 +483,8 @@ function ClientHomePageContent() {
   };
 
   const myFeaturedPosts = useMemo(
-    () => (meUserId ? posts.filter((post) => post.authorId === meUserId) : []),
-    [posts, meUserId],
+    () => (meUserId ? myPosts.filter(isEligibleFeaturedPost) : []),
+    [myPosts, meUserId],
   );
   const profileName = profileNameInput || displayName || "Client User";
   const hasUnsavedProfileChanges = useMemo(() => {

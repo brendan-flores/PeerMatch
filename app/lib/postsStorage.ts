@@ -27,6 +27,13 @@ export type CommunityPost = {
   reviewText?: string;
 };
 
+/** Client featured-post lists: approved tasks that are not yet completed. */
+export function isEligibleFeaturedPost(post: Pick<CommunityPost, "status" | "hireStatus">): boolean {
+  const status = post.status || "approved";
+  if (status !== "approved") return false;
+  return (post.hireStatus || "open") !== "completed";
+}
+
 export const COMMUNITY_POSTS_STORAGE_KEY = "peermatch_community_posts_v2";
 export const COMMUNITY_POSTS_CHANGED_EVENT = "peermatch:posts-changed";
 
