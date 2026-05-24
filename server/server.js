@@ -21,7 +21,15 @@ const envPath = path.resolve(__dirname, '../.env');
 console.log('Loading .env from:', envPath);
 console.log('.env file exists:', fs.existsSync(envPath));
 
-dotenv.config({ path: envPath });
+// Try loading with explicit path
+const result = dotenv.config({ path: envPath });
+console.log('dotenv.config() result:', result.error ? result.error.message : 'SUCCESS');
+
+// If explicit path fails, try default
+if (result.error) {
+  console.log('Trying default dotenv.config()...');
+  dotenv.config();
+}
 
 // Debug: Check if environment variables are loaded
 console.log('Environment variables loaded:');
