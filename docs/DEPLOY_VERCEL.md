@@ -6,7 +6,7 @@ The app is one Next.js repo: main routes (`/`, `/login`, `/client-home`, …) an
 
 | Service | Your URL | Role |
 |--------|-------------|------|
-| Main Next.js | `https://peermatch.vercel.app` | Students / clients / freelancers |
+| Main Next.js | `https://peermatch-app.vercel.app` | Students / clients / freelancers |
 | Admin Next.js | `https://peermatch-admin.vercel.app` | Admin dashboard |
 | API | `https://peermatch-api.onrender.com` | MongoDB, auth cookies, Socket.IO |
 
@@ -17,21 +17,21 @@ Both frontends call the same `NEXT_PUBLIC_API_BASE_URL` with `credentials: "incl
 ## Option A — One Vercel project, two domains (simplest)
 
 1. Import the repo in Vercel (Framework: Next.js).
-2. **Settings → Domains**: add `peermatch.vercel.app` and `peermatch-admin.vercel.app`.
+2. **Settings → Domains**: add `peermatch-app.vercel.app` and `peermatch-admin.vercel.app`.
 3. **Settings → Environment Variables** (Production):
 
    ```
    NEXT_PUBLIC_API_BASE_URL=https://peermatch-api.onrender.com
-   NEXT_PUBLIC_MAIN_SITE_URL=https://peermatch.vercel.app
+   NEXT_PUBLIC_MAIN_SITE_URL=https://peermatch-app.vercel.app
    NEXT_PUBLIC_ADMIN_SITE_URL=https://peermatch-admin.vercel.app
-   MAIN_SITE_HOSTS=peermatch.vercel.app
+   MAIN_SITE_HOSTS=peermatch-app.vercel.app
    ADMIN_SITE_HOSTS=peermatch-admin.vercel.app
    ```
 
 4. Deploy the API with:
 
    ```
-   CORS_ORIGINS=https://peermatch.vercel.app,https://peermatch-admin.vercel.app
+   CORS_ORIGINS=https://peermatch-app.vercel.app,https://peermatch-admin.vercel.app
    JWT_COOKIE_SAMESITE=none
    JWT_COOKIE_SECURE=true
    TRUST_PROXY=1
@@ -51,7 +51,7 @@ Useful if you want separate env/build settings.
 
 | Project | Domain | Extra env |
 |---------|--------|-----------|
-| `peermatch-web` | `peermatch.vercel.app` | `MAIN_SITE_HOSTS=peermatch.vercel.app` |
+| `peermatch-web` | `peermatch-app.vercel.app` | `MAIN_SITE_HOSTS=peermatch-app.vercel.app` |
 | `peermatch-admin` | `peermatch-admin.vercel.app` | `ADMIN_SITE_HOSTS=peermatch-admin.vercel.app` |
 
 Set the **same** `NEXT_PUBLIC_*` URLs on both projects so redirects and API calls stay correct.
