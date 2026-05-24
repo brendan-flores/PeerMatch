@@ -86,8 +86,6 @@ router.get('/mine', authMiddleware, async (req, res) => {
       .limit(100)
       .lean();
 
-    const clientById = await loadClientsForTasks(tasks);
-
     const freelancerIds = [
       ...new Set(
         tasks
@@ -100,12 +98,14 @@ router.get('/mine', authMiddleware, async (req, res) => {
       ),
     ];
 
-    const freelancers =
+    const [clientById, freelancers] = await Promise.all([
+      loadClientsForTasks(tasks),
       freelancerIds.length > 0
-        ? await User.find({ _id: { $in: freelancerIds } })
+        ? User.find({ _id: { $in: freelancerIds } })
             .select('name')
             .lean()
-        : [];
+        : [],
+    ]);
 
     const freelancerById = new Map(
       freelancers.map((f) => [String(f._id), f]),

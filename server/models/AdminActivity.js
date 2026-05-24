@@ -23,4 +23,6 @@ const adminActivitySchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+adminActivitySchema.index({ kind: 1, occurredAt: -1 });
+
 module.exports = mongoose.model('AdminActivity', adminActivitySchema);

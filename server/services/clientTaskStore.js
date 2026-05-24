@@ -83,11 +83,22 @@ async function getClientTaskByIdForAdmin(taskId) {
 }
 
 async function listClientTasksForAdmin() {
-  const tasks = await ClientTask.find().sort({ createdAt: -1 }).lean();
-  const clientById = await loadClientsForTasks(tasks);
-  const pendingTotal = await ClientTask.countDocuments({
+  const pendingFilter = {
     $or: [{ status: 'pending' }, { status: { $exists: false } }, { status: null }],
-  });
+  };
+
+  const [tasks, pendingTotal] = await Promise.all([
+    ClientTask.find()
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .select(
+        'title description status hireStatus clientId budget category flagged urgency createdAt updatedAt assignedFreelancerId',
+      )
+      .lean(),
+    ClientTask.countDocuments(pendingFilter),
+  ]);
+
+  const clientById = await loadClientsForTasks(tasks);
 
   return {
     tasks: tasks.map((task) => mapTaskToAdminRow(task, clientById)),

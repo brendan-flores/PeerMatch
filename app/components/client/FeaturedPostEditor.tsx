@@ -4,7 +4,6 @@ import { Check, ChevronDown, FileText } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { apiDeleteJson, apiPutJson, ApiError } from "@/app/lib/api";
 import {
-  notifyAndRefreshCommunityPosts,
   useCommunityPostsContext,
 } from "@/app/lib/CommunityPostsContext";
 import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
@@ -170,7 +169,7 @@ export function FeaturedPostEditor({ authorId, authorAvatar }: FeaturedPostEdito
       updatePostLocally(selectedPost.id, patch);
       resetFormFromPost(updatedPost);
       setShowSaved(true);
-      notifyAndRefreshCommunityPosts(refreshAll);
+      void refreshAll();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Could not save changes. Try again.";
       setSaveStatus(message);
@@ -187,7 +186,7 @@ export function FeaturedPostEditor({ authorId, authorAvatar }: FeaturedPostEdito
       await apiDeleteJson<{ message: string }>(`/api/tasks/${selectedPost.id}`);
       removePostLocally(selectedPost.id);
       setShowDeleteConfirm(false);
-      notifyAndRefreshCommunityPosts(refreshAll);
+      void refreshAll();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Could not delete post. Try again.";
       setSaveStatus(message);

@@ -29,7 +29,7 @@ type CommunityPostsContextValue = {
   myPostsLoading: boolean;
   approvedError: string | null;
   refreshApproved: () => Promise<void>;
-  refreshMyPosts: () => Promise<void>;
+  refreshMyPosts: () => Promise<CommunityPost[]>;
   refreshAll: () => Promise<void>;
   updatePostLocally: (postId: string, patch: Partial<CommunityPost>) => void;
   updateAuthorAvatarsLocally: (authorId: string, photoDataUrl: string) => void;
@@ -62,13 +62,15 @@ export function CommunityPostsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const refreshMyPosts = useCallback(async () => {
+  const refreshMyPosts = useCallback(async (): Promise<CommunityPost[]> => {
     setMyPostsLoading(true);
     try {
       const posts = await fetchMyCommunityPosts();
       setMyPosts(posts);
+      return posts;
     } catch {
       setMyPosts([]);
+      return [];
     } finally {
       setMyPostsLoading(false);
     }
@@ -172,7 +174,7 @@ export function useCommunityPostsContext(): CommunityPostsContextValue {
   return ctx;
 }
 
+/** Refresh community posts once (avoids duplicate refresh from event + direct call). */
 export function notifyAndRefreshCommunityPosts(refreshAll: () => Promise<void>): void {
-  notifyCommunityPostsChanged();
   void refreshAll();
 }

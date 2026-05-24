@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { apiGetJson, apiPostJson, ApiError } from "../lib/api";
 import {
-  fetchMyCommunityPosts,
   formatPhpBudget,
   POST_APPROVED_MESSAGE,
   POST_REVIEW_MESSAGE,
@@ -182,8 +181,15 @@ function ClientHomePageContent() {
   const [savedProfileSnapshot, setSavedProfileSnapshot] = useState<ProfileFormSnapshot | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [isPanelVisible, setIsPanelVisible] = useState(true);
-  const { approvedPosts, myPosts, approvedLoading, approvedError, refreshAll, updateAuthorAvatarsLocally } =
-    useCommunityPostsContext();
+  const {
+    approvedPosts,
+    myPosts,
+    approvedLoading,
+    approvedError,
+    refreshAll,
+    refreshMyPosts,
+    updateAuthorAvatarsLocally,
+  } = useCommunityPostsContext();
   const [postCategoryInput, setPostCategoryInput] = useState("");
   const [postPriorityInput, setPostPriorityInput] = useState<CommunityPostPriority>("Normal");
   const [postSubmitting, setPostSubmitting] = useState(false);
@@ -327,7 +333,6 @@ function ClientHomePageContent() {
     (message?: string) => {
       const approvedMessage = String(message || "").trim() || POST_APPROVED_MESSAGE;
       setPostToast({ variant: "approved", message: approvedMessage });
-      notifyCommunityPostsChanged();
       void refreshAll();
       void refreshNotifications();
     },
@@ -348,24 +353,12 @@ function ClientHomePageContent() {
 
   useEffect(() => {
     if (!meUserId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const mine = await fetchMyCommunityPosts();
-        if (cancelled) return;
-        for (const post of mine) {
-          if (post.status === "approved") {
-            knownApprovedPostIdsRef.current.add(post.id);
-          }
-        }
-      } catch {
-        // ignore — polling/socket will still work after a new post
+    for (const post of myPosts) {
+      if (post.status === "approved") {
+        knownApprovedPostIdsRef.current.add(post.id);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [meUserId]);
+    }
+  }, [meUserId, myPosts]);
 
   const awaitingPostApproval =
     postToast?.variant === "pending" ||
@@ -377,7 +370,7 @@ function ClientHomePageContent() {
     let cancelled = false;
     const pollForApproval = async () => {
       try {
-        const mine = await fetchMyCommunityPosts();
+        const mine = await refreshMyPosts();
         if (cancelled) return;
         const newlyApproved = mine.filter(
           (post) => post.status === "approved" && !knownApprovedPostIdsRef.current.has(post.id),
@@ -393,12 +386,12 @@ function ClientHomePageContent() {
     };
 
     void pollForApproval();
-    const intervalId = window.setInterval(() => void pollForApproval(), 15000);
+    const intervalId = window.setInterval(() => void pollForApproval(), 30000);
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [meUserId, awaitingPostApproval, handlePostApproved]);
+  }, [meUserId, awaitingPostApproval, handlePostApproved, refreshMyPosts]);
 
   useEffect(() => {
     setIsPanelVisible(false);
@@ -407,6 +400,11 @@ function ClientHomePageContent() {
     }, 90);
     return () => window.clearTimeout(timeoutId);
   }, [activePanel]);
+
+  const hasUnreadOfferNotification = useMemo(
+    () => notifications.some((item) => item.type === "new_offer" && !item.read),
+    [notifications],
+  );
 
   useEffect(() => {
     if (!meUserId) return;
@@ -423,7 +421,7 @@ function ClientHomePageContent() {
     return () => {
       cancelled = true;
     };
-  }, [meUserId, notifications, activePanel]);
+  }, [meUserId, hasUnreadOfferNotification]);
 
   useEffect(() => {
     setPeerUserId(peerFromQuery);
@@ -623,7 +621,6 @@ function ClientHomePageContent() {
         setPostDescriptionInput("");
         setPostBudgetInput("");
         setPostToast({ variant: "pending", message: POST_REVIEW_MESSAGE });
-        notifyCommunityPostsChanged();
         void refreshNotifications();
         await refreshAll();
       } catch (err) {

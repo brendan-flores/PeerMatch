@@ -10,10 +10,9 @@ import {
 import type { NotificationItem } from "@/app/lib/notifications";
 import { useFreelancerSelectedPost } from "@/app/freelancer-dashboard/FreelancerDashboardShell";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { fetchApprovedCommunityPosts } from "@/app/lib/communityPosts";
+import { useCallback, useMemo } from "react";
+import { useCommunityPostsContext } from "@/app/lib/CommunityPostsContext";
 import {
-  clearCommunityPostsStorage,
   isCommunityPostWithinLast24Hours,
   type CommunityPost,
 } from "@/app/lib/postsStorage";
@@ -51,7 +50,7 @@ export function FreelancerRightAside({
   const router = useRouter();
   const { setSelectedPost } = useFreelancerSelectedPost();
   const isFixedLayout = pathname.startsWith("/freelancer-dashboard");
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const { approvedPosts } = useCommunityPostsContext();
 
   const handleRecentPostClick = useCallback(
     (post: CommunityPost) => {
@@ -68,27 +67,9 @@ export function FreelancerRightAside({
     [pathname, router, setSelectedPost],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const feed = await fetchApprovedCommunityPosts();
-        if (!cancelled) {
-          setPosts(feed);
-          clearCommunityPostsStorage();
-        }
-      } catch {
-        if (!cancelled) setPosts([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const recentPosts = useMemo(
-    () => posts.filter((post) => isCommunityPostWithinLast24Hours(post.createdAt)),
-    [posts],
+    () => approvedPosts.filter((post) => isCommunityPostWithinLast24Hours(post.createdAt)),
+    [approvedPosts],
   );
 
   return (

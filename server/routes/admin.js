@@ -119,13 +119,15 @@ router.get('/activities', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find()
-      .select('name email role accountType verified suspended createdAt')
-      .sort({ createdAt: -1 })
-      .lean();
-
-    const taskCounts = await ClientTask.aggregate([
-      { $group: { _id: '$clientId', count: { $sum: 1 } } },
+    const [users, taskCounts] = await Promise.all([
+      User.find()
+        .select('name email role accountType verified suspended createdAt')
+        .sort({ createdAt: -1 })
+        .limit(500)
+        .lean(),
+      ClientTask.aggregate([
+        { $group: { _id: '$clientId', count: { $sum: 1 } } },
+      ]),
     ]);
     const countByClient = new Map(taskCounts.map((x) => [String(x._id), x.count]));
 

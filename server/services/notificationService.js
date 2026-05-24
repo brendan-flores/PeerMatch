@@ -92,7 +92,10 @@ async function createNotification(params) {
     read: false,
   });
 
-  const actorPhotoDataUrl = await photoUrlForActorId(params.actorId);
+  const actorPhotoDataUrl =
+    params.actorPhotoDataUrl !== undefined
+      ? params.actorPhotoDataUrl
+      : await photoUrlForActorId(params.actorId);
   const dto = mapNotificationToDto(doc, actorPhotoDataUrl);
   emitToUser(recipientId, 'notification', { notification: dto });
   return doc;
@@ -112,21 +115,29 @@ async function notifyFreelancersNewTask({ clientId, clientName, taskId }) {
     .select('_id')
     .lean();
 
+  if (!freelancers.length) return;
+
   const actionText = 'posted a new task';
   const name = String(clientName || '').trim() || 'A client';
+  const actorPhotoDataUrl = await photoUrlForActorId(clientId);
 
-  await Promise.all(
-    freelancers.map((freelancer) =>
-      createNotification({
-        recipientId: String(freelancer._id),
-        actorId: clientId,
-        actorName: name,
-        type: 'new_task',
-        actionText,
-        relatedTaskId: taskId,
-      }),
-    ),
+  const docs = await Notification.insertMany(
+    freelancers.map((freelancer) => ({
+      recipientId: freelancer._id,
+      actorId: clientId,
+      actorName: name,
+      type: 'new_task',
+      actionText,
+      relatedTaskId: taskId,
+      read: false,
+    })),
+    { ordered: false },
   );
+
+  for (const doc of docs) {
+    const dto = mapNotificationToDto(doc, actorPhotoDataUrl);
+    emitToUser(String(doc.recipientId), 'notification', { notification: dto });
+  }
 }
 
 /**

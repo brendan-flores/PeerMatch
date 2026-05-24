@@ -35,5 +35,6 @@ const offerSchema = new mongoose.Schema(
 );
 
 offerSchema.index({ postId: 1, freelancerId: 1 });
+offerSchema.index({ clientId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Offer', offerSchema);

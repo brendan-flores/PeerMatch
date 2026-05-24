@@ -5,7 +5,7 @@ import { dashboardFeedPageHeadingClass } from "@/app/components/dashboard/dashbo
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/app/lib/api";
 import { formatPhpBudget } from "@/app/lib/communityPosts";
-import { notifyAndRefreshCommunityPosts, useCommunityPostsContext } from "@/app/lib/CommunityPostsContext";
+import { useCommunityPostsContext } from "@/app/lib/CommunityPostsContext";
 import { freelancerProfilePath } from "@/app/lib/freelancerProfileApi";
 import {
   acceptClientOffer,
@@ -155,10 +155,6 @@ export function ClientOffersPanel({
 
   useEffect(() => {
     void loadOffers();
-    const interval = window.setInterval(() => {
-      void loadOffers({ silent: true });
-    }, 15000);
-    return () => window.clearInterval(interval);
   }, [loadOffers]);
 
   const approvedMyPosts = useMemo(
@@ -250,9 +246,7 @@ export function ClientOffersPanel({
     setStatusMessage("");
     try {
       await acceptClientOffer(offerId);
-      await loadOffers({ silent: true });
-      await refreshAll();
-      notifyAndRefreshCommunityPosts(refreshAll);
+      await Promise.all([loadOffers({ silent: true }), refreshAll()]);
       setStatusMessage("Offer accepted. The freelancer has been notified.");
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Could not accept the offer.";
@@ -282,9 +276,7 @@ export function ClientOffersPanel({
     setStatusMessage("");
     try {
       await completeClientTask(postId);
-      await loadOffers({ silent: true });
-      await refreshAll();
-      notifyAndRefreshCommunityPosts(refreshAll);
+      await Promise.all([loadOffers({ silent: true }), refreshAll()]);
       setStatusMessage("Task marked as completed. You can leave a review below.");
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Could not mark the task as completed.";

@@ -41,4 +41,8 @@ const clientTaskSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+clientTaskSchema.index({ clientId: 1, createdAt: -1 });
+clientTaskSchema.index({ status: 1, hireStatus: 1, createdAt: -1 });
+clientTaskSchema.index({ status: 1 });
+
 module.exports = mongoose.model('ClientTask', clientTaskSchema, 'clientTasks');

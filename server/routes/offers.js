@@ -48,11 +48,6 @@ router.get('/mine', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Only client accounts can view incoming offers.' });
     }
 
-    await Offer.updateMany(
-      { clientId: req.user.userId, $or: [{ status: { $exists: false } }, { status: '' }, { status: null }] },
-      { $set: { status: 'pending' } },
-    );
-
     const offers = await Offer.find({ clientId: req.user.userId })
       .sort({ createdAt: -1 })
       .limit(200)
