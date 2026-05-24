@@ -46,7 +46,6 @@ import {
 } from "../lib/postsStorage";
 import { connectSocket, disconnectSocket, subscribePostApproved } from "../lib/socket";
 import { ChatLayout } from "../components/chat/ChatLayout";
-import { ClientPostToast, type ClientPostToastState } from "../components/ClientPostToast";
 import { DashboardCenterColumn } from "../components/dashboard/DashboardCenterColumn";
 import {
   dashboardPanelScrollClass,
@@ -198,7 +197,6 @@ function ClientHomePageContent() {
   const [postDescriptionInput, setPostDescriptionInput] = useState("");
   const [postBudgetInput, setPostBudgetInput] = useState("");
   const [postStatusMessage, setPostStatusMessage] = useState("");
-  const [postToast, setPostToast] = useState<ClientPostToastState>(null);
   const knownApprovedPostIdsRef = useRef<Set<string>>(new Set());
 
   const activeConnections: number | null | undefined = undefined;
@@ -311,8 +309,6 @@ function ClientHomePageContent() {
     useNotifications(meUserId || null);
   const { count: unreadMessageCount } = useUnreadMessageCount(meUserId || null);
 
-  const dismissPostToast = useCallback(() => setPostToast(null), []);
-
   const handleNotificationClick = useCallback(
     (item: NotificationItem) => {
       if (item.type === "new_offer" && item.relatedTaskId) {
@@ -331,8 +327,6 @@ function ClientHomePageContent() {
 
   const handlePostApproved = useCallback(
     (message?: string) => {
-      const approvedMessage = String(message || "").trim() || POST_APPROVED_MESSAGE;
-      setPostToast({ variant: "approved", message: approvedMessage });
       void refreshAll();
       void refreshNotifications();
     },
@@ -361,7 +355,6 @@ function ClientHomePageContent() {
   }, [meUserId, myPosts]);
 
   const awaitingPostApproval =
-    postToast?.variant === "pending" ||
     notifications.some((item) => item.type === "post_review" && !item.read);
 
   useEffect(() => {
@@ -620,7 +613,6 @@ function ClientHomePageContent() {
         setPostTitleInput("");
         setPostDescriptionInput("");
         setPostBudgetInput("");
-        setPostToast({ variant: "pending", message: POST_REVIEW_MESSAGE });
         void refreshNotifications();
         await refreshAll();
       } catch (err) {
@@ -940,7 +932,6 @@ function ClientHomePageContent() {
                             setPostDescriptionInput("");
                             setPostBudgetInput("");
                             setPostStatusMessage("");
-                            setPostToast(null);
                           }}
                           className="inline-flex h-11 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-sm text-zinc-700 transition hover:bg-zinc-50"
                         >
@@ -1190,7 +1181,6 @@ function ClientHomePageContent() {
           }
         />
       </div>
-      <ClientPostToast toast={postToast} onDismiss={dismissPostToast} />
     </div>
   );
 }
