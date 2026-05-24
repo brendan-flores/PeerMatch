@@ -31,9 +31,8 @@ function mapTaskToAdminRow(task, clientById) {
     urgency: task.urgency || 'normal',
     createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : null,
     updatedAt: task.updatedAt ? new Date(task.updatedAt).toISOString() : null,
-    flagged: !!task.flagged,
     clientId,
-    clientName: client?.name || 'Unknown',
+    clientName: client?.name || task.clientId?.name || 'Unknown',
     clientEmail: client?.email || '',
     clientAccountType: client?.accountType || null,
     clientCourse: client?.course || '',
@@ -89,10 +88,11 @@ async function listClientTasksForAdmin() {
 
   const [tasks, pendingTotal] = await Promise.all([
     ClientTask.find()
+      .populate('clientId', 'name')
       .sort({ createdAt: -1 })
       .limit(200)
       .select(
-        'title description status hireStatus clientId budget category flagged urgency createdAt updatedAt assignedFreelancerId',
+        'title description status hireStatus clientId budget category urgency createdAt updatedAt assignedFreelancerId',
       )
       .lean(),
     ClientTask.countDocuments(pendingFilter),

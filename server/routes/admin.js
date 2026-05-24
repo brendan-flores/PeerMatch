@@ -231,7 +231,6 @@ router.patch('/tasks/:id', async (req, res) => {
         title: task.title,
         createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : null,
         updatedAt: task.updatedAt ? new Date(task.updatedAt).toISOString() : null,
-        flagged: !!task.flagged,
         clientName: task.clientId?.name || 'Unknown',
         budget: task.budget,
         category: task.category,
