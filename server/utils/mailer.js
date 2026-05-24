@@ -17,6 +17,7 @@ async function ipv4Lookup(hostname) {
     return addresses[0];
   } catch (error) {
     // Fallback to original hostname if IPv4 lookup fails
+    console.log('IPv4 lookup failed, falling back to original hostname:', error.message);
     return hostname;
   }
 }
@@ -40,6 +41,7 @@ async function createTransporter() {
 
   // Resolve hostname to IPv4 address to avoid IPv6 connection issues
   const resolvedHost = await ipv4Lookup(host);
+  console.log('Email host resolved:', resolvedHost);
 
   return nodemailer.createTransport({
     host: resolvedHost,
@@ -61,6 +63,16 @@ async function createTransporter() {
     connectionTimeout: 10000,
     greetingTimeout: 5000,
     socketTimeout: 10000,
+    // Try to force IPv4 using lookup option
+    lookup: function (hostname, options, callback) {
+      dns.resolve4(hostname).then((addresses) => {
+        callback(null, addresses[0], 4);
+      }).catch((err) => {
+        console.log('IPv4 lookup failed in transport:', err.message);
+        // Fallback to default lookup
+        dns.lookup(hostname, options, callback);
+      });
+    },
   });
 }
 
