@@ -47,6 +47,8 @@ function mapTaskToFeedPost(task, client) {
     reviewSubmittedAt: task.reviewSubmittedAt
       ? new Date(task.reviewSubmittedAt).toISOString()
       : undefined,
+    reviewRating: typeof task.reviewRating === 'number' ? task.reviewRating : null,
+    reviewText: task.reviewText ? String(task.reviewText) : undefined,
     createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : new Date().toISOString(),
   };
 }

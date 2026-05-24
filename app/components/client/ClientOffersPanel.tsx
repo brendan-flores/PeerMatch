@@ -44,10 +44,49 @@ function hireStatusClass(status: TaskHireStatus | undefined) {
   return "bg-zinc-100 text-zinc-700 border-zinc-200";
 }
 
+function formatOfferRate(rate: string | undefined): string | null {
+  const trimmed = String(rate || "").trim();
+  if (!trimmed) return null;
+  if (/^₱/.test(trimmed)) return trimmed;
+  const numeric = Number(trimmed.replace(/[^\d.]/g, ""));
+  if (Number.isFinite(numeric) && numeric > 0) return formatPhpBudget(numeric);
+  return trimmed;
+}
+
+function ReviewStars({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((value) => (
+        <Star
+          key={value}
+          className={`h-3.5 w-3.5 ${
+            value <= rating ? "fill-amber-400 text-amber-400" : "text-zinc-300"
+          }`}
+          strokeWidth={1.5}
+        />
+      ))}
+    </div>
+  );
+}
+
 function offerStatusClass(status: ClientOffer["status"]) {
   if (status === "accepted") return "bg-emerald-50 text-emerald-800 border-emerald-200";
   if (status === "rejected") return "bg-zinc-100 text-zinc-500 border-zinc-200";
   return "bg-white text-zinc-800 border-zinc-200";
+}
+
+function postHasAssignedFreelancer(post: CommunityPost, offers: ClientOffer[]): boolean {
+  const hireStatus = post.hireStatus || "open";
+  return (
+    hireStatus === "assigned" ||
+    hireStatus === "completed" ||
+    offers.some((offer) => offer.status === "accepted")
+  );
+}
+
+function visibleOffersForPost(post: CommunityPost, offers: ClientOffer[]): ClientOffer[] {
+  if (!postHasAssignedFreelancer(post, offers)) return offers;
+  return offers.filter((offer) => offer.status !== "rejected");
 }
 
 type PostOfferGroup = {
@@ -311,6 +350,8 @@ export function ClientOffersPanel({
         {groups.map(({ post, offers: postOffers }) => {
           const hireStatus = post.hireStatus || "open";
           const acceptedOffer = postOffers.find((offer) => offer.status === "accepted");
+          const visibleOffers = visibleOffersForPost(post, postOffers);
+          const hasAssignedFreelancer = postHasAssignedFreelancer(post, postOffers);
           const canAccept = hireStatus === "open";
           const reviewDraft = reviewDrafts[post.id] || { rating: 5, text: "" };
 
@@ -411,7 +452,23 @@ export function ClientOffersPanel({
                 </div>
               ) : null}
 
-              {hireStatus === "completed" && post.reviewSubmittedAt ? (
+              {hireStatus === "completed" && post.reviewSubmittedAt && post.reviewRating ? (
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                    <Check className="h-4 w-4 shrink-0" strokeWidth={2} />
+                    Review submitted — thank you!
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <ReviewStars rating={post.reviewRating} />
+                    <span className="text-xs font-medium text-emerald-800">{post.reviewRating} / 5</span>
+                  </div>
+                  {post.reviewText ? (
+                    <p className="mt-2 text-sm leading-snug text-emerald-900/90">{post.reviewText}</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {hireStatus === "completed" && post.reviewSubmittedAt && !post.reviewRating ? (
                 <p className="mt-4 flex items-center gap-2 text-sm text-emerald-800">
                   <Check className="h-4 w-4 shrink-0" strokeWidth={2} />
                   Review submitted — thank you!
@@ -419,15 +476,17 @@ export function ClientOffersPanel({
               ) : null}
 
               <div className="mt-5 space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  {postOffers.length === 0
-                    ? "Offers"
-                    : `${postOffers.length} offer${postOffers.length === 1 ? "" : "s"}`}
-                </h3>
-                {postOffers.length === 0 ? (
+                {!hasAssignedFreelancer ? (
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    {visibleOffers.length === 0
+                      ? "Offers"
+                      : `${visibleOffers.length} offer${visibleOffers.length === 1 ? "" : "s"}`}
+                  </h3>
+                ) : null}
+                {visibleOffers.length === 0 ? (
                   <p className="text-xs text-zinc-500">No freelancer offers for this post yet.</p>
                 ) : (
-                  postOffers.map((offer) => (
+                  visibleOffers.map((offer) => (
                     <div
                       key={offer.id}
                       className={`rounded-xl border px-4 py-3 ${offerStatusClass(offer.status)}`}
@@ -451,10 +510,20 @@ export function ClientOffersPanel({
                             </a>
                             <span className="text-xs text-zinc-500">{formatTimeAgo(offer.createdAt)}</span>
                           </div>
-                          {offer.rate ? (
-                            <p className="mt-0.5 text-xs font-medium text-[#FF6B35]">Rate: {offer.rate}</p>
+                          {formatOfferRate(offer.rate) ? (
+                            <p className="mt-0.5 text-xs font-medium text-[#FF6B35]">
+                              Rate: {formatOfferRate(offer.rate)}
+                            </p>
                           ) : null}
                           <p className="mt-2 text-sm leading-snug text-zinc-700">{offer.message}</p>
+                          {acceptedOffer?.id === offer.id && post.reviewRating ? (
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <ReviewStars rating={post.reviewRating} />
+                              <span className="text-xs font-medium text-amber-700">
+                                Your rating: {post.reviewRating}/5
+                              </span>
+                            </div>
+                          ) : null}
                           <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
                             {offer.status === "accepted"
                               ? "Accepted"

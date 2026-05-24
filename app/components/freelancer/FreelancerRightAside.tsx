@@ -36,6 +36,7 @@ type FreelancerRightAsideProps = {
   notifications: NotificationItem[];
   onMarkAllRead: () => void | Promise<void>;
   onMarkOneRead: (id: string) => void | Promise<void>;
+  onDeleteNotification?: (id: string) => void | Promise<void>;
   onNotificationClick?: (item: NotificationItem) => void;
 };
 
@@ -43,6 +44,7 @@ export function FreelancerRightAside({
   notifications,
   onMarkAllRead,
   onMarkOneRead,
+  onDeleteNotification,
   onNotificationClick,
 }: FreelancerRightAsideProps) {
   const pathname = usePathname();
@@ -102,6 +104,7 @@ export function FreelancerRightAside({
           items={notifications}
           onMarkAllRead={onMarkAllRead}
           onMarkOneRead={onMarkOneRead}
+          onDeleteNotification={onDeleteNotification}
           onNotificationClick={onNotificationClick}
         />
       </div>

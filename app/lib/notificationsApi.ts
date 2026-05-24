@@ -1,4 +1,4 @@
-import { apiGetJson, apiPatchJson } from "./api";
+import { apiDeleteJson, apiGetJson, apiPatchJson } from "./api";
 import type { NotificationItem } from "./notifications";
 
 export type ApiNotification = {
@@ -54,4 +54,8 @@ export async function markNotificationRead(id: string): Promise<NotificationItem
     {},
   );
   return mapApiNotification(res.notification);
+}
+
+export async function deleteNotification(id: string): Promise<void> {
+  await apiDeleteJson<{ ok: boolean }>(`/api/notifications/${encodeURIComponent(id)}`);
 }

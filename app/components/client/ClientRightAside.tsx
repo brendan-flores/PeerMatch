@@ -21,6 +21,7 @@ type ClientRightAsideProps = {
   notifications: NotificationItem[];
   onMarkAllRead: () => void | Promise<void>;
   onMarkOneRead: (id: string) => void | Promise<void>;
+  onDeleteNotification?: (id: string) => void | Promise<void>;
   onNotificationClick?: (item: NotificationItem) => void;
   onRecentPostClick: (postId: string) => void;
 };
@@ -30,6 +31,7 @@ export function ClientRightAside({
   notifications,
   onMarkAllRead,
   onMarkOneRead,
+  onDeleteNotification,
   onNotificationClick,
   onRecentPostClick,
 }: ClientRightAsideProps) {
@@ -44,6 +46,7 @@ export function ClientRightAside({
           items={notifications}
           onMarkAllRead={onMarkAllRead}
           onMarkOneRead={onMarkOneRead}
+          onDeleteNotification={onDeleteNotification}
           onNotificationClick={onNotificationClick}
         />
       </div>

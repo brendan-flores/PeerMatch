@@ -5,6 +5,7 @@ import type { NotificationItem } from "@/app/lib/notifications";
 
 export type { NotificationItem };
 import {
+  deleteNotification,
   fetchNotifications,
   mapApiNotification,
   markAllNotificationsRead,
@@ -66,5 +67,17 @@ export function useNotifications(userId: string | null) {
     }
   }, []);
 
-  return { items, loading, refresh, markAllRead, markOneRead };
+  const deleteOne = useCallback(
+    async (id: string) => {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      try {
+        await deleteNotification(id);
+      } catch {
+        void refresh();
+      }
+    },
+    [refresh],
+  );
+
+  return { items, loading, refresh, markAllRead, markOneRead, deleteOne };
 }

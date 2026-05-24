@@ -154,6 +154,7 @@ export function FreelancerDashboardShell({
     items: notifications,
     markAllRead,
     markOneRead,
+    deleteOne,
   } = useNotifications(user?.id ?? null);
 
   const { count: unreadMessageCount } =
@@ -434,6 +435,7 @@ export function FreelancerDashboardShell({
             onMarkOneRead={
               markOneRead
             }
+            onDeleteNotification={deleteOne}
             onNotificationClick={
               handleNotificationClick
             }
@@ -458,6 +460,7 @@ export function FreelancerDashboardShell({
               onMarkOneRead={
                 markOneRead
               }
+              onDeleteNotification={deleteOne}
               onNotificationClick={
                 handleNotificationClick
               }

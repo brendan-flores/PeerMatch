@@ -50,6 +50,8 @@ function mapFeedPosts(posts: ApiFeedPost[] | undefined): CommunityPost[] {
     assignedFreelancerName: post.assignedFreelancerName,
     completedAt: post.completedAt,
     reviewSubmittedAt: post.reviewSubmittedAt,
+    reviewRating: typeof post.reviewRating === "number" ? post.reviewRating : null,
+    reviewText: post.reviewText,
   }));
 }
 

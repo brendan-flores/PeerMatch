@@ -300,7 +300,7 @@ function ClientHomePageContent() {
     [posts],
   );
 
-  const { items: notifications, markAllRead, markOneRead, refresh: refreshNotifications } =
+  const { items: notifications, markAllRead, markOneRead, deleteOne, refresh: refreshNotifications } =
     useNotifications(meUserId || null);
   const { count: unreadMessageCount } = useUnreadMessageCount(meUserId || null);
 
@@ -716,6 +716,7 @@ function ClientHomePageContent() {
             items={notifications}
             onMarkAllRead={markAllRead}
             onMarkOneRead={markOneRead}
+            onDeleteNotification={deleteOne}
             onNotificationClick={handleNotificationClick}
             showBell={false}
             contentClassName={panelTransitionClass}
@@ -752,6 +753,7 @@ function ClientHomePageContent() {
           items={notifications}
           onMarkAllRead={markAllRead}
           onMarkOneRead={markOneRead}
+          onDeleteNotification={deleteOne}
           onNotificationClick={handleNotificationClick}
           showBell={false}
           contentClassName={panelTransitionClass}
@@ -1166,6 +1168,7 @@ function ClientHomePageContent() {
           notifications={notifications}
           onMarkAllRead={markAllRead}
           onMarkOneRead={markOneRead}
+          onDeleteNotification={deleteOne}
           onNotificationClick={handleNotificationClick}
           onRecentPostClick={(postId) =>
             router.push(`/client-home?post=${encodeURIComponent(postId)}`)

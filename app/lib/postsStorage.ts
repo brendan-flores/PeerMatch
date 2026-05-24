@@ -23,6 +23,8 @@ export type CommunityPost = {
   assignedFreelancerName?: string;
   completedAt?: string;
   reviewSubmittedAt?: string;
+  reviewRating?: number | null;
+  reviewText?: string;
 };
 
 export const COMMUNITY_POSTS_STORAGE_KEY = "peermatch_community_posts_v2";

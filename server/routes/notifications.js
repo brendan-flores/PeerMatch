@@ -51,6 +51,32 @@ router.patch('/read-all', authMiddleware, async (req, res) => {
   }
 });
 
+/** Delete a single notification */
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid notification id.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(req.user.userId)) {
+      return res.status(400).json({ message: 'Invalid user id.' });
+    }
+
+    const doc = await Notification.findOneAndDelete({
+      _id: req.params.id,
+      recipientId: req.user.userId,
+    }).lean();
+
+    if (!doc) {
+      return res.status(404).json({ message: 'Notification not found.' });
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Could not delete notification.' });
+  }
+});
+
 /** Mark a single notification as read */
 router.patch('/:id/read', authMiddleware, async (req, res) => {
   try {

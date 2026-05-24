@@ -39,7 +39,7 @@ export const dashboardRightAsideHeaderClass =
   "relative z-30 flex shrink-0 items-start justify-between gap-3";
 
 export const dashboardRightAsideBellClass =
-  "relative shrink-0 [&_button]:rounded-full [&_button]:shadow-md [&_button]:ring-2 [&_button]:ring-white/90";
+  "relative shrink-0 [&_[data-bell-trigger]]:rounded-full [&_[data-bell-trigger]]:shadow-md [&_[data-bell-trigger]]:ring-2 [&_[data-bell-trigger]]:ring-white/90";
 
 /** Scroll panels inside the center column (bell clearance is on titles via dashboardCenterTitleOffsetClass) */
 export const dashboardPanelScrollInsetClass = "min-w-0";

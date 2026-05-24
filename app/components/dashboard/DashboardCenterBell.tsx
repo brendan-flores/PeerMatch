@@ -12,6 +12,7 @@ type DashboardCenterBellProps = {
   items: NotificationItem[];
   onMarkAllRead: () => void | Promise<void>;
   onMarkOneRead: (id: string) => void | Promise<void>;
+  onDeleteNotification?: (id: string) => void | Promise<void>;
   onNotificationClick?: (item: NotificationItem) => void;
   placement?: "center" | "rightAside";
 };
@@ -21,6 +22,7 @@ export function DashboardCenterBell({
   items,
   onMarkAllRead,
   onMarkOneRead,
+  onDeleteNotification,
   onNotificationClick,
   placement = "center",
 }: DashboardCenterBellProps) {
@@ -31,6 +33,7 @@ export function DashboardCenterBell({
           items={items}
           onMarkAllRead={onMarkAllRead}
           onMarkOneRead={onMarkOneRead}
+          onDeleteNotification={onDeleteNotification}
           onNotificationClick={onNotificationClick}
           menuAlign="right"
           menuElevated
@@ -43,12 +46,13 @@ export function DashboardCenterBell({
   return (
     <div className={dashboardCenterBellAnchorClass}>
       <div
-        className={`${dashboardCenterBellInnerClass} [&_button]:shadow-md [&_button]:ring-2 [&_button]:ring-white/90`}
+        className={`${dashboardCenterBellInnerClass} [&_[data-bell-trigger]]:shadow-md [&_[data-bell-trigger]]:ring-2 [&_[data-bell-trigger]]:ring-white/90`}
       >
         <NotificationsDropdown
           items={items}
           onMarkAllRead={onMarkAllRead}
           onMarkOneRead={onMarkOneRead}
+          onDeleteNotification={onDeleteNotification}
           onNotificationClick={onNotificationClick}
           className="relative"
         />
