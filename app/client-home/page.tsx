@@ -682,16 +682,19 @@ function ClientHomePageContent() {
               const isDashboard = item.href === "/client-home";
               return (
                 isDashboard ? (
-                  <button
+                  <Link
                     key={item.href}
-                    type="button"
-                    onClick={() => router.push("/client-home")}
+                    href="/client-home"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      router.push("/client-home");
+                    }}
                     aria-current={active ? "page" : undefined}
-                    className={`${navItemClass} text-left ${active ? navActiveClass : ""}`}
+                    className={`${navItemClass} ${active ? navActiveClass : ""}`}
                   >
                     {item.icon}
                     <span className="min-w-0 flex-1">{item.label}</span>
-                  </button>
+                  </Link>
                 ) : (
                   <Link
                     key={item.href}
