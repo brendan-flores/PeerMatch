@@ -684,6 +684,7 @@ function ClientHomePageContent() {
                 isDashboard ? (
                   <button
                     key={item.href}
+                    type="button"
                     onClick={() => router.push("/client-home")}
                     aria-current={active ? "page" : undefined}
                     className={`${navItemClass} ${active ? navActiveClass : ""}`}
