@@ -9,7 +9,7 @@ export default function PeerMatchHome() {
   return (
     <div className="min-h-screen bg-[#E5F6F4]">
       <AuthPageHeader />
-      <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-4 py-6">
+      <div className="flex items-center justify-center px-4 py-6">
       <div className="ui-page-enter ui-surface w-full max-w-5xl rounded-[2.25rem] border border-zinc-200 bg-white p-10 shadow-xl shadow-zinc-200/40">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center lg:justify-items-center">
           <div>
