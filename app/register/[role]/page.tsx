@@ -16,6 +16,11 @@ const roleDisplayNames: Record<RoleType, string> = {
 const USERNAME_HINT =
   "3–30 characters. Letters, numbers, and underscores only.";
 
+function isInstitutionalEmail(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return normalized.endsWith("@cit.edu") || normalized.endsWith(".cit.edu");
+}
+
 function getUsernameValidationError(value: string): string | null {
   const normalized = value.trim().toLowerCase();
 
@@ -67,6 +72,13 @@ export default function RegisterRolePage() {
 
     const trimmedEmail = email.trim();
     const trimmedUsername = username.trim();
+
+    if (!isInstitutionalEmail(trimmedEmail)) {
+      setStatusMessage(
+        "Please use your institutional Outlook email (e.g., name@cit.edu)."
+      );
+      return;
+    }
 
     const validationError =
       getUsernameValidationError(trimmedUsername);

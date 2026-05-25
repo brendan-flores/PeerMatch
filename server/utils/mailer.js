@@ -86,14 +86,10 @@ async function createTransporter() {
  * @param {string} name - Recipient name.
  * @param {string} code - Verification code.
  */
-async function sendVerificationEmail(to, name, code) {
-  if (isSupabaseEmailEnabled()) {
-    return sendVerificationEmailViaSupabase(to, name, code);
-  }
-
+async function sendViaSmtp(to, name, code) {
   if (!hasEmailConfig()) {
     throw new Error(
-      'Email is not configured. Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (Supabase + Resend), or SMTP EMAIL_* variables on the API server.'
+      'SMTP credentials are missing. Set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, and EMAIL_FROM.'
     );
   }
 
@@ -120,6 +116,29 @@ async function sendVerificationEmail(to, name, code) {
       err && err.message ? err.message : 'Unable to send verification email through SMTP.';
     throw new Error(smtpError);
   }
+}
+
+/**
+ * Send a verification email containing the 6-digit code.
+ * Tries Supabase/Resend first unless EMAIL_PREFER_SMTP=1, then falls back to SMTP.
+ */
+async function sendVerificationEmail(to, name, code) {
+  const preferSmtp = process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
+
+  if (isSupabaseEmailEnabled() && !preferSmtp) {
+    try {
+      return await sendVerificationEmailViaSupabase(to, name, code);
+    } catch (supabaseError) {
+      const reason = supabaseError?.message || String(supabaseError);
+      console.error('Supabase/Resend email failed:', to, reason);
+      if (!hasEmailConfig()) {
+        throw supabaseError;
+      }
+      console.log('Falling back to SMTP for', to);
+    }
+  }
+
+  return sendViaSmtp(to, name, code);
 }
 
 module.exports = { sendVerificationEmail };
