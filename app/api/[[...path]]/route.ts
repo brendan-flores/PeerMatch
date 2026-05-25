@@ -3,11 +3,11 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-/** Allow slow Render cold starts + SMTP during registration (Vercel Pro; Hobby capped lower). */
-export const maxDuration = 60;
+/** Vercel Hobby max is 10s; keep proxy calls short (API responds before slow SMTP). */
+export const maxDuration = 10;
 
 const METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-const PROXY_TIMEOUT_MS = 55_000;
+const PROXY_TIMEOUT_MS = 9_000;
 
 async function fetchUpstream(target: string, init: RequestInit): Promise<Response> {
   return fetch(target, {

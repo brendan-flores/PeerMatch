@@ -174,19 +174,19 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    try {
-      await sendVerificationEmail(pending.email, pending.name, verificationCode);
-    } catch (mailError) {
-      await User.deleteOne({ _id: pending._id, verified: false });
-      const detail = mailError?.message || 'Unknown mail error';
-      return res.status(502).json({
-        message: `Could not send the verification email (${detail}). Check EMAIL_HOST, EMAIL_USER, and EMAIL_PASS on the API server (Render), then try again.`,
-      });
-    }
+    const recipientEmail = pending.email;
+    const recipientName = pending.name;
 
-    return res.status(201).json({
+    res.status(201).json({
       message: 'Verification code sent to email. Enter the code to verify your account.',
-      email: pending.email,
+      email: recipientEmail,
+    });
+
+    // Send email after responding so Vercel/Render proxy does not hit serverless timeouts.
+    setImmediate(() => {
+      sendVerificationEmail(recipientEmail, recipientName, verificationCode).catch((mailError) => {
+        console.error('Verification email failed:', recipientEmail, mailError?.message || mailError);
+      });
     });
   } catch (error) {
     console.error(error);
@@ -477,15 +477,22 @@ router.post('/resend', async (req, res) => {
     pending.verification = { code: verificationCode, expiresAt };
     await pending.save();
 
-    await sendVerificationEmail(pending.email, pending.name, verificationCode);
+    const recipientEmail = pending.email;
+    const recipientName = pending.name;
 
     res.status(200).json({
       message: 'Verification code resent to email.',
       email: normalizedEmail,
     });
+
+    setImmediate(() => {
+      sendVerificationEmail(recipientEmail, recipientName, verificationCode).catch((mailError) => {
+        console.error('Resend verification email failed:', recipientEmail, mailError?.message || mailError);
+      });
+    });
   } catch (error) {
     console.error(error);
-    res.status(502).json({ message: `Could not deliver verification email: ${error.message}` });
+    res.status(500).json({ message: 'Could not resend verification code. Please try again.' });
   }
 });
 

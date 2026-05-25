@@ -1,5 +1,9 @@
 const nodemailer = require('nodemailer');
 const dns = require('dns').promises;
+const {
+  isSupabaseEmailEnabled,
+  sendVerificationEmailViaSupabase,
+} = require('./supabaseEmail');
 
 function hasEmailConfig() {
   return Boolean(
@@ -83,9 +87,13 @@ async function createTransporter() {
  * @param {string} code - Verification code.
  */
 async function sendVerificationEmail(to, name, code) {
+  if (isSupabaseEmailEnabled()) {
+    return sendVerificationEmailViaSupabase(to, name, code);
+  }
+
   if (!hasEmailConfig()) {
     throw new Error(
-      'SMTP credentials are missing. Set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, and EMAIL_FROM.'
+      'Email is not configured. Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (Supabase + Resend), or SMTP EMAIL_* variables on the API server.'
     );
   }
 

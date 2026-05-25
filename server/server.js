@@ -74,6 +74,28 @@ app.use('/api/offers', requireDb, offersRoutes);
 
 app.get('/', (req, res) => res.send('PeerMatch MERN API is running'));
 
+/** Quick deploy check — open /api/health on your Render URL (no secrets returned). */
+app.get('/api/health', (req, res) => {
+  const supabaseEmail = Boolean(
+    process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
+  const smtpEmail = Boolean(
+    process.env.EMAIL_HOST &&
+      process.env.EMAIL_PORT &&
+      process.env.EMAIL_USER &&
+      process.env.EMAIL_PASS,
+  );
+  res.json({
+    ok: true,
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    email: supabaseEmail ? 'supabase_edge_function' : smtpEmail ? 'smtp' : 'missing_env',
+    emailProvider: supabaseEmail ? 'supabase+resend' : smtpEmail ? 'smtp' : 'none',
+    supabaseUrl: process.env.SUPABASE_URL ? 'set' : 'missing',
+    emailHost: process.env.EMAIL_HOST ? 'set' : 'missing',
+    corsOrigins: process.env.CORS_ORIGINS ? 'set' : 'missing',
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
