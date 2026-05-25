@@ -60,9 +60,9 @@ async function createTransporter() {
       pass: process.env.EMAIL_PASS,
     },
     // Force IPv4 to avoid IPv6 connection issues on some hosting platforms
-    connectionTimeout: 10000,
-    greetingTimeout: 5000,
-    socketTimeout: 10000,
+    connectionTimeout: 30000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
     // Try to force IPv4 using lookup option
     lookup: function (hostname, options, callback) {
       dns.resolve4(hostname).then((addresses) => {
@@ -100,8 +100,6 @@ async function sendVerificationEmail(to, name, code) {
 
   const transporter = await createTransporter();
   try {
-    // Verify credentials/connection to get a clear error early.
-    await transporter.verify();
     const info = await transporter.sendMail(mailOptions);
     return {
       delivered: true,

@@ -1,6 +1,5 @@
-type ApiErrorPayload = {
-  message?: string;
-};
+import { extractApiErrorMessage, readApiResponsePayload } from "@/app/lib/parseApiError";
+import { getApiBaseUrl as resolveApiBaseUrl } from "@/app/lib/siteUrls";
 
 export class ApiError extends Error {
   status: number;
@@ -13,8 +12,6 @@ export class ApiError extends Error {
     this.payload = payload;
   }
 }
-
-import { getApiBaseUrl as resolveApiBaseUrl } from "@/app/lib/siteUrls";
 
 function getApiBaseUrl() {
   return resolveApiBaseUrl();
@@ -49,18 +46,10 @@ export async function apiPostJson<TResponse>(
     );
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-
-  const payload = isJson
-    ? await res.json().catch(() => undefined)
-    : await res.text().catch(() => undefined);
+  const payload = await readApiResponsePayload(res);
 
   if (!res.ok) {
-    const messageFromPayload = (payload as ApiErrorPayload | undefined)?.message;
-    const message: string = typeof messageFromPayload === "string" ? messageFromPayload : "Request failed.";
-
-    throw new ApiError(message, res.status, payload);
+    throw new ApiError(extractApiErrorMessage(payload, res.status), res.status, payload);
   }
 
   return payload as TResponse;
@@ -95,18 +84,10 @@ export async function apiPutJson<TResponse>(
     );
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-
-  const payload = isJson
-    ? await res.json().catch(() => undefined)
-    : await res.text().catch(() => undefined);
+  const payload = await readApiResponsePayload(res);
 
   if (!res.ok) {
-    const messageFromPayload = (payload as ApiErrorPayload | undefined)?.message;
-    const message: string = typeof messageFromPayload === "string" ? messageFromPayload : "Request failed.";
-
-    throw new ApiError(message, res.status, payload);
+    throw new ApiError(extractApiErrorMessage(payload, res.status), res.status, payload);
   }
 
   return payload as TResponse;
@@ -136,18 +117,10 @@ export async function apiGetJson<TResponse>(
     );
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-
-  const payload = isJson
-    ? await res.json().catch(() => undefined)
-    : await res.text().catch(() => undefined);
+  const payload = await readApiResponsePayload(res);
 
   if (!res.ok) {
-    const messageFromPayload = (payload as ApiErrorPayload | undefined)?.message;
-    const message: string = typeof messageFromPayload === "string" ? messageFromPayload : "Request failed.";
-
-    throw new ApiError(message, res.status, payload);
+    throw new ApiError(extractApiErrorMessage(payload, res.status), res.status, payload);
   }
 
   return payload as TResponse;
@@ -182,18 +155,10 @@ export async function apiPatchJson<TResponse>(
     );
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-
-  const payload = isJson
-    ? await res.json().catch(() => undefined)
-    : await res.text().catch(() => undefined);
+  const payload = await readApiResponsePayload(res);
 
   if (!res.ok) {
-    const messageFromPayload = (payload as ApiErrorPayload | undefined)?.message;
-    const message: string = typeof messageFromPayload === "string" ? messageFromPayload : "Request failed.";
-
-    throw new ApiError(message, res.status, payload);
+    throw new ApiError(extractApiErrorMessage(payload, res.status), res.status, payload);
   }
 
   return payload as TResponse;
@@ -225,14 +190,8 @@ export async function apiSend(
   }
 
   if (!res.ok) {
-    const contentType = res.headers.get("content-type") || "";
-    const isJson = contentType.includes("application/json");
-    const payload = isJson
-      ? await res.json().catch(() => undefined)
-      : await res.text().catch(() => undefined);
-    const messageFromPayload = (payload as ApiErrorPayload | undefined)?.message;
-    const message: string = typeof messageFromPayload === "string" ? messageFromPayload : "Request failed.";
-    throw new ApiError(message, res.status, payload);
+    const payload = await readApiResponsePayload(res);
+    throw new ApiError(extractApiErrorMessage(payload, res.status), res.status, payload);
   }
 }
 
@@ -260,18 +219,10 @@ export async function apiDeleteJson<TResponse>(
     );
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-
-  const payload = isJson
-    ? await res.json().catch(() => undefined)
-    : await res.text().catch(() => undefined);
+  const payload = await readApiResponsePayload(res);
 
   if (!res.ok) {
-    const messageFromPayload = (payload as ApiErrorPayload | undefined)?.message;
-    const message: string = typeof messageFromPayload === "string" ? messageFromPayload : "Request failed.";
-
-    throw new ApiError(message, res.status, payload);
+    throw new ApiError(extractApiErrorMessage(payload, res.status), res.status, payload);
   }
 
   return payload as TResponse;

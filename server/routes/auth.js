@@ -29,7 +29,9 @@ function getVerificationExpiration() {
 
 function isInstitutionalEmail(email) {
   const domain = (process.env.INSTITUTIONAL_EMAIL_DOMAIN || 'cit.edu').trim().toLowerCase();
-  return normalizeEmail(email).endsWith(`@${domain}`);
+  const normalized = normalizeEmail(email);
+  const atSuffix = `@${domain}`;
+  return normalized.endsWith(atSuffix) || normalized.endsWith(`.${domain}`);
 }
 
 function serializeProfileUser(user) {
@@ -176,8 +178,9 @@ router.post('/register', async (req, res) => {
       await sendVerificationEmail(pending.email, pending.name, verificationCode);
     } catch (mailError) {
       await User.deleteOne({ _id: pending._id, verified: false });
+      const detail = mailError?.message || 'Unknown mail error';
       return res.status(502).json({
-        message: `Registration failed because verification email could not be delivered: ${mailError.message}`,
+        message: `Could not send the verification email (${detail}). Check EMAIL_HOST, EMAIL_USER, and EMAIL_PASS on the API server (Render), then try again.`,
       });
     }
 

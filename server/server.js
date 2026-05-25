@@ -45,6 +45,13 @@ app.use(
 app.use(cookieParser());
 app.use(express.json({ limit: '5mb' }));
 
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ message: 'Invalid request body. Please try again.' });
+  }
+  return next(err);
+});
+
 connectDB();
 
 function requireDb(req, res, next) {

@@ -228,9 +228,12 @@ export default function RegisterRolePage() {
                   onChange={(event) =>
                     setEmail(event.target.value)
                   }
-                  placeholder="Institutional Email"
+                  placeholder="you@cit.edu"
                   className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] py-4 px-4 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
                 />
+                <p className="mt-2 text-xs text-zinc-500">
+                  Use your school email ending in @cit.edu (for example, name@cit.edu).
+                </p>
               </div>
 
               {/* PASSWORD */}
