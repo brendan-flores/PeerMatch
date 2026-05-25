@@ -1,5 +1,8 @@
-// @ts-nocheck — Deno runtime; excluded from Next.js tsc (see tsconfig.json)
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+/** Minimal Deno types for Supabase Edge runtime (ignored by Next.js via .vercelignore). */
+declare const Deno: {
+  env: { get(key: string): string | undefined };
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +58,7 @@ Deno.serve(async (req) => {
         to: [to],
         subject: "Peer Match System: Verify Your Email",
         text: `Hello ${name},\n\nYour Peer Match verification code is: ${code}\nThis code expires in ${TTL_MINUTES} minutes.\n\nIf you did not request this, please ignore this email.`,
-        html: `<p>Hello ${name},</p><p>Your Peer Match verification code is: <strong>${code}</strong></p><p>This code expires in ${TTL_MINUTES} minutes.</p><p>If you did not request this, please ignore this email.</p>`,
+        html: `<p>Hello ${name},</p><p>Your Peer Match verification code is: <strong>${code}</strong></p><p>This code expires in ${TTL_MINUTES} minutes.</p><p>If you do not request this, please ignore this email.</p>`,
       }),
     });
 

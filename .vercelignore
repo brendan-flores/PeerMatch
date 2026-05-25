@@ -1,0 +1,5 @@
+# Supabase Edge Functions use Deno — not part of the Next.js app (deployed via Supabase CLI).
+supabase/
+
+# Express API runs on Render, not Vercel.
+server/
