@@ -1,3 +1,4 @@
+// @ts-nocheck — Deno runtime; excluded from Next.js tsc (see tsconfig.json)
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const corsHeaders = {
