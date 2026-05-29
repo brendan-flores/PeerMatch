@@ -14,6 +14,20 @@ function hasEmailConfig() {
   );
 }
 
+function isInstitutionalRecipient(to) {
+  const domain = (process.env.INSTITUTIONAL_EMAIL_DOMAIN || 'cit.edu').trim().toLowerCase();
+  const email = String(to || '').trim().toLowerCase();
+  return email.endsWith(`@${domain}`) || email.endsWith(`.${domain}`);
+}
+
+function preferSmtpDelivery() {
+  return process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
+}
+
+function shouldSendViaSmtpFirst(to) {
+  return hasEmailConfig() && (preferSmtpDelivery() || isInstitutionalRecipient(to));
+}
+
 // Custom DNS lookup that only returns IPv4 addresses
 async function ipv4Lookup(hostname) {
   try {
@@ -64,9 +78,9 @@ async function createTransporter() {
       pass: process.env.EMAIL_PASS,
     },
     // Force IPv4 to avoid IPv6 connection issues on some hosting platforms
-    connectionTimeout: 30000,
-    greetingTimeout: 15000,
-    socketTimeout: 30000,
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
     // Try to force IPv4 using lookup option
     lookup: function (hostname, options, callback) {
       dns.resolve4(hostname).then((addresses) => {
@@ -123,11 +137,18 @@ async function sendViaSmtp(to, name, code) {
  * Tries Supabase/Resend first unless EMAIL_PREFER_SMTP=1, then falls back to SMTP.
  */
 async function sendVerificationEmail(to, name, code) {
-  const preferSmtp = process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
+  if (shouldSendViaSmtpFirst(to)) {
+    console.log('Sending verification email via SMTP to', to);
+    const result = await sendViaSmtp(to, name, code);
+    console.log('SMTP verification email sent to', to, result?.messageId || '');
+    return result;
+  }
 
-  if (isSupabaseEmailEnabled() && !preferSmtp) {
+  if (isSupabaseEmailEnabled()) {
     try {
-      return await sendVerificationEmailViaSupabase(to, name, code);
+      const result = await sendVerificationEmailViaSupabase(to, name, code);
+      console.log('Supabase/Resend verification email accepted for', to);
+      return result;
     } catch (supabaseError) {
       const reason = supabaseError?.message || String(supabaseError);
       console.error('Supabase/Resend email failed:', to, reason);
@@ -135,10 +156,18 @@ async function sendVerificationEmail(to, name, code) {
         throw supabaseError;
       }
       console.log('Falling back to SMTP for', to);
+      const result = await sendViaSmtp(to, name, code);
+      console.log('SMTP fallback sent to', to, result?.messageId || '');
+      return result;
     }
   }
 
   return sendViaSmtp(to, name, code);
 }
 
-module.exports = { sendVerificationEmail };
+module.exports = {
+  sendVerificationEmail,
+  hasEmailConfig,
+  preferSmtpDelivery,
+  shouldSendViaSmtpFirst,
+};

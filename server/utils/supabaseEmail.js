@@ -21,25 +21,40 @@ async function sendVerificationEmailViaSupabase(to, name, code) {
   const url = getFunctionUrl();
   const serviceKey = trimSlash(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${serviceKey}`,
-      apikey: serviceKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ to, name, code }),
-  });
+  // Add AbortController for timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-  const payload = await res.json().catch(() => ({}));
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ to, name, code }),
+      signal: controller.signal,
+    });
 
-  if (!res.ok) {
-    const detail =
-      typeof payload?.message === 'string' ? payload.message : `Supabase email failed (${res.status})`;
-    throw new Error(detail);
+    clearTimeout(timeout);
+
+    const payload = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const detail =
+        typeof payload?.message === 'string' ? payload.message : `Supabase email failed (${res.status})`;
+      throw new Error(detail);
+    }
+
+    return payload;
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error.name === 'AbortError') {
+      throw new Error('Supabase email request timed out after 15 seconds');
+    }
+    throw error;
   }
-
-  return payload;
 }
 
 module.exports = {
