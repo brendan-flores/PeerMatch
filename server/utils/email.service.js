@@ -1,13 +1,9 @@
 /**
- * Verification email: SMTP (Gmail/Office365) and optional Supabase Edge + Resend.
+ * Verification email via Nodemailer (SMTP).
  */
 
 const nodemailer = require('nodemailer');
 const dns = require('dns').promises;
-const {
-  isSupabaseEmailEnabled,
-  sendVerificationEmailViaSupabase,
-} = require('./supabaseEmail');
 
 function isValidEmailAddress(email) {
   if (!email || typeof email !== 'string') return false;
@@ -24,21 +20,7 @@ function hasSmtpConfig() {
 }
 
 function isEmailServiceEnabled() {
-  return hasSmtpConfig() || isSupabaseEmailEnabled();
-}
-
-function isInstitutionalRecipient(to) {
-  const domain = (process.env.INSTITUTIONAL_EMAIL_DOMAIN || 'cit.edu').trim().toLowerCase();
-  const email = String(to || '').trim().toLowerCase();
-  return email.endsWith(`@${domain}`) || email.endsWith(`.${domain}`);
-}
-
-function preferSmtpDelivery() {
-  return process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
-}
-
-function shouldSendViaSmtpFirst(to) {
-  return hasSmtpConfig() && (preferSmtpDelivery() || isInstitutionalRecipient(to));
+  return hasSmtpConfig();
 }
 
 async function ipv4Lookup(hostname) {
@@ -112,9 +94,15 @@ function buildMailContent(name, code) {
   };
 }
 
-async function sendViaSmtp(to, name, code) {
+async function sendVerificationEmail(to, name, code) {
+  if (!isValidEmailAddress(to)) {
+    throw new Error('Invalid email: ' + to);
+  }
+
   if (!hasSmtpConfig()) {
-    throw new Error('SMTP is not configured. Set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS.');
+    throw new Error(
+      'SMTP is not configured. Set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS on the API server.',
+    );
   }
 
   const { subject, html, text } = buildMailContent(name, code);
@@ -130,38 +118,8 @@ async function sendViaSmtp(to, name, code) {
   return { success: true, messageId: info?.messageId, provider: 'smtp' };
 }
 
-async function sendVerificationEmail(to, name, code) {
-  if (!isValidEmailAddress(to)) {
-    throw new Error('Invalid email: ' + to);
-  }
-
-  if (shouldSendViaSmtpFirst(to)) {
-    return sendViaSmtp(to, name, code);
-  }
-
-  if (isSupabaseEmailEnabled()) {
-    try {
-      const result = await sendVerificationEmailViaSupabase(to, name, code);
-      return { success: true, provider: 'supabase+resend', ...result };
-    } catch (supabaseError) {
-      if (!hasSmtpConfig()) throw supabaseError;
-      console.error('Supabase/Resend failed, using SMTP:', supabaseError.message);
-      return sendViaSmtp(to, name, code);
-    }
-  }
-
-  if (hasSmtpConfig()) {
-    return sendViaSmtp(to, name, code);
-  }
-
-  throw new Error(
-    'Email is not configured. Set SMTP EMAIL_* or SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY on the API server.',
-  );
-}
-
 module.exports = {
   sendVerificationEmail,
   isEmailServiceEnabled,
   hasSmtpConfig,
-  isSupabaseEmailEnabled,
 };

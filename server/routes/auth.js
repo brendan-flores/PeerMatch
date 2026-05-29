@@ -180,10 +180,7 @@ router.post('/register', async (req, res) => {
     const recipientName = pending.name;
 
     const waitForEmail =
-      process.env.EMAIL_SYNC_SEND === '1' ||
-      process.env.EMAIL_SYNC_SEND === 'true' ||
-      process.env.EMAIL_PREFER_SMTP === '1' ||
-      process.env.EMAIL_PREFER_SMTP === 'true';
+      process.env.EMAIL_SYNC_SEND === '1' || process.env.EMAIL_SYNC_SEND === 'true';
 
     if (waitForEmail) {
       try {
@@ -521,10 +518,7 @@ router.post('/resend', async (req, res) => {
     const recipientName = pending.name;
 
     const waitForEmail =
-      process.env.EMAIL_SYNC_SEND === '1' ||
-      process.env.EMAIL_SYNC_SEND === 'true' ||
-      process.env.EMAIL_PREFER_SMTP === '1' ||
-      process.env.EMAIL_PREFER_SMTP === 'true';
+      process.env.EMAIL_SYNC_SEND === '1' || process.env.EMAIL_SYNC_SEND === 'true';
 
     if (waitForEmail) {
       try {

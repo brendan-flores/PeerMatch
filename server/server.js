@@ -71,34 +71,13 @@ app.get('/', (req, res) => res.send('PeerMatch MERN API is running'));
 
 /** Quick deploy check — open /api/health on your Render URL (no secrets returned). */
 app.get('/api/health', (req, res) => {
-  const { isEmailServiceEnabled, hasSmtpConfig, isSupabaseEmailEnabled } = require('./utils/email.service');
-  const preferSmtp =
-    process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
+  const { isEmailServiceEnabled, hasSmtpConfig } = require('./utils/email.service');
   const smtp = hasSmtpConfig();
-  const supabase = isSupabaseEmailEnabled();
-  let email = 'missing_env';
-  let emailProvider = 'none';
-  if (preferSmtp && smtp) {
-    email = 'smtp';
-    emailProvider = 'smtp';
-  } else if (supabase) {
-    email = 'supabase_edge_function';
-    emailProvider = 'supabase+resend';
-  } else if (smtp) {
-    email = 'smtp';
-    emailProvider = 'smtp';
-  } else if (isEmailServiceEnabled()) {
-    email = 'configured';
-    emailProvider = 'mixed';
-  }
   res.json({
     ok: true,
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    email,
-    emailProvider,
-    emailPreferSmtp: preferSmtp ? 'yes' : 'no',
-    smtpConfigured: smtp ? 'yes' : 'no',
-    supabaseConfigured: supabase ? 'yes' : 'no',
+    email: smtp ? 'smtp' : 'missing_env',
+    emailProvider: smtp ? 'nodemailer' : 'none',
     corsOrigins: process.env.CORS_ORIGINS ? 'set' : 'missing',
   });
 });
