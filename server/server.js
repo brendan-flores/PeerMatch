@@ -76,30 +76,16 @@ app.get('/', (req, res) => res.send('PeerMatch MERN API is running'));
 
 /** Quick deploy check — open /api/health on your Render URL (no secrets returned). */
 app.get('/api/health', (req, res) => {
-  const supabaseEmail = Boolean(
-    process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
-  );
-  const smtpEmail = Boolean(
-    process.env.EMAIL_HOST &&
-      process.env.EMAIL_PORT &&
-      process.env.EMAIL_USER &&
-      process.env.EMAIL_PASS,
-  );
+  const resendEmail = Boolean(process.env.RESEND_API_KEY);
   const gmailSmtp = Boolean(
     process.env.GMAIL_EMAIL && process.env.GMAIL_APP_PASSWORD,
   );
-  const preferSmtp =
-    process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
   res.json({
     ok: true,
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    email: gmailSmtp ? 'gmail_smtp' : preferSmtp && smtpEmail ? 'smtp' : supabaseEmail ? 'supabase_edge_function' : smtpEmail ? 'smtp' : 'missing_env',
-    emailProvider: gmailSmtp ? 'gmail_smtp' : preferSmtp && smtpEmail ? 'smtp' : supabaseEmail ? 'supabase+resend' : smtpEmail ? 'smtp' : 'none',
-    emailPreferSmtp: preferSmtp ? 'yes' : 'no',
-    emailSyncSend:
-      process.env.EMAIL_SYNC_SEND === '1' || process.env.EMAIL_SYNC_SEND === 'true' ? 'yes' : 'no',
-    supabaseUrl: process.env.SUPABASE_URL ? 'set' : 'missing',
-    emailHost: process.env.EMAIL_HOST ? 'set' : 'missing',
+    email: resendEmail ? 'resend' : gmailSmtp ? 'gmail_smtp' : 'missing_env',
+    emailProvider: resendEmail ? 'resend' : gmailSmtp ? 'gmail_smtp' : 'none',
+    resendApiKey: process.env.RESEND_API_KEY ? 'set' : 'missing',
     gmailEmail: process.env.GMAIL_EMAIL ? 'set' : 'missing',
     corsOrigins: process.env.CORS_ORIGINS ? 'set' : 'missing',
   });
