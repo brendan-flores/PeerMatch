@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { sendVerificationEmail } = require('../utils/email.service');
@@ -11,6 +12,7 @@ const {
   validateUsername,
 } = require('../utils/userAuth');
 const { sanitizePhotoDataUrl, INVALID_PHOTO_MESSAGE } = require('../utils/profilePhoto');
+const { rateLimitByKey } = require('../utils/rateLimit');
 
 const router = express.Router();
 
@@ -18,7 +20,7 @@ const REGISTER_ACCOUNT_TYPES = ['client', 'freelancer'];
 
 // Generate a random 6-digit numeric verification code.
 function generateVerificationCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 // Create a verification expiration date based on environment settings.
@@ -220,6 +222,14 @@ router.post('/verify', async (req, res) => {
   try {
     const { email, code } = req.body;
     const normalizedEmail = normalizeEmail(email);
+
+    const verifyLimit = rateLimitByKey(`verify:${normalizedEmail || req.ip}`, {
+      windowMs: 15 * 60 * 1000,
+      max: 20,
+    });
+    if (verifyLimit) {
+      return res.status(verifyLimit.status).json({ message: verifyLimit.message });
+    }
 
     if (!normalizedEmail || !code) {
       return res.status(400).json({ message: 'Please provide email and verification code.' });
@@ -473,11 +483,18 @@ router.put('/profile', authMiddleware, async (req, res) => {
 router.post('/resend', async (req, res) => {
   try {
     const { email } = req.body;
-    console.log('[Auth /resend] incoming body email:', String(email || ''));
     const normalizedEmail = normalizeEmail(email);
 
     if (!normalizedEmail) {
       return res.status(400).json({ message: 'Please provide email.' });
+    }
+
+    const resendLimit = rateLimitByKey(`resend:${normalizedEmail || req.ip}`, {
+      windowMs: 15 * 60 * 1000,
+      max: 5,
+    });
+    if (resendLimit) {
+      return res.status(resendLimit.status).json({ message: resendLimit.message });
     }
 
     if (!isInstitutionalEmail(normalizedEmail)) {

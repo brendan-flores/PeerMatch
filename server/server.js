@@ -3,9 +3,9 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
+const { loadEnv } = require('./config/env');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const messageRoutes = require('./routes/messages');
@@ -15,13 +15,8 @@ const notificationsRoutes = require('./routes/notifications');
 const offersRoutes = require('./routes/offers');
 const { attachSocketServer } = require('./socket/socketServer');
 
-const envPath = path.resolve(__dirname, '..', '.env');
-const dotenvResult = dotenv.config({ path: envPath });
-if (dotenvResult.error) {
-  console.warn(`Failed to load .env from ${envPath}: ${dotenvResult.error.message}`);
-} else {
-  console.log(`Loaded environment variables from ${envPath}`);
-}
+// Load environment variables (handles BOM stripping)
+loadEnv();
 
 const rawOrigins =
   process.env.CORS_ORIGINS || 'http://localhost:3000';
@@ -76,17 +71,42 @@ app.get('/', (req, res) => res.send('PeerMatch MERN API is running'));
 
 /** Quick deploy check — open /api/health on your Render URL (no secrets returned). */
 app.get('/api/health', (req, res) => {
-  const emailService = Boolean(
-    process.env.EMAIL_USER && process.env.EMAIL_PASS,
-  );
+  const { isEmailServiceEnabled, hasSmtpConfig, isSupabaseEmailEnabled } = require('./utils/email.service');
+  const preferSmtp =
+    process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
+  const smtp = hasSmtpConfig();
+  const supabase = isSupabaseEmailEnabled();
+  let email = 'missing_env';
+  let emailProvider = 'none';
+  if (preferSmtp && smtp) {
+    email = 'smtp';
+    emailProvider = 'smtp';
+  } else if (supabase) {
+    email = 'supabase_edge_function';
+    emailProvider = 'supabase+resend';
+  } else if (smtp) {
+    email = 'smtp';
+    emailProvider = 'smtp';
+  } else if (isEmailServiceEnabled()) {
+    email = 'configured';
+    emailProvider = 'mixed';
+  }
   res.json({
     ok: true,
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    email: emailService ? 'nodemailer_gmail' : 'missing_env',
-    emailProvider: emailService ? 'nodemailer_gmail' : 'none',
-    emailUser: process.env.EMAIL_USER ? 'set' : 'missing',
+    email,
+    emailProvider,
+    emailPreferSmtp: preferSmtp ? 'yes' : 'no',
+    smtpConfigured: smtp ? 'yes' : 'no',
+    supabaseConfigured: supabase ? 'yes' : 'no',
     corsOrigins: process.env.CORS_ORIGINS ? 'set' : 'missing',
   });
+});
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  console.error('Unhandled API error:', err?.message || err);
+  res.status(500).json({ message: 'Server error. Please try again.' });
 });
 
 const PORT = process.env.PORT || 5000;

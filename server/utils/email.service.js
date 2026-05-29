@@ -1,124 +1,167 @@
 /**
- * Email Service - Nodemailer with Gmail SMTP
- * Sends verification emails using Gmail App Password authentication
+ * Verification email: SMTP (Gmail/Office365) and optional Supabase Edge + Resend.
  */
 
 const nodemailer = require('nodemailer');
+const dns = require('dns').promises;
+const {
+  isSupabaseEmailEnabled,
+  sendVerificationEmailViaSupabase,
+} = require('./supabaseEmail');
 
-// Validate email format
 function isValidEmailAddress(email) {
   if (!email || typeof email !== 'string') return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
-// Check if email service is configured
-function isEmailServiceEnabled() {
-  return Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+function hasSmtpConfig() {
+  return Boolean(
+    process.env.EMAIL_HOST &&
+      process.env.EMAIL_PORT &&
+      process.env.EMAIL_USER &&
+      process.env.EMAIL_PASS,
+  );
 }
 
-// Create and cache Nodemailer transporter
-let transporter = null;
+function isEmailServiceEnabled() {
+  return hasSmtpConfig() || isSupabaseEmailEnabled();
+}
 
-function getTransporter() {
-  if (!transporter) {
-    if (!isEmailServiceEnabled()) {
-      throw new Error('EMAIL_USER and EMAIL_PASS are not set');
-    }
+function isInstitutionalRecipient(to) {
+  const domain = (process.env.INSTITUTIONAL_EMAIL_DOMAIN || 'cit.edu').trim().toLowerCase();
+  const email = String(to || '').trim().toLowerCase();
+  return email.endsWith(`@${domain}`) || email.endsWith(`.${domain}`);
+}
 
-    transporter = nodemailer.createTransport({
-      service: 'gmail',
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS, // Gmail App Password
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 15000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-    });
+function preferSmtpDelivery() {
+  return process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
+}
+
+function shouldSendViaSmtpFirst(to) {
+  return hasSmtpConfig() && (preferSmtpDelivery() || isInstitutionalRecipient(to));
+}
+
+async function ipv4Lookup(hostname) {
+  try {
+    const addresses = await dns.resolve4(hostname);
+    return addresses[0];
+  } catch {
+    return hostname;
+  }
+}
+
+function getFromHeader() {
+  const displayName = (process.env.EMAIL_FROM_NAME || 'PeerMatch').trim();
+  const fromEmail = (process.env.EMAIL_FROM_EMAIL || process.env.EMAIL_USER || '').trim();
+  if (!fromEmail) {
+    throw new Error('Missing sender email. Set EMAIL_FROM_EMAIL or EMAIL_USER.');
+  }
+  return `"${displayName}" <${fromEmail}>`;
+}
+
+async function createTransporter() {
+  const host = process.env.EMAIL_HOST;
+  const port = Number(process.env.EMAIL_PORT) || 587;
+  const isOffice365 = typeof host === 'string' && /office365\.com$/i.test(host);
+  const secure = process.env.EMAIL_SECURE === 'true' || port === 465;
+  const resolvedHost = await ipv4Lookup(host);
+
+  return nodemailer.createTransport({
+    host: resolvedHost,
+    port,
+    secure,
+    requireTLS: isOffice365 ? true : process.env.EMAIL_REQUIRE_TLS === 'true' ? true : undefined,
+    tls: isOffice365 ? { minVersion: 'TLSv1.2' } : undefined,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    connectionTimeout: 30000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
+  });
+}
+
+function buildMailContent(name, code) {
+  const fromName = process.env.EMAIL_FROM_NAME || 'PeerMatch';
+  const ttlMinutes = process.env.VERIFICATION_CODE_TTL_MINUTES || 10;
+  const html =
+    '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">' +
+    '<h2 style="background:#0069A8;color:white;padding:15px;text-align:center;">Welcome to ' +
+    fromName +
+    '</h2><div style="padding:20px;"><p>Hello <strong>' +
+    name +
+    '</strong>,</p><p>Your verification code is:</p>' +
+    '<div style="text-align:center;margin:20px 0;"><span style="font-size:32px;font-weight:bold;color:#FA642C;">' +
+    code +
+    '</span></div><p>This code expires in <strong>' +
+    ttlMinutes +
+    ' minutes</strong>.</p></div></div>';
+  const text =
+    'Hello ' +
+    name +
+    ',\n\nYour verification code is: ' +
+    code +
+    '\n\nThis code expires in ' +
+    ttlMinutes +
+    ' minutes.\n';
+  return {
+    subject: fromName + ' Verification Code',
+    html,
+    text,
+  };
+}
+
+async function sendViaSmtp(to, name, code) {
+  if (!hasSmtpConfig()) {
+    throw new Error('SMTP is not configured. Set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS.');
   }
 
-  return transporter;
+  const { subject, html, text } = buildMailContent(name, code);
+  const transporter = await createTransporter();
+  const info = await transporter.sendMail({
+    from: getFromHeader(),
+    to,
+    subject,
+    html,
+    text,
+  });
+
+  return { success: true, messageId: info?.messageId, provider: 'smtp' };
 }
 
-/**
- * Send verification email
- * @param {string} to - Recipient email address
- * @param {string} name - Recipient name
- * @param {string} code - 6-digit verification code
- * @returns {Promise<Object>} Result with delivery status and message ID
- */
 async function sendVerificationEmail(to, name, code) {
   if (!isValidEmailAddress(to)) {
     throw new Error('Invalid email: ' + to);
   }
 
-  const fromName = process.env.EMAIL_FROM_NAME || 'PeerMatch';
-  const ttlMinutes = process.env.VERIFICATION_CODE_TTL_MINUTES || 10;
-
-  // HTML email template
-  const html =
-    '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">' +
-    '<h2 style="background:#0069A8;color:white;padding:15px;text-align:center;">' +
-    'Welcome to ' + fromName +
-    '</h2>' +
-    '<div style="padding:20px;">' +
-    '<p>Hello <strong>' + name + '</strong>,</p>' +
-    '<p>Your verification code is:</p>' +
-    '<div style="text-align:center;margin:20px 0;">' +
-    '<span style="font-size:32px;font-weight:bold;color:#FA642C;">' +
-    code +
-    '</span>' +
-    '</div>' +
-    '<p>This code expires in <strong>' + ttlMinutes + ' minutes</strong>.</p>' +
-    '<p style="color:#888;font-size:13px;">' +
-    'If you did not request this, you can ignore this email.' +
-    '</p>' +
-    '<hr/>' +
-    '<p style="text-align:center;font-size:12px;color:#999;">' +
-    fromName + ' Team' +
-    '</p>' +
-    '</div>' +
-    '</div>';
-
-  // Plain text version
-  const text =
-    'Hello ' + name + ',\n\n' +
-    'Your verification code is: ' + code + '\n\n' +
-    'This code expires in ' + ttlMinutes + ' minutes.\n\n' +
-    'If you did not request this, you can ignore this email.\n\n' +
-    '- ' + fromName + ' Team';
-
-  const mailOptions = {
-    from: fromName + ' <' + process.env.EMAIL_USER + '>',
-    to: to,
-    subject: fromName + ' Verification Code',
-    html: html,
-    text: text,
-  };
-
-  try {
-    const result = await getTransporter().sendMail(mailOptions);
-
-    console.log('[Email] Sent:', {
-      to: to,
-      messageId: result.messageId,
-    });
-
-    return {
-      success: true,
-      messageId: result.messageId,
-    };
-  } catch (error) {
-    console.error('[Email] Failed:', error.message);
-    throw new Error('Failed to send email');
+  if (shouldSendViaSmtpFirst(to)) {
+    return sendViaSmtp(to, name, code);
   }
+
+  if (isSupabaseEmailEnabled()) {
+    try {
+      const result = await sendVerificationEmailViaSupabase(to, name, code);
+      return { success: true, provider: 'supabase+resend', ...result };
+    } catch (supabaseError) {
+      if (!hasSmtpConfig()) throw supabaseError;
+      console.error('Supabase/Resend failed, using SMTP:', supabaseError.message);
+      return sendViaSmtp(to, name, code);
+    }
+  }
+
+  if (hasSmtpConfig()) {
+    return sendViaSmtp(to, name, code);
+  }
+
+  throw new Error(
+    'Email is not configured. Set SMTP EMAIL_* or SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY on the API server.',
+  );
 }
 
 module.exports = {
   sendVerificationEmail,
   isEmailServiceEnabled,
+  hasSmtpConfig,
+  isSupabaseEmailEnabled,
 };

@@ -1,0 +1,9 @@
+{
+  "files.encoding": "utf8",
+  "[dotenv]": {
+    "files.encoding": "utf8"
+  },
+  "files.associations": {
+    ".env": "dotenv"
+  }
+}

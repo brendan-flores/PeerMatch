@@ -1,4 +1,6 @@
-# EmailJS OTP Integration Guide
+# EmailJS OTP Integration Guide (DEPRECATED)
+
+> **Not used by the app.** PeerMatch sends verification codes via **SMTP (Gmail)** and optionally **Supabase Edge + Resend** (`server/utils/email.service.js`). This doc is kept for historical reference only. Do not commit real API keys here.
 
 Your PeerMatch authentication system now includes complete EmailJS OTP (One-Time Password) integration. This document outlines the implementation and provides configuration instructions.
 
@@ -19,10 +21,10 @@ The authentication flow consists of:
 
 ```env
 # EmailJS Credentials
-EMAILJS_SERVICE_ID=service_fhyovvs
-EMAILJS_TEMPLATE_ID=template_i7o4ljn
-EMAILJS_PUBLIC_KEY=vxKkEeVy38_oEcHb9
-EMAILJS_PRIVATE_KEY=tpc2c1rgksinyOeHPkX6Z
+EMAILJS_SERVICE_ID=your_service_id
+EMAILJS_TEMPLATE_ID=your_template_id
+EMAILJS_PUBLIC_KEY=your_public_key
+EMAILJS_PRIVATE_KEY=your_private_key
 
 # OTP Settings
 VERIFICATION_CODE_TTL_MINUTES=10
@@ -211,8 +213,8 @@ When OTP email is sent, this payload goes to EmailJS:
 {
   service_id: "service_fhyovvs",
   template_id: "template_i7o4ljn",
-  user_id: "vxKkEeVy38_oEcHb9",  // Public key
-  accessToken: "tpc2c1rgksinyOeHPkX6Z",  // Private key (optional)
+  user_id: "your_public_key",
+  accessToken: "your_private_key",
   template_params: {
     to_email: "user@cit.edu",
     email: "user@cit.edu",

@@ -24,7 +24,7 @@ router.use((req, res, next) => {
 });
 
 // Admin-only auth (uses the admin JWT cookie).
-router.post('/auth/login', (req, res) => void authController.login(req, res));
+router.post('/auth/login', (req, res) => void authController.loginAsAdmin(req, res));
 router.post('/auth/logout', (req, res) => void authController.logout(req, res));
 router.get('/auth/me', authMiddleware, (req, res) => void authController.getMe(req, res));
 

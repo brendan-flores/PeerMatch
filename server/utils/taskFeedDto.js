@@ -29,7 +29,8 @@ function mapTaskToFeedPost(task, client) {
     id: String(task._id),
     authorId,
     authorName: clientDoc?.name || 'Client User',
-    authorEmail: clientDoc?.email || '',
+    // Email omitted from public feed (privacy). Clients see their own email in profile/settings.
+    authorEmail: '',
     authorAccountType: clientDoc?.accountType || 'client',
     authorAvatarDataUrl: clientDoc?.photoDataUrl || undefined,
     title: task.title,

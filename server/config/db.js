@@ -30,7 +30,7 @@ const connectDB = async () => {
     });
   } catch (error) {
     console.error('MongoDB connection error:', error.message);
-    console.error('Attempted URI:', uri);
+    console.error('Attempted URI:', process.env.MONGODB_URI ? '(from MONGODB_URI)' : uri);
     setTimeout(connectDB, 5000);
   }
 };

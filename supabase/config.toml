@@ -2,4 +2,5 @@
 # See docs/SUPABASE-EMAIL-SETUP.md for full setup steps.
 
 [functions.send-verification-email]
-verify_jwt = false
+# Render calls this with SUPABASE_SERVICE_ROLE_KEY; function also checks that secret.
+verify_jwt = true
