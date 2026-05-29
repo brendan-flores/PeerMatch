@@ -85,11 +85,16 @@ app.get('/api/health', (req, res) => {
       process.env.EMAIL_USER &&
       process.env.EMAIL_PASS,
   );
+  const preferSmtp =
+    process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
   res.json({
     ok: true,
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    email: supabaseEmail ? 'supabase_edge_function' : smtpEmail ? 'smtp' : 'missing_env',
-    emailProvider: supabaseEmail ? 'supabase+resend' : smtpEmail ? 'smtp' : 'none',
+    email: preferSmtp && smtpEmail ? 'smtp' : supabaseEmail ? 'supabase_edge_function' : smtpEmail ? 'smtp' : 'missing_env',
+    emailProvider: preferSmtp && smtpEmail ? 'smtp' : supabaseEmail ? 'supabase+resend' : smtpEmail ? 'smtp' : 'none',
+    emailPreferSmtp: preferSmtp ? 'yes' : 'no',
+    emailSyncSend:
+      process.env.EMAIL_SYNC_SEND === '1' || process.env.EMAIL_SYNC_SEND === 'true' ? 'yes' : 'no',
     supabaseUrl: process.env.SUPABASE_URL ? 'set' : 'missing',
     emailHost: process.env.EMAIL_HOST ? 'set' : 'missing',
     corsOrigins: process.env.CORS_ORIGINS ? 'set' : 'missing',

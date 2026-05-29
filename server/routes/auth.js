@@ -177,12 +177,34 @@ router.post('/register', async (req, res) => {
     const recipientEmail = pending.email;
     const recipientName = pending.name;
 
+    const waitForEmail =
+      process.env.EMAIL_SYNC_SEND === '1' ||
+      process.env.EMAIL_SYNC_SEND === 'true' ||
+      process.env.EMAIL_PREFER_SMTP === '1' ||
+      process.env.EMAIL_PREFER_SMTP === 'true';
+
+    if (waitForEmail) {
+      try {
+        await sendVerificationEmail(recipientEmail, recipientName, verificationCode);
+      } catch (mailError) {
+        console.error('Verification email failed:', recipientEmail, mailError?.message || mailError);
+        return res.status(502).json({
+          message:
+            mailError?.message ||
+            'Could not send verification email. Check API email settings (Gmail App Password on Render) and try again.',
+        });
+      }
+      return res.status(201).json({
+        message: 'Verification code sent to email. Enter the code to verify your account.',
+        email: recipientEmail,
+      });
+    }
+
     res.status(201).json({
       message: 'Verification code sent to email. Enter the code to verify your account.',
       email: recipientEmail,
     });
 
-    // Send email after responding so Vercel/Render proxy does not hit serverless timeouts.
     setImmediate(() => {
       sendVerificationEmail(recipientEmail, recipientName, verificationCode).catch((mailError) => {
         console.error('Verification email failed:', recipientEmail, mailError?.message || mailError);
@@ -451,6 +473,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
 router.post('/resend', async (req, res) => {
   try {
     const { email } = req.body;
+    console.log('[Auth /resend] incoming body email:', String(email || ''));
     const normalizedEmail = normalizeEmail(email);
 
     if (!normalizedEmail) {
@@ -479,6 +502,29 @@ router.post('/resend', async (req, res) => {
 
     const recipientEmail = pending.email;
     const recipientName = pending.name;
+
+    const waitForEmail =
+      process.env.EMAIL_SYNC_SEND === '1' ||
+      process.env.EMAIL_SYNC_SEND === 'true' ||
+      process.env.EMAIL_PREFER_SMTP === '1' ||
+      process.env.EMAIL_PREFER_SMTP === 'true';
+
+    if (waitForEmail) {
+      try {
+        await sendVerificationEmail(recipientEmail, recipientName, verificationCode);
+      } catch (mailError) {
+        console.error('Resend verification email failed:', recipientEmail, mailError?.message || mailError);
+        return res.status(502).json({
+          message:
+            mailError?.message ||
+            'Could not send verification email. Check API email settings and try again.',
+        });
+      }
+      return res.status(200).json({
+        message: 'Verification code resent to email.',
+        email: normalizedEmail,
+      });
+    }
 
     res.status(200).json({
       message: 'Verification code resent to email.',
