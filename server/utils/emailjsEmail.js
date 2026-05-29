@@ -30,6 +30,8 @@ function getTransporter() {
       connectionTimeout: 10000,
       greetingTimeout: 10000,
       socketTimeout: 10000,
+      // Force IPv4 to avoid IPv6 connection issues on Render
+      family: 4,
     });
   }
   return transporter;
