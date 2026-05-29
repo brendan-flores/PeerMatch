@@ -1,6 +1,10 @@
 # Live deployment: email, Vercel, Render, MongoDB
 
-Verification email is sent from the **Render API** using **Nodemailer (SMTP)** — Gmail or Office 365.
+Verification email is sent from the **Render API**:
+
+- **Local dev:** Nodemailer + Gmail SMTP (`EMAIL_*`)
+- **Render (free tier):** **Resend HTTP API** (`RESEND_API_KEY`) — Render **blocks SMTP ports 587/465**
+- **Render (paid):** Gmail SMTP works, or keep using Resend
 
 ## Who does what
 
@@ -45,9 +49,18 @@ VERIFICATION_CODE_TTL_MINUTES=10
 INSTITUTIONAL_EMAIL_DOMAIN=cit.edu
 ```
 
-Remove **`SUPABASE_URL`** and **`SUPABASE_SERVICE_ROLE_KEY`** if present — not used.
+### Render free tier — use Resend (required for email)
 
-### Gmail on Render
+Render blocks outbound SMTP. Add:
+
+```
+RESEND_API_KEY=re_your_key_from_resend.com
+RESEND_FROM_EMAIL=onboarding@resend.dev
+```
+
+Create a key at [resend.com](https://resend.com). Until you verify a domain, test sends may only reach your Resend account email.
+
+### Gmail SMTP (local dev, or Render paid plan)
 - Turn on **2-Step Verification** on the Google account.
 - Create an **App Password**: Google Account → Security → App passwords.
 - Use that 16-character password as `EMAIL_PASS`.

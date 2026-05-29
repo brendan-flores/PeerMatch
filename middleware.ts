@@ -1,15 +1,24 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-function normalizeHost(host: string): string {
-  return host.split(":")[0].toLowerCase();
-}
-
 function parseHosts(raw: string | undefined): string[] {
   return String(raw || "")
     .split(",")
-    .map((entry) => normalizeHost(entry.trim()))
+    .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean);
+}
+
+/** Match request Host header (keeps port for localhost:3000 vs :3001). */
+function hostMatches(allowedHosts: string[], requestHost: string): boolean {
+  const host = requestHost.trim().toLowerCase();
+  if (!host || allowedHosts.length === 0) return false;
+
+  const hostWithoutPort = host.split(":")[0];
+  return allowedHosts.some((allowed) => {
+    if (allowed === host) return true;
+    if (!allowed.includes(":") && allowed === hostWithoutPort) return true;
+    return false;
+  });
 }
 
 function trimOrigin(value: string | undefined): string {
@@ -36,6 +45,11 @@ const MAIN_ONLY_PREFIXES = [
   "/forgot-password",
 ];
 
+/** True when admin is on its own domain (e.g. peermatch-admin.vercel.app), not /admin on main host. */
+function usesSeparateAdminSite(): boolean {
+  return Boolean(ADMIN_SITE_URL && MAIN_SITE_URL && ADMIN_SITE_URL !== MAIN_SITE_URL);
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -48,15 +62,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const host = normalizeHost(request.headers.get("host") || "");
-  const onAdminHost = ADMIN_HOSTS.length > 0 && ADMIN_HOSTS.includes(host);
-  const onMainHost = MAIN_HOSTS.length > 0 && MAIN_HOSTS.includes(host);
+  const host = request.headers.get("host") || "";
+  const onMainHost = hostMatches(MAIN_HOSTS, host);
+  const onDedicatedAdminHost =
+    hostMatches(ADMIN_HOSTS, host) && !onMainHost;
 
-  if (!onAdminHost && !onMainHost) {
+  if (!onDedicatedAdminHost && !onMainHost) {
     return NextResponse.next();
   }
 
-  if (onAdminHost) {
+  // Separate admin domain (production): peermatch-admin.vercel.app
+  if (onDedicatedAdminHost) {
     if (pathname === "/") {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
@@ -73,12 +89,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (onMainHost && pathname.startsWith("/admin")) {
-    const targetBase = ADMIN_SITE_URL || request.nextUrl.origin;
-    const dest = new URL(`${pathname}${request.nextUrl.search}`, targetBase);
+  // Main domain: send /admin to admin site only when admin is a different URL (not localhost)
+  if (onMainHost && pathname.startsWith("/admin") && usesSeparateAdminSite()) {
+    const dest = new URL(`${pathname}${request.nextUrl.search}`, ADMIN_SITE_URL);
     return NextResponse.redirect(dest);
   }
 
+  // Local dev (localhost:3000): / and /admin/* on the same host — no redirect
   return NextResponse.next();
 }
 

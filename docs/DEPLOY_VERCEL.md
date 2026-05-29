@@ -41,7 +41,7 @@ Both frontends call the same `NEXT_PUBLIC_API_BASE_URL` with `credentials: "incl
    - On **admin** host: `/` → `/admin/dashboard`, block main-app paths, keep `/admin/*`.
    - On **main** host: `/admin/*` → redirect to `NEXT_PUBLIC_ADMIN_SITE_URL`.
 
-Local dev (optional): run admin on port 3001 and set `ADMIN_SITE_HOSTS=localhost:3001`, `MAIN_SITE_HOSTS=localhost:3000`.
+Local dev: one server on port 3000 — main at `/`, admin at `/admin` (no `ADMIN_SITE_HOSTS` needed).
 
 ---
 

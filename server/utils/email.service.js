@@ -1,5 +1,6 @@
 /**
- * Verification email via Nodemailer (SMTP).
+ * Verification email via Nodemailer (SMTP) or Resend HTTP API.
+ * Render free tier blocks outbound SMTP (ports 587/465) — use RESEND_API_KEY on Render.
  */
 
 const nodemailer = require('nodemailer');
@@ -19,8 +20,23 @@ function hasSmtpConfig() {
   );
 }
 
+function hasResendApiKey() {
+  return Boolean(String(process.env.RESEND_API_KEY || '').trim());
+}
+
 function isEmailServiceEnabled() {
-  return hasSmtpConfig();
+  return hasSmtpConfig() || hasResendApiKey();
+}
+
+function getResendFromAddress() {
+  const displayName = (process.env.EMAIL_FROM_NAME || 'PeerMatch').trim();
+  const fromEmail = (
+    process.env.RESEND_FROM_EMAIL ||
+    process.env.EMAIL_FROM_EMAIL ||
+    process.env.EMAIL_USER ||
+    'onboarding@resend.dev'
+  ).trim();
+  return `${displayName} <${fromEmail}>`;
 }
 
 async function ipv4Lookup(hostname) {
@@ -94,32 +110,83 @@ function buildMailContent(name, code) {
   };
 }
 
+async function sendViaResendApi(to, name, code) {
+  const apiKey = String(process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not set.');
+  }
+
+  const { subject, html, text } = buildMailContent(name, code);
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: getResendFromAddress(),
+      to: [to],
+      subject,
+      html,
+      text,
+    }),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail =
+      typeof payload?.message === 'string' ? payload.message : `Resend failed (${res.status})`;
+    throw new Error(detail);
+  }
+
+  return { success: true, messageId: payload?.id, provider: 'resend' };
+}
+
+async function sendViaSmtp(to, name, code) {
+  const { subject, html, text } = buildMailContent(name, code);
+  const transporter = await createTransporter();
+  try {
+    const info = await transporter.sendMail({
+      from: getFromHeader(),
+      to,
+      subject,
+      html,
+      text,
+    });
+    return { success: true, messageId: info?.messageId, provider: 'smtp' };
+  } catch (err) {
+    const msg = err?.message || 'SMTP send failed';
+    if (/timeout|ETIMEDOUT|ECONNREFUSED/i.test(msg) && process.env.RENDER === 'true') {
+      throw new Error(
+        'SMTP is blocked on Render free tier (ports 587/465). Add RESEND_API_KEY on Render, or upgrade to a paid Render instance.',
+      );
+    }
+    throw err;
+  }
+}
+
 async function sendVerificationEmail(to, name, code) {
   if (!isValidEmailAddress(to)) {
     throw new Error('Invalid email: ' + to);
   }
 
+  // Resend uses HTTPS (port 443) — works on Render free tier where SMTP is blocked.
+  if (hasResendApiKey()) {
+    return sendViaResendApi(to, name, code);
+  }
+
   if (!hasSmtpConfig()) {
     throw new Error(
-      'SMTP is not configured. Set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS on the API server.',
+      'Email is not configured. Set RESEND_API_KEY (Render) or SMTP EMAIL_* variables (local).',
     );
   }
 
-  const { subject, html, text } = buildMailContent(name, code);
-  const transporter = await createTransporter();
-  const info = await transporter.sendMail({
-    from: getFromHeader(),
-    to,
-    subject,
-    html,
-    text,
-  });
-
-  return { success: true, messageId: info?.messageId, provider: 'smtp' };
+  return sendViaSmtp(to, name, code);
 }
 
 module.exports = {
   sendVerificationEmail,
   isEmailServiceEnabled,
   hasSmtpConfig,
+  hasResendApiKey,
 };
