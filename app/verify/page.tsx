@@ -155,6 +155,14 @@ export default function VerifyPage() {
     setIsResending(true);
     setStatus({ kind: "idle", message: "" });
 
+    if (!emailFromQuery || !emailFromQuery.trim()) {
+      console.error('[Verify] resend attempted with empty emailFromQuery:', emailFromQuery);
+      setStatus({ kind: 'error', message: 'Email address is missing. Please register again.' });
+      setIsResending(false);
+      return;
+    }
+    console.log('[Verify] Resend requested for', emailFromQuery);
+
     try {
       await apiPostJson("/api/auth/resend", { email: emailFromQuery });
       setDigits(Array.from({ length: 6 }, () => ""));

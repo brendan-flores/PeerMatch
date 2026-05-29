@@ -16,6 +16,11 @@ const apiBackend = getApiBackendOrigin();
 
 const nextConfig: NextConfig = {
   async rewrites() {
+    // Only add rewrites if we have a valid backend URL
+    if (!apiBackend || apiBackend === "http://localhost:5000") {
+      return [];
+    }
+    
     return [
       {
         source: "/socket.io/:path*",
