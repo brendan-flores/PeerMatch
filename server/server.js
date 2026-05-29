@@ -85,18 +85,22 @@ app.get('/api/health', (req, res) => {
       process.env.EMAIL_USER &&
       process.env.EMAIL_PASS,
   );
+  const gmailSmtp = Boolean(
+    process.env.GMAIL_EMAIL && process.env.GMAIL_APP_PASSWORD,
+  );
   const preferSmtp =
     process.env.EMAIL_PREFER_SMTP === '1' || process.env.EMAIL_PREFER_SMTP === 'true';
   res.json({
     ok: true,
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    email: preferSmtp && smtpEmail ? 'smtp' : supabaseEmail ? 'supabase_edge_function' : smtpEmail ? 'smtp' : 'missing_env',
-    emailProvider: preferSmtp && smtpEmail ? 'smtp' : supabaseEmail ? 'supabase+resend' : smtpEmail ? 'smtp' : 'none',
+    email: gmailSmtp ? 'gmail_smtp' : preferSmtp && smtpEmail ? 'smtp' : supabaseEmail ? 'supabase_edge_function' : smtpEmail ? 'smtp' : 'missing_env',
+    emailProvider: gmailSmtp ? 'gmail_smtp' : preferSmtp && smtpEmail ? 'smtp' : supabaseEmail ? 'supabase+resend' : smtpEmail ? 'smtp' : 'none',
     emailPreferSmtp: preferSmtp ? 'yes' : 'no',
     emailSyncSend:
       process.env.EMAIL_SYNC_SEND === '1' || process.env.EMAIL_SYNC_SEND === 'true' ? 'yes' : 'no',
     supabaseUrl: process.env.SUPABASE_URL ? 'set' : 'missing',
     emailHost: process.env.EMAIL_HOST ? 'set' : 'missing',
+    gmailEmail: process.env.GMAIL_EMAIL ? 'set' : 'missing',
     corsOrigins: process.env.CORS_ORIGINS ? 'set' : 'missing',
   });
 });
