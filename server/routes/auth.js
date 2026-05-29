@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const { sendVerificationEmail } = require('../utils/mailer');
+const { sendVerificationEmail } = require('../utils/email.service');
 const { authMiddleware, signAccessToken, attachAccessTokenCookie } = require('../middleware/auth');
 const authController = require('../controllers/authController');
 const { listFreelancerReviews } = require('../services/freelancerReviewService');

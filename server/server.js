@@ -76,17 +76,15 @@ app.get('/', (req, res) => res.send('PeerMatch MERN API is running'));
 
 /** Quick deploy check — open /api/health on your Render URL (no secrets returned). */
 app.get('/api/health', (req, res) => {
-  const resendEmail = Boolean(process.env.RESEND_API_KEY);
-  const gmailSmtp = Boolean(
-    process.env.GMAIL_EMAIL && process.env.GMAIL_APP_PASSWORD,
+  const emailService = Boolean(
+    process.env.EMAIL_USER && process.env.EMAIL_PASS,
   );
   res.json({
     ok: true,
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    email: resendEmail ? 'resend' : gmailSmtp ? 'gmail_smtp' : 'missing_env',
-    emailProvider: resendEmail ? 'resend' : gmailSmtp ? 'gmail_smtp' : 'none',
-    resendApiKey: process.env.RESEND_API_KEY ? 'set' : 'missing',
-    gmailEmail: process.env.GMAIL_EMAIL ? 'set' : 'missing',
+    email: emailService ? 'nodemailer_gmail' : 'missing_env',
+    emailProvider: emailService ? 'nodemailer_gmail' : 'none',
+    emailUser: process.env.EMAIL_USER ? 'set' : 'missing',
     corsOrigins: process.env.CORS_ORIGINS ? 'set' : 'missing',
   });
 });
