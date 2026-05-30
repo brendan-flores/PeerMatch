@@ -5,7 +5,7 @@
 | Where | What happens |
 |-------|----------------|
 | **Browser** | Calls same-origin `https://peermatch-app.site/api/...` (Vercel proxy) |
-| **Vercel server** | Proxies to Render using `NEXT_PUBLIC_API_BASE_URL` |
+| **Vercel server** | Proxies to Render using `NEXT_PUBLIC_API_BASE_URL`; **login sets `peermatch_token` on the app host** via `app/api/auth/login` |
 | **Socket.IO** | Connects to `NEXT_PUBLIC_API_BASE_URL` (Render) with cookies |
 
 You do **not** need `API_PROXY_URL` on Vercel if `NEXT_PUBLIC_API_BASE_URL` is set to your Render URL.
@@ -31,7 +31,7 @@ Resend belongs in **Supabase SMTP**, not Render.
 | `MONGODB_URI` | Atlas connection string |
 | `JWT_SECRET` | Long random (32+ chars) |
 | `JWT_EXPIRES_IN` | `7d` |
-| `JWT_COOKIE_SAMESITE` | `none` |
+| `JWT_COOKIE_SAMESITE` | `lax` (recommended with Vercel proxy; `none` still works) |
 | `JWT_COOKIE_SECURE` | `true` |
 | `JWT_COOKIE_NAME` | `peermatch_token` |
 | `TRUST_PROXY` | `1` |

@@ -1,5 +1,6 @@
 import { vercelApiEnvHint } from "@/app/lib/deployEnvHint";
 import { getServerApiBackendOrigin } from "@/app/lib/apiBackend";
+import { applySessionCookieFromUpstream } from "@/app/lib/proxyAuthCookie";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -92,10 +93,18 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
     if (rewritten) responseHeaders.append("set-cookie", rewritten);
   }
 
-  // Buffer full body — streaming upstream.body often arrives empty on Vercel (blank /api/health, broken login JSON).
   const bodyText = await upstream.text();
   responseHeaders.delete("content-length");
   responseHeaders.delete("transfer-encoding");
+
+  if (
+    upstream.ok &&
+    request.method === "POST" &&
+    (subpath === "auth/login" || subpath === "auth/verify-otp" || subpath === "auth/verify")
+  ) {
+    await applySessionCookieFromUpstream(upstream);
+    responseHeaders.delete("set-cookie");
+  }
   const contentType = responseHeaders.get("content-type") || "";
   if (
     !contentType.includes("application/json") &&

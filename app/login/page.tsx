@@ -98,7 +98,7 @@ export default function LoginPage() {
 
       if (!hasAuthUserId(rawUser)) {
         throw new ApiError(
-          "Could not confirm your session after login. Set NEXT_PUBLIC_API_BASE_URL on Vercel to your Render API URL, then redeploy.",
+          "Login did not return your profile. Redeploy the latest Vercel build, then try again. If it persists, check Render logs for /api/auth/login.",
           500,
           data,
         );

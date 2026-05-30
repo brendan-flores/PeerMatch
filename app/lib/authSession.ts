@@ -67,20 +67,27 @@ export function hasAuthUserId(user: Pick<LoginUserPayload, "id">): boolean {
 
 function isRetryableAuthMeError(err: unknown): boolean {
   if (!isApiError(err)) return true;
-  return (
-    err.status === 0 ||
-    err.status === 401 ||
-    err.status === 502 ||
-    err.status === 503 ||
-    err.status === 504
-  );
+  if (err.status === 0) return true;
+  if (err.status === 401) return true;
+  if (err.status === 502 || err.status === 503 || err.status === 504) return true;
+  if (err.status === 200 && err.message === "EMPTY_SESSION_BODY") return true;
+  return false;
 }
 
 function invalidMeResponseError(payload: unknown): ApiError {
+  const emptyBody =
+    payload === undefined ||
+    payload === null ||
+    (typeof payload === "object" &&
+      payload !== null &&
+      Object.keys(payload as object).length === 0);
+
   const hint =
     typeof payload === "string" && payload.includes("<html")
       ? `The API returned an HTML page instead of JSON.${vercelApiEnvHint()}`
-      : `Could not read your session from the server.${vercelApiEnvHint()}`;
+      : emptyBody
+        ? "Signed in, but the server returned an empty session response. Redeploy the latest Vercel build (login cookie fix), then try again in a private window."
+        : `Could not read your session from the server. If /api/health works, redeploy Vercel and try login again.`;
 
   const fromPayload = extractApiErrorMessage(payload, 500);
   const message =
@@ -107,6 +114,15 @@ export async function fetchAuthMeWithRetry(options?: {
       const payload = await apiGetJson<unknown>("/api/auth/me");
       const parsed = parseAuthMeResponse(payload);
       if (parsed) return parsed;
+      const emptyBody =
+        payload === undefined ||
+        payload === null ||
+        (typeof payload === "object" &&
+          payload !== null &&
+          Object.keys(payload as object).length === 0);
+      if (emptyBody) {
+        throw new ApiError("EMPTY_SESSION_BODY", 200, payload);
+      }
       throw invalidMeResponseError(payload);
     } catch (err) {
       lastErr = err;
