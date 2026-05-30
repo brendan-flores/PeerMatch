@@ -66,6 +66,10 @@ export function isOfferPending(status: OfferStatus | string | undefined): boolea
   return !value || value === "pending";
 }
 
+export function countPendingOffers(offers: ClientOffer[]): number {
+  return offers.filter((offer) => isOfferPending(offer.status)).length;
+}
+
 export async function completeClientTask(taskId: string) {
   return apiPatchJson<{ message: string; post: TaskPostPatch }>(
     `/api/tasks/${encodeURIComponent(taskId)}/complete`,

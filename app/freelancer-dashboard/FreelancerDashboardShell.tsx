@@ -25,7 +25,8 @@ import { useNotifications } from "@/app/hooks/useNotifications";
 
 import { useUnreadMessageCount } from "@/app/hooks/useUnreadMessageCount";
 
-import { apiGetJson, apiPostJson, ApiError } from "@/app/lib/api";
+import { fetchAuthMeWithRetry } from "@/app/lib/authSession";
+import { apiPostJson, ApiError, isApiError } from "@/app/lib/api";
 
 import {
   normalizeAuthUser,
@@ -218,12 +219,20 @@ export function FreelancerDashboardShell({
 
     (async () => {
       try {
-        const me =
-          await apiGetJson<MeResponse>(
-            "/api/auth/me"
-          );
+        const me = await fetchAuthMeWithRetry({
+          attempts:
+            typeof window !== "undefined" &&
+            window.sessionStorage.getItem("peermatch_session_ready") === "1"
+              ? 8
+              : 5,
+          baseDelayMs: 400,
+        });
 
         if (cancelled) return;
+
+        if (typeof window !== "undefined") {
+          window.sessionStorage.removeItem("peermatch_session_ready");
+        }
 
         const raw =
           me.user as Record<
@@ -266,10 +275,7 @@ export function FreelancerDashboardShell({
       } catch (err) {
         if (cancelled) return;
 
-        if (
-          err instanceof ApiError &&
-          err.status === 401
-        ) {
+        if (isApiError(err) && err.status === 401) {
           router.push("/login");
           return;
         }

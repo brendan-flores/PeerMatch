@@ -4,8 +4,9 @@ import { FormEvent, useEffect, useState } from "react";
 import AuthPageHeader from "../components/AuthPageHeader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { assertSessionAfterLogin } from "../lib/authSession";
 import { apiPostJson, ApiError, getErrorMessage, isApiError } from "../lib/api";
-import { getApiBaseUrl } from "../lib/siteUrls";
+import { getApiBaseUrl, getMainSiteUrl } from "../lib/siteUrls";
 import { connectSocket } from "../lib/socket";
 import {
   normalizeAuthUser,
@@ -51,6 +52,20 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    const mainSite = getMainSiteUrl();
+    if (mainSite && typeof window !== "undefined") {
+      try {
+        const canonicalHost = new URL(mainSite).host;
+        if (canonicalHost && window.location.host !== canonicalHost) {
+          const target = `${mainSite.replace(/\/$/, "")}${window.location.pathname}${window.location.search}`;
+          window.location.replace(target);
+          return;
+        }
+      } catch {
+        // ignore invalid MAIN_SITE_URL
+      }
+    }
+
     const base = getApiBaseUrl();
     const healthUrl = `${base}/api/health`;
     void fetch(healthUrl, { credentials: "include" }).catch(() => {});
@@ -94,7 +109,10 @@ export default function LoginPage() {
 
       if (typeof window !== "undefined" && rawUser.role) {
         window.sessionStorage.setItem("peermatch_role", String(rawUser.role));
+        window.sessionStorage.setItem("peermatch_session_ready", "1");
       }
+
+      await assertSessionAfterLogin();
 
       if (isClientAccount(rawUser)) {
         redirectAfterLogin("/client-home");

@@ -26,7 +26,8 @@ import {
   UserCircle,
   User,
 } from "lucide-react";
-import { apiGetJson, apiPostJson, ApiError } from "../lib/api";
+import { fetchAuthMeWithRetry } from "../lib/authSession";
+import { apiGetJson, apiPostJson, ApiError, isApiError } from "../lib/api";
 import {
   formatPhpBudget,
   POST_REVIEW_MESSAGE,
@@ -43,7 +44,12 @@ import {
   notifyCommunityPostsChanged,
   type CommunityPostPriority,
 } from "../lib/postsStorage";
-import { connectSocket, disconnectSocket, subscribePostApproved } from "../lib/socket";
+import {
+  connectSocket,
+  disconnectSocket,
+  subscribeNotification,
+  subscribePostApproved,
+} from "../lib/socket";
 import { ChatLayout } from "../components/chat/ChatLayout";
 import { DashboardCenterColumn } from "../components/dashboard/DashboardCenterColumn";
 import {
@@ -55,6 +61,8 @@ import {
   dashboardProfileFormStackClass,
   dashboardProfileScrollClass,
   dashboardProfileScrollPaneClass,
+  dashboardOffersPanelScrollClass,
+  dashboardOffersPanelWrapClass,
   dashboardSidebarNavScrollClass,
   mobileDashboardWhitePanelClass,
 } from "../components/dashboard/dashboardShellClasses";
@@ -62,7 +70,7 @@ import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
 import { MobileFeedTopBar } from "../components/dashboard/MobileFeedTopBar";
 import { buildClientMobileNavItems } from "../components/dashboard/dashboardMobileNavItems";
 import { NavUnreadBadge } from "../components/NavUnreadBadge";
-import { fetchClientOffers, isOfferPending } from "../lib/offersApi";
+import { countPendingOffers, fetchClientOffers } from "../lib/offersApi";
 import { useCurrentUserProfile } from "../lib/CurrentUserProfileContext";
 import { persistProfilePhotoFromFile } from "../lib/profilePhoto";
 import { UserAvatar } from "../components/UserAvatar";
@@ -272,12 +280,20 @@ function ClientHomePageContent() {
     let cancelled = false;
     (async () => {
       try {
-        const me = await apiGetJson<{ user: { id: string; name: string; email: string; role: string } }>(
-          "/api/auth/me",
-        );
+        const me = await fetchAuthMeWithRetry({
+          attempts:
+            typeof window !== "undefined" &&
+            window.sessionStorage.getItem("peermatch_session_ready") === "1"
+              ? 8
+              : 5,
+          baseDelayMs: 400,
+        });
         const fullName = String(me.user?.name || "").trim();
         const email = String(me.user?.email || "").trim();
         if (!cancelled) {
+          if (typeof window !== "undefined") {
+            window.sessionStorage.removeItem("peermatch_session_ready");
+          }
           setDisplayName(fullName);
           setDisplayEmail(email);
           setProfileNameInput(fullName);
@@ -286,7 +302,7 @@ function ClientHomePageContent() {
           }
         }
       } catch (err) {
-        if (err instanceof ApiError && err.status === 401) {
+        if (!cancelled && isApiError(err) && err.status === 401) {
           router.push("/login");
         }
       }
@@ -402,27 +418,47 @@ function ClientHomePageContent() {
     return () => window.clearTimeout(timeoutId);
   }, [activePanel]);
 
-  const hasUnreadOfferNotification = useMemo(
-    () => notifications.some((item) => item.type === "new_offer" && !item.read),
-    [notifications],
-  );
+  const refreshPendingOffersCount = useCallback(async () => {
+    if (!meUserId) return;
+    try {
+      const { offers } = await fetchClientOffers();
+      const pendingFromApi = countPendingOffers(offers);
+      const unreadOfferNotes = notifications.filter(
+        (item) => item.type === "new_offer" && !item.read,
+      ).length;
+      setPendingOffersCount(Math.max(pendingFromApi, unreadOfferNotes));
+    } catch {
+      const unreadOfferNotes = notifications.filter(
+        (item) => item.type === "new_offer" && !item.read,
+      ).length;
+      if (unreadOfferNotes > 0) {
+        setPendingOffersCount(unreadOfferNotes);
+      }
+    }
+  }, [meUserId, notifications]);
+
+  useEffect(() => {
+    void refreshPendingOffersCount();
+  }, [refreshPendingOffersCount]);
 
   useEffect(() => {
     if (!meUserId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { offers } = await fetchClientOffers();
-        if (cancelled) return;
-        setPendingOffersCount(offers.filter((offer) => isOfferPending(offer.status)).length);
-      } catch {
-        // ignore — offers panel will surface errors when opened
+    const intervalId = window.setInterval(() => {
+      void refreshPendingOffersCount();
+    }, 45_000);
+    return () => window.clearInterval(intervalId);
+  }, [meUserId, refreshPendingOffersCount]);
+
+  useEffect(() => {
+    if (!meUserId) return;
+    const unsub = subscribeNotification((payload) => {
+      const type = String(payload?.notification?.type || "");
+      if (type === "new_offer") {
+        void refreshPendingOffersCount();
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [meUserId, hasUnreadOfferNotification]);
+    });
+    return unsub;
+  }, [meUserId, refreshPendingOffersCount]);
 
   useEffect(() => {
     setPeerUserId(peerFromQuery);
@@ -733,7 +769,7 @@ function ClientHomePageContent() {
                       <NavUnreadBadge count={unreadMessageCount} active={active} />
                     ) : null}
                     {item.href.includes("panel=offers") ? (
-                      <NavUnreadBadge count={pendingOffersCount} active={active} />
+                      <NavUnreadBadge count={pendingOffersCount} active={active} label="offer" />
                     ) : null}
                   </Link>
                 )
@@ -1005,14 +1041,16 @@ function ClientHomePageContent() {
               </div>
               </div>
             ) : activePanel === "offers" ? (
-              <div className={`${mobileDashboardWhitePanelClass} h-full min-h-0`}>
-              <div className={`${dashboardPanelScrollClass} max-lg:px-4 max-lg:py-4`}>
-                <ClientOffersPanel
-                  onPendingCountChange={setPendingOffersCount}
-                  highlightPostId={highlightPost}
-                  onHighlightComplete={clearOfferHighlightFromUrl}
-                />
-              </div>
+              <div className={dashboardOffersPanelWrapClass}>
+                <div className={`${mobileDashboardWhitePanelClass} ${dashboardOffersPanelWrapClass}`}>
+                  <div className={dashboardOffersPanelScrollClass}>
+                    <ClientOffersPanel
+                      onPendingCountChange={setPendingOffersCount}
+                      highlightPostId={highlightPost}
+                      onHighlightComplete={clearOfferHighlightFromUrl}
+                    />
+                  </div>
+                </div>
               </div>
             ) : activePanel === "messages" ? (
               <section

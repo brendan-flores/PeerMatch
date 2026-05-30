@@ -58,6 +58,13 @@ export const dashboardPanelBodyClass =
 export const dashboardPanelScrollClass =
   "panel-scroll-pane flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]";
 
+/** Client offers panel — fills center column; inner list scrolls */
+export const dashboardOffersPanelWrapClass =
+  "flex h-full min-h-0 flex-1 flex-col overflow-hidden";
+
+export const dashboardOffersPanelScrollClass =
+  "panel-scroll-pane min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] max-lg:px-4 max-lg:py-4 lg:pr-1";
+
 /** Left / right column cards */
 export const dashboardAsideClass =
   "flex min-h-0 flex-col rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1";

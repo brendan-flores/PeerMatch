@@ -24,6 +24,10 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
 
   const headers = new Headers(request.headers);
   headers.delete("host");
+  // Avoid stale intermediaries; auth responses must reach the browser fresh.
+  if (subpath.startsWith("auth/")) {
+    headers.set("cache-control", "no-store");
+  }
 
   let body: string | undefined;
   if (METHODS_WITH_BODY.has(request.method)) {
