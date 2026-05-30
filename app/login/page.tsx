@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import AuthPageHeader from "../components/AuthPageHeader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiGetJson, apiPostJson, ApiError } from "../lib/api";
+import { apiPostJson, ApiError } from "../lib/api";
 import { connectSocket } from "../lib/socket";
 import {
   normalizeAuthUser,
@@ -16,9 +16,15 @@ type LoginResponse = {
   user: { id: string; name: string; email: string; role: string; accountType?: string };
 };
 
-type MeResponse = {
-  user: { id: string; name: string; email: string; role: string; accountType?: string };
-};
+function isClientAccount(user: LoginResponse["user"]) {
+  const role = String(user?.role || "").toLowerCase();
+  const accountType = String(user?.accountType || "").toLowerCase();
+  return accountType === "client" || role === "client";
+}
+
+function redirectAfterLogin(path: string) {
+  window.location.replace(path);
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,38 +48,24 @@ export default function LoginPage() {
         email: loginId.trim(),
         password,
       });
+
+      const user = normalizeAuthUser(data.user);
+      persistFreelancerFromMe(user);
+
       if (data.user?.id) {
         connectSocket(String(data.user.id));
       }
       if (typeof window !== "undefined") {
         window.sessionStorage.setItem("peermatch_role", data.user.role);
       }
-      persistFreelancerFromMe(normalizeAuthUser(data.user));
-      const roleFromLogin = String(data.user?.role || "").toLowerCase();
-      const accountTypeFromLogin = String(data.user?.accountType || "").toLowerCase();
-      if (accountTypeFromLogin === "client" || roleFromLogin === "client") {
-        router.push("/client-home");
+
+      if (isClientAccount(data.user)) {
+        redirectAfterLogin("/client-home");
         return;
       }
 
-      let freelancerId = normalizeAuthUser(data.user).id;
-      // Confirm role when the login payload omits accountType (older API responses).
-      try {
-        const me = await apiGetJson<MeResponse>("/api/auth/me");
-        const meUser = normalizeAuthUser(me.user);
-        persistFreelancerFromMe(meUser);
-        freelancerId = meUser.id || freelancerId;
-        const role = String(me.user?.role || "").toLowerCase();
-        const accountType = String(me.user?.accountType || "").toLowerCase();
-        if (accountType === "client" || role === "client") {
-          router.push("/client-home");
-          return;
-        }
-      } catch {
-        // Session may still be valid from login; dashboard will re-fetch /api/auth/me.
-      }
-      recordFreelancerLoginForGreeting(freelancerId);
-      router.push("/freelancer-dashboard");
+      recordFreelancerLoginForGreeting(user.id);
+      redirectAfterLogin("/freelancer-dashboard");
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Login failed. Please try again.";
       setStatusMessage(message);
@@ -88,99 +80,100 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#E5F6F4]">
-      <div className="flex min-h-screen w-full flex-col">
-        <AuthPageHeader />
+    <>
+      <AuthPageHeader />
 
-        <main className="flex flex-1 items-start justify-center px-4 py-10">
-          <div className="ui-page-enter ui-surface w-full max-w-md rounded-[2rem] bg-white px-10 py-10 shadow-[0_30px_90px_rgba(0,0,0,0.12)]">
-            <h1 className="text-3xl font-semibold text-[#0F172A]">Log in to PeerMatch</h1>
-            <p className="mt-3 text-sm text-zinc-600">
-              Sign in with your institutional email or username.
-            </p>
+      <main className="grid min-h-0 flex-1 grid-rows-1 place-items-center px-4 py-4 max-lg:overflow-hidden max-lg:pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:py-10 lg:py-12">
+        <div className="ui-page-enter w-full max-w-md rounded-[2rem] bg-white px-6 py-8 shadow-[0_30px_90px_rgba(0,0,0,0.12)] sm:px-8 sm:py-10 max-lg:max-w-[min(100%,19.5rem)] max-lg:px-5 max-lg:py-6">
+          <h1 className="text-center text-xl font-semibold text-[#0F172A] max-lg:text-[1.35rem] sm:text-3xl">
+            Log in to PeerMatch
+          </h1>
+          <p className="mt-2 text-center text-sm text-zinc-600 max-lg:text-[13px]">
+            Sign in with your institutional email or username.
+          </p>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div>
-                <label htmlFor="loginId" className="mb-2 block text-sm font-medium text-zinc-700">
-                  Email or Username
-                </label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4 5H20C20.5523 5 21 5.44772 21 6V18C21 18.5523 20.5523 19 20 19H4C3.44772 19 3 18.5523 3 18V6C3 5.44772 3.44772 5 4 5Z" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M3 7.5L12 13L21 7.5" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                  <input
-                    id="loginId"
-                    name="loginId"
-                    type="text"
-                    autoComplete="username"
-                    value={loginId}
-                    onChange={(event) => setLoginId(event.target.value)}
-                    placeholder="Email or username"
-                    required
-                    className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] py-4 pl-14 pr-4 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
-                  />
-                </div>
+          <form onSubmit={handleSubmit} className="mt-5 space-y-3.5 sm:mt-8 sm:space-y-5 max-lg:mt-4">
+            <div>
+              <label htmlFor="loginId" className="mb-1.5 block text-sm font-medium text-zinc-700 max-lg:text-[13px]">
+                Email or Username
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 5H20C20.5523 5 21 5.44772 21 6V18C21 18.5523 20.5523 19 20 19H4C3.44772 19 3 18.5523 3 18V6C3 5.44772 3.44772 5 4 5Z" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M3 7.5L12 13L21 7.5" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+                <input
+                  id="loginId"
+                  name="loginId"
+                  type="text"
+                  autoComplete="username"
+                  value={loginId}
+                  onChange={(event) => setLoginId(event.target.value)}
+                  placeholder="Email or username"
+                  required
+                  className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] py-3 pl-14 pr-4 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30 max-lg:py-2.5 sm:py-4"
+                />
               </div>
+            </div>
 
-              <div>
-                <label htmlFor="password" className="mb-2 block text-sm font-medium text-zinc-700">
-                  Password
-                </label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M17 11V8C17 5.23858 14.7614 3 12 3C9.23858 3 7 5.23858 7 8V11" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M5 11H19C20.1046 11 21 11.8954 21 13V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V13C3 11.8954 3.89543 11 5 11Z" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Password"
-                    required
-                    className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] py-4 pl-14 pr-4 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30"
-                  />
-                </div>
+            <div>
+              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-zinc-700 max-lg:text-[13px]">
+                Password
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17 11V8C17 5.23858 14.7614 3 12 3C9.23858 3 7 5.23858 7 8V11" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M5 11H19C20.1046 11 21 11.8954 21 13V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V13C3 11.8954 3.89543 11 5 11Z" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Password"
+                  required
+                  className="ui-input w-full rounded-3xl border border-zinc-200 bg-[#F8FAFC] py-3 pl-14 pr-4 text-sm text-[#0F172A] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30 max-lg:py-2.5 sm:py-4"
+                />
               </div>
+            </div>
 
-              {statusMessage ? (
-                <p className="text-sm text-red-600">{statusMessage}</p>
-              ) : null}
+            {statusMessage ? (
+              <p className="text-center text-sm text-red-600">{statusMessage}</p>
+            ) : null}
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="ui-interactive flex w-full items-center justify-center rounded-3xl bg-[#FA642C] py-4 text-sm font-semibold text-white hover:bg-[#df531f] motion-safe:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-zinc-300"
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Signing in...
-                  </>
-                ) : (
-                  "Continue"
-                )}
-              </button>
-            </form>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="ui-interactive flex w-full items-center justify-center rounded-3xl bg-[#FA642C] py-3 text-sm font-semibold text-white hover:bg-[#df531f] disabled:cursor-not-allowed disabled:bg-zinc-300 max-lg:py-2.5 sm:py-4"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Signing in...
+                </>
+              ) : (
+                "Continue"
+              )}
+            </button>
+          </form>
 
-            <p className="mt-6 text-center text-sm text-zinc-600">
-              Don&apos;t have PeerMatch account?{' '}
-              <Link href="/register" className="ui-interactive font-semibold text-[#0069A8] hover:text-[#004f7d] motion-safe:hover:-translate-y-0.5">
-                Sign up
-              </Link>
-            </p>
-          </div>
-        </main>
-      </div>
-    </div>
+          <p className="mt-4 text-center text-sm text-zinc-600 max-lg:mt-3 max-lg:text-[13px] sm:mt-6">
+            Don&apos;t have PeerMatch account?{" "}
+            <Link href="/register" className="font-semibold text-[#0069A8] hover:text-[#004f7d]">
+              Sign up
+            </Link>
+          </p>
+        </div>
+      </main>
+    </>
   );
 }

@@ -17,7 +17,7 @@ import { searchUsersByQuery } from "@/app/lib/userSearch";
 import { ChatThread } from "@/app/components/chat/ChatThread";
 import { UserAvatar } from "@/app/components/UserAvatar";
 import { NotificationsDropdown } from "@/app/components/NotificationsDropdown";
-import { dashboardCenterPanelHeadingClass, mobileDashboardWhitePanelClass } from "@/app/components/dashboard/dashboardShellClasses";
+import { dashboardCenterPanelHeadingClass } from "@/app/components/dashboard/dashboardShellClasses";
 import {
   MobileDashboardMenu,
   type MobileNavItem,
@@ -535,15 +535,19 @@ export function ChatLayout({
   const showMobileThread = Boolean(activeUserId);
 
   return (
-    <div className={`flex h-full max-h-full min-h-0 w-full min-w-0 overflow-hidden bg-[#E5F6F4] px-3 pb-3 pt-0 lg:bg-[#F5F5F5] lg:px-0 lg:pb-0 lg:pt-0 ${className}`}>
+    <div
+      className={`flex h-full max-h-full min-h-0 w-full min-w-0 overflow-hidden bg-[#E5F6F4] lg:bg-[#F5F5F5] ${
+        showMobileThread ? "max-lg:px-0 max-lg:pb-0 max-lg:pt-0" : "max-lg:px-3 max-lg:pb-3 max-lg:pt-0"
+      } lg:px-0 lg:pb-0 lg:pt-0 ${className}`}
+    >
       {/* Left sidebar / mobile chat list */}
       <aside
-        className={`flex h-full max-h-full min-h-0 shrink-0 flex-col overflow-hidden bg-transparent lg:w-[300px] lg:border-r lg:border-zinc-200 lg:bg-white ${
+        className={`flex h-full max-h-full min-h-0 shrink-0 flex-col overflow-hidden bg-[#E5F6F4] lg:w-[300px] lg:border-r lg:border-zinc-200 lg:bg-white ${
           showMobileThread ? "hidden lg:flex" : "flex w-full"
         }`}
       >
-        <div className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${mobileDashboardWhitePanelClass} lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none`}>
-        <div className={`shrink-0 px-4 pt-3 pb-3 lg:bg-white ${dashboardCenterPanelHeadingClass}`}>
+        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden lg:bg-white">
+        <div className={`shrink-0 px-4 pt-3 pb-3 ${dashboardCenterPanelHeadingClass}`}>
           <div className="flex items-center justify-between gap-3 lg:hidden">
             <button
               type="button"
@@ -751,13 +755,12 @@ export function ChatLayout({
 
       {/* Main chat */}
       <main
-        className={`h-full max-h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent lg:flex lg:bg-[#F5F5F5] ${
+        className={`h-full max-h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#E5F6F4] lg:flex lg:bg-[#F5F5F5] ${
           showMobileThread ? "flex" : "hidden"
         }`}
       >
-        <div className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${mobileDashboardWhitePanelClass} lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none`}>
         <ChatThread
-          className="h-full"
+          className="h-full max-lg:rounded-none"
           currentUserId={currentUserId}
           otherUserId={activeUserId}
           otherUserLabel={activeUserName}
@@ -806,7 +809,6 @@ export function ChatLayout({
             });
           }}
         />
-        </div>
       </main>
 
       {mobileNav ? (

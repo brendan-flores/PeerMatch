@@ -69,11 +69,76 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
   }
 
   const responseHeaders = new Headers(upstream.headers);
+  responseHeaders.delete("set-cookie");
+
+  const upstreamCookies =
+    typeof upstream.headers.getSetCookie === "function"
+      ? upstream.headers.getSetCookie()
+      : [];
+  const cookieLines =
+    upstreamCookies.length > 0
+      ? upstreamCookies
+      : upstream.headers.get("set-cookie")
+        ? [upstream.headers.get("set-cookie") as string]
+        : [];
+
+  for (const raw of cookieLines) {
+    const rewritten = rewriteSetCookieForSiteHost(raw);
+    if (rewritten) responseHeaders.append("set-cookie", rewritten);
+  }
+
   return new NextResponse(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers: responseHeaders,
   });
+}
+
+/** Drop upstream Domain= so the session cookie applies to the Next.js site (fixes mobile/Vercel proxy login). */
+function rewriteSetCookieForSiteHost(raw: string): string | null {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return null;
+
+  const parts = trimmed.split(";").map((part) => part.trim());
+  const nameValue = parts[0];
+  if (!nameValue || !nameValue.includes("=")) return null;
+
+  const attrs: string[] = [nameValue];
+  let hasPath = false;
+  let hasSameSite = false;
+  let hasSecure = false;
+
+  for (const part of parts.slice(1)) {
+    if (/^domain=/i.test(part)) continue;
+    if (/^path=/i.test(part)) {
+      hasPath = true;
+      attrs.push("Path=/");
+      continue;
+    }
+    if (/^samesite=/i.test(part)) {
+      hasSameSite = true;
+      attrs.push("SameSite=Lax");
+      continue;
+    }
+    if (/^secure$/i.test(part)) {
+      hasSecure = true;
+      attrs.push("Secure");
+      continue;
+    }
+    if (/^httponly$/i.test(part)) {
+      attrs.push("HttpOnly");
+      continue;
+    }
+    if (/^max-age=/i.test(part) || /^expires=/i.test(part)) {
+      attrs.push(part);
+    }
+  }
+
+  if (!hasPath) attrs.push("Path=/");
+  if (!hasSameSite) attrs.push("SameSite=Lax");
+  if (!hasSecure && process.env.NODE_ENV === "production") attrs.push("Secure");
+
+  return attrs.join("; ");
 }
 
 type RouteContext = { params: Promise<{ path?: string[] }> };

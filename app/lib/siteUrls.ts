@@ -23,15 +23,16 @@ export function getAdminSiteUrl(): string {
  * - Local: http://localhost:5000
  */
 export function getApiBaseUrl(): string {
-  const direct = trimOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
-  if (direct) return direct;
-
   if (typeof window !== "undefined") {
     if (!isLocalHostname(window.location.hostname)) {
       return "";
     }
-    return "http://localhost:5000";
+    const direct = trimOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
+    return direct || "http://localhost:5000";
   }
+
+  const direct = trimOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
+  if (direct) return direct;
 
   return "http://localhost:5000";
 }

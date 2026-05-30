@@ -632,8 +632,8 @@ export function ChatThread({
   }
 
   return (
-    <div className={`flex h-full max-h-full min-h-0 flex-col overflow-hidden ${className}`}>
-      <header className="shrink-0 border-b border-zinc-200 bg-white px-4 py-3 lg:min-h-[76px] lg:px-6 lg:py-6">
+    <div className={`flex h-full max-h-full min-h-0 flex-col overflow-hidden bg-[#E5F6F4] ${className}`}>
+      <header className="shrink-0 w-full border-b border-zinc-200 bg-white px-4 py-3 max-lg:rounded-none lg:min-h-[76px] lg:px-6 lg:py-6">
         <div className="flex items-center gap-3">
           {onBack ? (
             <button
@@ -720,7 +720,10 @@ export function ChatThread({
         </div>
       </div>
 
-      <form onSubmit={send} className="relative shrink-0 border-t border-zinc-200 bg-white px-4 py-3 lg:px-6 lg:py-4">
+      <form
+        onSubmit={send}
+        className="relative w-full shrink-0 border-t border-zinc-200 bg-white px-4 py-3 max-lg:rounded-none lg:px-6 lg:py-4"
+      >
         {replyingTo ? (
           <div className="mb-3 flex items-start justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
             <div className="min-w-0">

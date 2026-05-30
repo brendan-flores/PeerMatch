@@ -257,7 +257,7 @@ export function ChatMessageRow({
               : "rounded-tl-md bg-transparent text-zinc-500 ring-0"
             : mine
               ? "rounded-br-sm bg-[#FF6B35] text-white lg:rounded-tr-md lg:bg-[#4DD2AC]"
-              : "rounded-bl-sm bg-zinc-100 text-zinc-900 lg:rounded-tl-md lg:bg-white lg:ring-1 lg:ring-zinc-200"
+              : "rounded-bl-sm bg-white text-zinc-900 ring-1 ring-zinc-200/90 lg:rounded-tl-md"
         }`}
       >
         {fwd && !isTombstone ? (

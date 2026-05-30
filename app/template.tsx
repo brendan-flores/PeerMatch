@@ -5,6 +5,8 @@ export default function Template({
 }: Readonly<{
   children: ReactNode;
 }>) {
-  return <div className="ui-route-enter">{children}</div>;
+  return (
+    <div className="ui-route-enter flex min-h-full flex-1 flex-col">{children}</div>
+  );
 }
 
