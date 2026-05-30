@@ -25,8 +25,7 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
 
   const headers = new Headers(request.headers);
   headers.delete("host");
-  // Avoid stale intermediaries; auth responses must reach the browser fresh.
-  if (subpath.startsWith("auth/")) {
+  if (subpath.startsWith("auth/") || subpath === "health") {
     headers.set("cache-control", "no-store");
   }
 
@@ -93,20 +92,19 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
     if (rewritten) responseHeaders.append("set-cookie", rewritten);
   }
 
-  // Buffer auth JSON bodies so login/me payloads are not truncated when streaming through Vercel.
-  if (subpath.startsWith("auth/")) {
-    const bodyText = await upstream.text();
-    if (!responseHeaders.get("content-type")?.includes("application/json")) {
-      responseHeaders.set("content-type", "application/json; charset=utf-8");
-    }
-    return new NextResponse(bodyText, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers: responseHeaders,
-    });
+  // Buffer full body — streaming upstream.body often arrives empty on Vercel (blank /api/health, broken login JSON).
+  const bodyText = await upstream.text();
+  responseHeaders.delete("content-length");
+  responseHeaders.delete("transfer-encoding");
+  const contentType = responseHeaders.get("content-type") || "";
+  if (
+    !contentType.includes("application/json") &&
+    (subpath.startsWith("auth/") || subpath === "health" || bodyText.trim().startsWith("{"))
+  ) {
+    responseHeaders.set("content-type", "application/json; charset=utf-8");
   }
 
-  return new NextResponse(upstream.body, {
+  return new NextResponse(bodyText, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers: responseHeaders,
