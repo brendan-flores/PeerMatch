@@ -93,11 +93,7 @@ export default function LoginPage() {
 
       if (!hasAuthUserId(rawUser)) {
         const me = await fetchAuthMeWithRetry({ attempts: 6, baseDelayMs: 400 });
-        rawUser = {
-          ...me.user,
-          role: me.user.role,
-          accountType: me.user.accountType,
-        };
+        rawUser = me.user;
       }
 
       if (!hasAuthUserId(rawUser)) {

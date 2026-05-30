@@ -1,4 +1,5 @@
 import { apiGetJson, ApiError, isApiError } from "@/app/lib/api";
+import { extractApiErrorMessage } from "@/app/lib/parseApiError";
 
 export type AuthMeUser = {
   id: string;
@@ -18,18 +19,19 @@ export type LoginUserPayload = AuthMeUser & {
   accountType?: string;
 };
 
-/** Normalize POST /api/auth/login body (handles id, _id, or missing user when cookie is set). */
-export function parseLoginUserFromPayload(payload: unknown): LoginUserPayload {
-  if (!payload || typeof payload !== "object") {
-    return { id: "", name: "", email: "", role: "" };
-  }
-
+function rawUserRecord(payload: unknown): Record<string, unknown> {
+  if (!payload || typeof payload !== "object") return {};
   const record = payload as Record<string, unknown>;
   const nested = record.user;
-  const raw =
-    nested && typeof nested === "object"
-      ? (nested as Record<string, unknown>)
-      : record;
+  if (nested && typeof nested === "object") {
+    return nested as Record<string, unknown>;
+  }
+  return record;
+}
+
+/** Normalize POST /api/auth/login or GET /api/auth/me bodies. */
+export function parseLoginUserFromPayload(payload: unknown): LoginUserPayload {
+  const raw = rawUserRecord(payload);
 
   return {
     id: String(raw.id ?? raw._id ?? raw.userId ?? ""),
@@ -37,6 +39,24 @@ export function parseLoginUserFromPayload(payload: unknown): LoginUserPayload {
     email: typeof raw.email === "string" ? raw.email : "",
     role: typeof raw.role === "string" ? raw.role : "",
     accountType: typeof raw.accountType === "string" ? raw.accountType : undefined,
+    photoDataUrl: typeof raw.photoDataUrl === "string" ? raw.photoDataUrl : undefined,
+  };
+}
+
+/** Normalize GET /api/auth/me — always returns null instead of throwing on bad shape. */
+export function parseAuthMeResponse(payload: unknown): AuthMeResponse | null {
+  const parsed = parseLoginUserFromPayload(payload);
+  if (!hasAuthUserId(parsed)) return null;
+
+  return {
+    user: {
+      id: parsed.id,
+      name: parsed.name,
+      email: parsed.email,
+      role: parsed.role || "",
+      accountType: parsed.accountType,
+      photoDataUrl: parsed.photoDataUrl,
+    },
   };
 }
 
@@ -55,6 +75,21 @@ function isRetryableAuthMeError(err: unknown): boolean {
   );
 }
 
+function invalidMeResponseError(payload: unknown): ApiError {
+  const hint =
+    typeof payload === "string" && payload.includes("<html")
+      ? "The API returned an HTML page instead of JSON. Set API_PROXY_URL on Vercel to your Render URL and redeploy."
+      : "Could not read your session from the server. On Vercel set API_PROXY_URL and NEXT_PUBLIC_API_BASE_URL to your Render API URL, then redeploy.";
+
+  const fromPayload = extractApiErrorMessage(payload, 500);
+  const message =
+    fromPayload && !fromPayload.startsWith("Request failed (")
+      ? fromPayload
+      : hint;
+
+  return new ApiError(message, 500, payload);
+}
+
 /**
  * Load /api/auth/me with retries (mobile Safari may apply Set-Cookie slightly after login).
  */
@@ -68,7 +103,10 @@ export async function fetchAuthMeWithRetry(options?: {
 
   for (let i = 0; i < attempts; i += 1) {
     try {
-      return await apiGetJson<AuthMeResponse>("/api/auth/me");
+      const payload = await apiGetJson<unknown>("/api/auth/me");
+      const parsed = parseAuthMeResponse(payload);
+      if (parsed) return parsed;
+      throw invalidMeResponseError(payload);
     } catch (err) {
       lastErr = err;
       if (!isRetryableAuthMeError(err) || i === attempts - 1) {
