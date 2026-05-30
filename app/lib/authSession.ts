@@ -13,6 +13,37 @@ export type AuthMeResponse = {
   user: AuthMeUser;
 };
 
+export type LoginUserPayload = AuthMeUser & {
+  role?: string;
+  accountType?: string;
+};
+
+/** Normalize POST /api/auth/login body (handles id, _id, or missing user when cookie is set). */
+export function parseLoginUserFromPayload(payload: unknown): LoginUserPayload {
+  if (!payload || typeof payload !== "object") {
+    return { id: "", name: "", email: "", role: "" };
+  }
+
+  const record = payload as Record<string, unknown>;
+  const nested = record.user;
+  const raw =
+    nested && typeof nested === "object"
+      ? (nested as Record<string, unknown>)
+      : record;
+
+  return {
+    id: String(raw.id ?? raw._id ?? raw.userId ?? ""),
+    name: typeof raw.name === "string" ? raw.name : "",
+    email: typeof raw.email === "string" ? raw.email : "",
+    role: typeof raw.role === "string" ? raw.role : "",
+    accountType: typeof raw.accountType === "string" ? raw.accountType : undefined,
+  };
+}
+
+export function hasAuthUserId(user: Pick<LoginUserPayload, "id">): boolean {
+  return Boolean(String(user.id || "").trim());
+}
+
 function isRetryableAuthMeError(err: unknown): boolean {
   if (!isApiError(err)) return true;
   return (

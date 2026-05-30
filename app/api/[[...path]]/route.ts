@@ -92,6 +92,19 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
     if (rewritten) responseHeaders.append("set-cookie", rewritten);
   }
 
+  // Buffer auth JSON bodies so login/me payloads are not truncated when streaming through Vercel.
+  if (subpath.startsWith("auth/")) {
+    const bodyText = await upstream.text();
+    if (!responseHeaders.get("content-type")?.includes("application/json")) {
+      responseHeaders.set("content-type", "application/json; charset=utf-8");
+    }
+    return new NextResponse(bodyText, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders,
+    });
+  }
+
   return new NextResponse(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,

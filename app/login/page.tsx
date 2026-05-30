@@ -4,7 +4,13 @@ import { FormEvent, useEffect, useState } from "react";
 import AuthPageHeader from "../components/AuthPageHeader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { assertSessionAfterLogin } from "../lib/authSession";
+import {
+  assertSessionAfterLogin,
+  fetchAuthMeWithRetry,
+  hasAuthUserId,
+  parseLoginUserFromPayload,
+  type LoginUserPayload,
+} from "../lib/authSession";
 import { apiPostJson, ApiError, getErrorMessage, isApiError } from "../lib/api";
 import { getApiBaseUrl, getMainSiteUrl } from "../lib/siteUrls";
 import { connectSocket } from "../lib/socket";
@@ -14,11 +20,7 @@ import {
   recordFreelancerLoginForGreeting,
 } from "../lib/freelancerStorage";
 
-type LoginResponse = {
-  user: { id: string; name: string; email: string; role: string; accountType?: string };
-};
-
-function isClientAccount(user: LoginResponse["user"]) {
+function isClientAccount(user: LoginUserPayload) {
   const role = String(user?.role || "").toLowerCase();
   const accountType = String(user?.accountType || "").toLowerCase();
   return accountType === "client" || role === "client";
@@ -32,7 +34,7 @@ async function postLoginWithRetry(body: { email: string; password: string }) {
   let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      return await apiPostJson<LoginResponse>("/api/auth/login", body);
+      return await apiPostJson<unknown>("/api/auth/login", body);
     } catch (err) {
       lastErr = err;
       const retryable =
@@ -87,10 +89,20 @@ export default function LoginPage() {
         password,
       });
 
-      const rawUser = data?.user;
-      if (!rawUser || (!rawUser.id && !(rawUser as { _id?: string })._id)) {
+      let rawUser = parseLoginUserFromPayload(data);
+
+      if (!hasAuthUserId(rawUser)) {
+        const me = await fetchAuthMeWithRetry({ attempts: 6, baseDelayMs: 400 });
+        rawUser = {
+          ...me.user,
+          role: me.user.role,
+          accountType: me.user.accountType,
+        };
+      }
+
+      if (!hasAuthUserId(rawUser)) {
         throw new ApiError(
-          "Login response was incomplete. Check API_PROXY_URL / NEXT_PUBLIC_API_BASE_URL on Vercel and CORS_ORIGINS on Render, then redeploy.",
+          "Could not confirm your session after login. Check that API_PROXY_URL is set on Vercel and redeploy, then try again.",
           500,
           data,
         );
