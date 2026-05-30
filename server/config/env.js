@@ -5,11 +5,25 @@
 const path = require('path');
 const fs = require('fs');
 
+function looksLikeUtf16LeWithoutBom(buf) {
+  if (buf.length < 4) return false;
+  let asciiPairs = 0;
+  const sample = Math.min(buf.length, 400);
+  for (let i = 0; i + 1 < sample; i += 2) {
+    if (buf[i + 1] === 0 && buf[i] >= 0x20 && buf[i] <= 0x7e) asciiPairs += 1;
+  }
+  return asciiPairs >= 4;
+}
+
 function readEnvFileContents(envPath) {
   const buf = fs.readFileSync(envPath);
 
   if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) {
     return buf.slice(2).toString('utf16le');
+  }
+
+  if (looksLikeUtf16LeWithoutBom(buf)) {
+    return buf.toString('utf16le');
   }
 
   if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
@@ -55,7 +69,9 @@ function loadEnv() {
 
     console.log(`Loaded ${count} variables from .env`);
     console.log(`MONGODB_URI: ${process.env.MONGODB_URI ? 'set' : 'missing'}`);
-    console.log(`EMAIL_USER: ${process.env.EMAIL_USER ? 'set' : 'missing'}`);
+    console.log(
+      `Supabase: ${process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY) ? 'set' : 'missing'}`,
+    );
     return true;
   } catch (error) {
     console.warn(`Failed to load .env: ${error.message}`);

@@ -1,8 +1,7 @@
 const express = require('express');
-const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const { sendVerificationEmail } = require('../utils/email.service');
+const { sendEmailOtp, verifyEmailOtp, isSupabaseConfigured } = require('../utils/supabaseClient');
 const { authMiddleware, signAccessToken, attachAccessTokenCookie } = require('../middleware/auth');
 const authController = require('../controllers/authController');
 const { listFreelancerReviews } = require('../services/freelancerReviewService');
@@ -18,23 +17,148 @@ const router = express.Router();
 
 const REGISTER_ACCOUNT_TYPES = ['client', 'freelancer'];
 
-// Generate a random 6-digit numeric verification code.
-function generateVerificationCode() {
-  return String(crypto.randomInt(100000, 1000000));
-}
-
-// Create a verification expiration date based on environment settings.
-function getVerificationExpiration() {
-  const ttlMinutes = Number(process.env.VERIFICATION_CODE_TTL_MINUTES || 10);
-  return new Date(Date.now() + ttlMinutes * 60 * 1000);
-}
-
 function isInstitutionalEmail(email) {
   const domain = (process.env.INSTITUTIONAL_EMAIL_DOMAIN || 'cit.edu').trim().toLowerCase();
   const normalized = normalizeEmail(email);
   const atSuffix = `@${domain}`;
   return normalized.endsWith(atSuffix) || normalized.endsWith(`.${domain}`);
 }
+
+async function activateVerifiedUser(normalizedEmail) {
+  const pending = await User.findOne({ email: normalizedEmail, verified: false });
+  if (!pending) {
+    const existing = await User.findOne({ email: normalizedEmail, verified: true });
+    if (existing) {
+      return {
+        error: {
+          status: 409,
+          body: {
+            message: 'Email is already registered. Please log in.',
+            email: normalizedEmail,
+          },
+        },
+      };
+    }
+    return {
+      error: {
+        status: 404,
+        body: { message: 'No pending registration found. Please register again.' },
+      },
+    };
+  }
+
+  pending.verified = true;
+  pending.verification = undefined;
+  pending.markModified('verification');
+  await pending.save();
+
+  return {
+    user: pending,
+    body: {
+      message: 'Email verified successfully.',
+      user: {
+        id: pending._id,
+        username: pending.username,
+        name: pending.name,
+        email: pending.email,
+        role: pending.role,
+        ...(pending.accountType ? { accountType: pending.accountType } : {}),
+      },
+    },
+  };
+}
+
+/** POST /api/auth/send-otp — Supabase sends a one-time password to the email. */
+router.post('/send-otp', async (req, res) => {
+  try {
+    const normalizedEmail = normalizeEmail(req.body?.email);
+
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: 'Please provide email.' });
+    }
+
+    const sendLimit = rateLimitByKey(`send-otp:${normalizedEmail || req.ip}`, {
+      windowMs: 15 * 60 * 1000,
+      max: 5,
+    });
+    if (sendLimit) {
+      return res.status(sendLimit.status).json({ message: sendLimit.message });
+    }
+
+    if (!isInstitutionalEmail(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please use your institutional Outlook email (e.g., name@cit.edu).' });
+    }
+
+    if (!isSupabaseConfigured()) {
+      return res.status(503).json({
+        message: 'Email verification is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.',
+      });
+    }
+
+    await sendEmailOtp(normalizedEmail);
+
+    return res.status(200).json({
+      message: 'Verification code sent to email.',
+      email: normalizedEmail,
+    });
+  } catch (error) {
+    console.error('send-otp failed:', error?.message || error);
+    return res.status(502).json({
+      message: error?.message || 'Could not send verification code. Please try again.',
+    });
+  }
+});
+
+/** POST /api/auth/verify-otp — verify Supabase OTP, then activate the MongoDB profile. */
+async function handleVerifyOtp(req, res) {
+  try {
+    const normalizedEmail = normalizeEmail(req.body?.email);
+    const token = String(req.body?.token || req.body?.code || '').trim();
+
+    const verifyLimit = rateLimitByKey(`verify-otp:${normalizedEmail || req.ip}`, {
+      windowMs: 15 * 60 * 1000,
+      max: 20,
+    });
+    if (verifyLimit) {
+      return res.status(verifyLimit.status).json({ message: verifyLimit.message });
+    }
+
+    if (!normalizedEmail || !token) {
+      return res.status(400).json({ message: 'Please provide email and verification code.' });
+    }
+
+    if (!isSupabaseConfigured()) {
+      return res.status(503).json({
+        message: 'Email verification is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.',
+      });
+    }
+
+    const supabaseResult = await verifyEmailOtp(normalizedEmail, token);
+    const activation = await activateVerifiedUser(normalizedEmail);
+
+    if (activation.error) {
+      return res.status(activation.error.status).json(activation.error.body);
+    }
+
+    const jwt = signAccessToken(activation.user);
+    attachAccessTokenCookie(res, jwt);
+
+    return res.json({
+      ...activation.body,
+      ...(supabaseResult?.session ? { supabaseSession: supabaseResult.session } : {}),
+    });
+  } catch (error) {
+    console.error('verify-otp failed:', error?.message || error);
+    return res.status(400).json({
+      message: error?.message || 'Invalid or expired verification code.',
+    });
+  }
+}
+
+router.post('/verify-otp', handleVerifyOtp);
+
+/** Legacy alias — accepts `code` in the request body. */
+router.post('/verify', handleVerifyOtp);
 
 function serializeProfileUser(user) {
   return {
@@ -138,6 +262,12 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Please use your institutional Outlook email (e.g., name@cit.edu).' });
     }
 
+    if (!isSupabaseConfigured()) {
+      return res.status(503).json({
+        message: 'Email verification is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.',
+      });
+    }
+
     const userByEmail = await User.findOne({ email: normalizedEmail });
     if (userByEmail?.verified) {
       return res.status(409).json({ message: 'Email is already registered.' });
@@ -150,8 +280,6 @@ router.post('/register', async (req, res) => {
 
     const displayName = normalizedUsername;
     const hashedPassword = await bcrypt.hash(password, 12);
-    const verificationCode = generateVerificationCode();
-    const expiresAt = getVerificationExpiration();
 
     let pending = userByEmail;
 
@@ -161,7 +289,8 @@ router.post('/register', async (req, res) => {
       pending.password = hashedPassword;
       pending.accountType = accountType;
       pending.verified = false;
-      pending.verification = { code: verificationCode, expiresAt };
+      pending.verification = undefined;
+      pending.markModified('verification');
       await pending.save();
     } else {
       pending = await User.create({
@@ -172,108 +301,27 @@ router.post('/register', async (req, res) => {
         role: 'user',
         verified: false,
         ...(accountType ? { accountType } : {}),
-        verification: { code: verificationCode, expiresAt },
       });
     }
 
-    const recipientEmail = pending.email;
-    const recipientName = pending.name;
-
-    const waitForEmail =
-      process.env.EMAIL_SYNC_SEND === '1' || process.env.EMAIL_SYNC_SEND === 'true';
-
-    if (waitForEmail) {
-      try {
-        await sendVerificationEmail(recipientEmail, recipientName, verificationCode);
-      } catch (mailError) {
-        console.error('Verification email failed:', recipientEmail, mailError?.message || mailError);
-        return res.status(502).json({
-          message:
-            mailError?.message ||
-            'Could not send verification email. Check API email settings (Gmail App Password on Render) and try again.',
-        });
-      }
-      return res.status(201).json({
-        message: 'Verification code sent to email. Enter the code to verify your account.',
-        email: recipientEmail,
+    try {
+      await sendEmailOtp(pending.email);
+    } catch (mailError) {
+      console.error('Verification OTP failed:', pending.email, mailError?.message || mailError);
+      return res.status(502).json({
+        message:
+          mailError?.message ||
+          'Could not send verification code. Check Supabase settings and try again.',
       });
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Verification code sent to email. Enter the code to verify your account.',
-      email: recipientEmail,
-    });
-
-    setImmediate(() => {
-      sendVerificationEmail(recipientEmail, recipientName, verificationCode).catch((mailError) => {
-        console.error('Verification email failed:', recipientEmail, mailError?.message || mailError);
-      });
+      email: pending.email,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error during registration.' });
-  }
-});
-
-router.post('/verify', async (req, res) => {
-  try {
-    const { email, code } = req.body;
-    const normalizedEmail = normalizeEmail(email);
-
-    const verifyLimit = rateLimitByKey(`verify:${normalizedEmail || req.ip}`, {
-      windowMs: 15 * 60 * 1000,
-      max: 20,
-    });
-    if (verifyLimit) {
-      return res.status(verifyLimit.status).json({ message: verifyLimit.message });
-    }
-
-    if (!normalizedEmail || !code) {
-      return res.status(400).json({ message: 'Please provide email and verification code.' });
-    }
-
-    const pending = await User.findOne({ email: normalizedEmail, verified: false });
-    if (!pending) {
-      const existing = await User.findOne({ email: normalizedEmail, verified: true });
-      if (existing) {
-        return res.status(409).json({
-          message: 'Email is already registered. Please log in.',
-          email: normalizedEmail,
-        });
-      }
-      return res.status(404).json({ message: 'No pending registration found. Please register again.' });
-    }
-
-    if (!pending.verification || pending.verification.code !== String(code)) {
-      return res.status(400).json({ message: 'Invalid verification code.' });
-    }
-
-    if (pending.verification.expiresAt < new Date()) {
-      return res.status(400).json({ message: 'Verification code has expired.' });
-    }
-
-    pending.verified = true;
-    pending.verification = undefined;
-    pending.markModified('verification');
-    await pending.save();
-
-    const token = signAccessToken(pending);
-    attachAccessTokenCookie(res, token);
-
-    return res.json({
-      message: 'Email verified successfully.',
-      user: {
-        id: pending._id,
-        username: pending.username,
-        name: pending.name,
-        email: pending.email,
-        role: pending.role,
-        ...(pending.accountType ? { accountType: pending.accountType } : {}),
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error during verification.' });
   }
 });
 
@@ -508,44 +556,26 @@ router.post('/resend', async (req, res) => {
       return res.status(404).json({ message: 'No pending registration found. Please register again.' });
     }
 
-    const verificationCode = generateVerificationCode();
-    const expiresAt = getVerificationExpiration();
-
-    pending.verification = { code: verificationCode, expiresAt };
-    await pending.save();
-
-    const recipientEmail = pending.email;
-    const recipientName = pending.name;
-
-    const waitForEmail =
-      process.env.EMAIL_SYNC_SEND === '1' || process.env.EMAIL_SYNC_SEND === 'true';
-
-    if (waitForEmail) {
-      try {
-        await sendVerificationEmail(recipientEmail, recipientName, verificationCode);
-      } catch (mailError) {
-        console.error('Resend verification email failed:', recipientEmail, mailError?.message || mailError);
-        return res.status(502).json({
-          message:
-            mailError?.message ||
-            'Could not send verification email. Check API email settings and try again.',
-        });
-      }
-      return res.status(200).json({
-        message: 'Verification code resent to email.',
-        email: normalizedEmail,
+    if (!isSupabaseConfigured()) {
+      return res.status(503).json({
+        message: 'Email verification is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.',
       });
     }
 
-    res.status(200).json({
+    try {
+      await sendEmailOtp(normalizedEmail);
+    } catch (mailError) {
+      console.error('Resend OTP failed:', normalizedEmail, mailError?.message || mailError);
+      return res.status(502).json({
+        message:
+          mailError?.message ||
+          'Could not send verification code. Check Supabase settings and try again.',
+      });
+    }
+
+    return res.status(200).json({
       message: 'Verification code resent to email.',
       email: normalizedEmail,
-    });
-
-    setImmediate(() => {
-      sendVerificationEmail(recipientEmail, recipientName, verificationCode).catch((mailError) => {
-        console.error('Resend verification email failed:', recipientEmail, mailError?.message || mailError);
-      });
     });
   } catch (error) {
     console.error(error);

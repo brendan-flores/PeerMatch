@@ -71,15 +71,13 @@ app.get('/', (req, res) => res.send('PeerMatch MERN API is running'));
 
 /** Quick deploy check — open /api/health on your Render URL (no secrets returned). */
 app.get('/api/health', (req, res) => {
-  const { isEmailServiceEnabled, hasSmtpConfig, hasResendApiKey } = require('./utils/email.service');
-  const smtp = hasSmtpConfig();
-  const resend = hasResendApiKey();
-  const emailOk = isEmailServiceEnabled();
+  const { isSupabaseConfigured } = require('./utils/supabaseClient');
+  const supabaseOk = isSupabaseConfigured();
   res.json({
     ok: true,
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    email: emailOk ? (resend ? 'resend_api' : 'smtp') : 'missing_env',
-    emailProvider: resend ? 'resend_https' : smtp ? 'nodemailer_smtp' : 'none',
+    email: supabaseOk ? 'supabase_otp' : 'missing_env',
+    emailProvider: supabaseOk ? 'supabase' : 'none',
     onRender: process.env.RENDER === 'true' ? 'yes' : 'no',
     corsOrigins: process.env.CORS_ORIGINS ? 'set' : 'missing',
   });

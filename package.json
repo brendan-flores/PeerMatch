@@ -17,6 +17,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
     "bcryptjs": "^2.4.3",
     "cookie": "^1.1.1",
     "cookie-parser": "^1.4.7",
@@ -29,7 +30,6 @@
     "mongodb": "^7.2.0",
     "mongoose": "^7.8.9",
     "next": "16.2.6",
-    "nodemailer": "^8.0.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "socket.io": "^4.8.3",
