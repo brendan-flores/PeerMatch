@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import AuthPageHeader from "../components/AuthPageHeader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiPostJson, ApiError } from "../lib/api";
+import { apiPostJson, ApiError, getErrorMessage, isApiError } from "../lib/api";
+import { getApiBaseUrl } from "../lib/siteUrls";
 import { connectSocket } from "../lib/socket";
 import {
   normalizeAuthUser,
@@ -26,12 +27,34 @@ function redirectAfterLogin(path: string) {
   window.location.replace(path);
 }
 
+async function postLoginWithRetry(body: { email: string; password: string }) {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await apiPostJson<LoginResponse>("/api/auth/login", body);
+    } catch (err) {
+      lastErr = err;
+      const retryable =
+        isApiError(err) && (err.status === 502 || err.status === 503 || err.status === 504);
+      if (!retryable || attempt === 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+  }
+  throw lastErr;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const base = getApiBaseUrl();
+    const healthUrl = `${base}/api/health`;
+    void fetch(healthUrl, { credentials: "include" }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -44,22 +67,36 @@ export default function LoginPage() {
     setStatusMessage("Signing in...");
 
     try {
-      const data = await apiPostJson<LoginResponse>("/api/auth/login", {
+      const data = await postLoginWithRetry({
         email: loginId.trim(),
         password,
       });
 
-      const user = normalizeAuthUser(data.user);
+      const rawUser = data?.user;
+      if (!rawUser || (!rawUser.id && !(rawUser as { _id?: string })._id)) {
+        throw new ApiError(
+          "Login response was incomplete. Check API_PROXY_URL / NEXT_PUBLIC_API_BASE_URL on Vercel and CORS_ORIGINS on Render, then redeploy.",
+          500,
+          data,
+        );
+      }
+
+      const user = normalizeAuthUser(rawUser);
       persistFreelancerFromMe(user);
 
-      if (data.user?.id) {
-        connectSocket(String(data.user.id));
-      }
-      if (typeof window !== "undefined") {
-        window.sessionStorage.setItem("peermatch_role", data.user.role);
+      try {
+        if (user.id) {
+          connectSocket(user.id);
+        }
+      } catch {
+        // Login should succeed even if Socket.IO is unavailable.
       }
 
-      if (isClientAccount(data.user)) {
+      if (typeof window !== "undefined" && rawUser.role) {
+        window.sessionStorage.setItem("peermatch_role", String(rawUser.role));
+      }
+
+      if (isClientAccount(rawUser)) {
         redirectAfterLogin("/client-home");
         return;
       }
@@ -67,9 +104,9 @@ export default function LoginPage() {
       recordFreelancerLoginForGreeting(user.id);
       redirectAfterLogin("/freelancer-dashboard");
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Login failed. Please try again.";
+      const message = getErrorMessage(err, "Login failed. Please try again.");
       setStatusMessage(message);
-      if (err instanceof ApiError && err.status === 403 && message.toLowerCase().includes("verify")) {
+      if (isApiError(err) && err.status === 403 && message.toLowerCase().includes("verify")) {
         const payload = err.payload as { email?: string } | undefined;
         const verifyEmail = typeof payload?.email === "string" ? payload.email : loginId.trim();
         router.push(`/verify?email=${encodeURIComponent(verifyEmail)}`);

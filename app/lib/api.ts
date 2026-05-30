@@ -13,6 +13,20 @@ export class ApiError extends Error {
   }
 }
 
+/** Works across Next.js chunks where `instanceof ApiError` can fail. */
+export function isApiError(err: unknown): err is ApiError {
+  if (err instanceof ApiError) return true;
+  if (!err || typeof err !== "object") return false;
+  const candidate = err as ApiError;
+  return candidate.name === "ApiError" && typeof candidate.status === "number";
+}
+
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (isApiError(err)) return err.message;
+  if (err instanceof Error && err.message.trim()) return err.message.trim();
+  return fallback;
+}
+
 function getApiBaseUrl() {
   return resolveApiBaseUrl();
 }

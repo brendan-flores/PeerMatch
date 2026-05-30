@@ -7,7 +7,8 @@ export const runtime = "nodejs";
 export const maxDuration = 10;
 
 const METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-const PROXY_TIMEOUT_MS = 9_000;
+const PROXY_TIMEOUT_MS = 9_500;
+const PROXY_ATTEMPTS = 3;
 
 async function fetchUpstream(target: string, init: RequestInit): Promise<Response> {
   return fetch(target, {
@@ -39,7 +40,7 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
   let upstream: Response | null = null;
   let lastError: string | null = null;
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < PROXY_ATTEMPTS; attempt += 1) {
     try {
       upstream = await fetchUpstream(target, init);
       if (upstream.status !== 502 && upstream.status !== 503 && upstream.status !== 504) {
@@ -51,8 +52,8 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
       upstream = null;
     }
 
-    if (attempt === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+    if (attempt < PROXY_ATTEMPTS - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
     }
   }
 

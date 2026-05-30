@@ -105,6 +105,14 @@ export const dashboardProfilePanelBodyClass = "flex h-full min-h-0 flex-1 flex-c
 export const dashboardProfileSummaryCardClass =
   "h-fit w-full shrink-0 rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-5 shadow-sm sm:p-6 xl:w-[260px] xl:max-w-[260px]";
 
+/** Profile page scroll area — gap between name card and About stack on mobile */
+export const dashboardProfileScrollPaneClass =
+  "panel-scroll-pane flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] max-lg:gap-6 max-lg:px-4 max-lg:py-5 xl:flex-row xl:gap-4 xl:overflow-hidden xl:px-0 xl:py-0";
+
+/** About, featured post, and save row — extra vertical spacing on mobile */
+export const dashboardProfileFormStackClass =
+  "mx-auto w-full max-w-md space-y-4 max-lg:space-y-6 max-lg:overflow-visible max-lg:flex-none xl:mx-0 xl:max-w-none xl:min-h-0 xl:flex-1";
+
 export const dashboardProfileFormCardClass =
   "rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-5 shadow-sm sm:p-6";
 

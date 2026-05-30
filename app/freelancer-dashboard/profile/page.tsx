@@ -11,7 +11,9 @@ import {
 import {
   dashboardCenterPanelFixedClass,
   dashboardProfileFormCardClass,
+  dashboardProfileFormStackClass,
   dashboardProfileScrollClass,
+  dashboardProfileScrollPaneClass,
   dashboardProfileSummaryCardClass,
   mobileDashboardWhitePanelClass,
 } from "@/app/components/dashboard/dashboardShellClasses";
@@ -264,9 +266,7 @@ export default function FreelancerProfilePage() {
       className={`${dashboardCenterPanelFixedClass} flex h-full min-h-0 flex-1 flex-col overflow-hidden max-lg:bg-transparent lg:rounded-2xl lg:border lg:border-zinc-100/80 lg:bg-white lg:p-6 lg:shadow-[0_4px_32px_rgba(15,23,42,0.04)]`}
     >
       <div className={`h-full min-h-0 ${mobileDashboardWhitePanelClass}`}>
-        <div
-          className={`panel-scroll-pane flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] max-lg:px-4 max-lg:py-4 xl:flex-row xl:gap-6 xl:overflow-hidden xl:px-0 xl:py-0`}
-        >
+        <div className={dashboardProfileScrollPaneClass}>
           <article className={`${dashboardProfileSummaryCardClass} mx-auto max-w-md xl:mx-0 xl:max-w-[260px]`}>
           <div className="mx-auto flex justify-center">
             <UserAvatar
@@ -303,7 +303,7 @@ export default function FreelancerProfilePage() {
           </div>
         </article>
 
-        <div className={`mx-auto w-full max-w-md space-y-4 max-lg:overflow-visible max-lg:flex-none xl:mx-0 xl:max-w-none xl:min-h-0 xl:flex-1 ${dashboardProfileScrollClass}`}>
+        <div className={`${dashboardProfileFormStackClass} ${dashboardProfileScrollClass}`}>
           <article className={dashboardProfileFormCardClass}>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
               <UserCircle className="h-5 w-5 shrink-0 text-[#FF6B35]" strokeWidth={1.75} aria-hidden />

@@ -45,7 +45,7 @@ async function login(req, res) {
 
     return res.json({
       user: {
-        id: user._id,
+        id: String(user._id),
         username: user.username,
         name: user.name,
         email: user.email,

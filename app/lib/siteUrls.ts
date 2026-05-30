@@ -18,22 +18,21 @@ export function getAdminSiteUrl(): string {
 
 /**
  * Base URL for browser fetch().
- * - Production: `""` → relative `/api/...` (proxied at runtime by app/api/[[...path]]).
- * - NEXT_PUBLIC_API_BASE_URL: direct calls to API (needs CORS).
- * - Local: http://localhost:5000
+ * - Production with NEXT_PUBLIC_API_BASE_URL: direct Render API (reliable cookies + no proxy timeout).
+ * - Production without it: `""` → same-origin `/api/...` (Vercel proxy).
+ * - Local: http://localhost:5000 (or NEXT_PUBLIC_API_BASE_URL if set).
  */
 export function getApiBaseUrl(): string {
+  const direct = trimOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
+
   if (typeof window !== "undefined") {
     if (!isLocalHostname(window.location.hostname)) {
-      return "";
+      return direct || "";
     }
-    const direct = trimOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
     return direct || "http://localhost:5000";
   }
 
-  const direct = trimOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
   if (direct) return direct;
-
   return "http://localhost:5000";
 }
 

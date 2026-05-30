@@ -31,11 +31,19 @@ Both frontends call the same `NEXT_PUBLIC_API_BASE_URL` with `credentials: "incl
 4. Deploy the API with:
 
    ```
-   CORS_ORIGINS=https://peermatch-app.vercel.app,https://peermatch-admin.vercel.app
+   CORS_ORIGINS=https://peermatch-app.vercel.app,https://peermatch-app.site,https://peermatch-admin.vercel.app
    JWT_COOKIE_SAMESITE=none
    JWT_COOKIE_SECURE=true
    TRUST_PROXY=1
    ```
+
+   Also set on Vercel (main project):
+
+   ```
+   API_PROXY_URL=https://peermatch-api.onrender.com
+   ```
+
+   `NEXT_PUBLIC_API_BASE_URL` should match the same Render URL so the browser calls the API directly (faster login; proxy remains fallback if unset).
 
 5. `middleware.ts` will:
    - On **admin** host: `/` → `/admin/dashboard`, block main-app paths, keep `/admin/*`.

@@ -52,7 +52,9 @@ import {
   dashboardCenterPanelHeadingClass,
   dashboardFeedPageHeadingClass,
   dashboardPanelScrollInsetClass,
+  dashboardProfileFormStackClass,
   dashboardProfileScrollClass,
+  dashboardProfileScrollPaneClass,
   dashboardSidebarNavScrollClass,
   mobileDashboardWhitePanelClass,
 } from "../components/dashboard/dashboardShellClasses";
@@ -1044,9 +1046,7 @@ function ClientHomePageContent() {
                 className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${dashboardPanelScrollInsetClass}`}
               >
                 <div className={`h-full min-h-0 ${mobileDashboardWhitePanelClass}`}>
-                  <div
-                    className={`panel-scroll-pane flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] max-lg:px-4 max-lg:py-4 xl:flex-row xl:gap-4 xl:overflow-hidden xl:px-0 xl:py-0`}
-                  >
+                  <div className={dashboardProfileScrollPaneClass}>
                     <article className="mx-auto h-fit w-full max-w-md shrink-0 rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:mx-0 xl:max-w-[260px]">
                     <div className="mx-auto flex justify-center">
                       <UserAvatar
@@ -1083,7 +1083,7 @@ function ClientHomePageContent() {
                     </div>
                   </article>
 
-                  <div className={`mx-auto w-full max-w-md space-y-4 max-lg:overflow-visible max-lg:flex-none xl:mx-0 xl:max-w-none xl:min-h-0 xl:flex-1 ${dashboardProfileScrollClass}`}>
+                  <div className={`${dashboardProfileFormStackClass} ${dashboardProfileScrollClass}`}>
                     {activePanel === "featured-post" ? (
                       <FeaturedPostEditor authorId={meUserId} authorAvatar={displayProfilePhoto || undefined} />
                     ) : (
