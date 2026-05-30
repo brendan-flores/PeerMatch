@@ -138,6 +138,13 @@ export async function apiGetJson<TResponse>(
     throw new ApiError(extractApiErrorMessage(payload, res.status), res.status, payload);
   }
 
+  if (payload === undefined && res.status === 200) {
+    throw new ApiError(
+      "The server returned an empty response. Redeploy the latest build and try again.",
+      502,
+    );
+  }
+
   return payload as TResponse;
 }
 

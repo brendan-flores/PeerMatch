@@ -5,6 +5,7 @@ import {
   applySessionFromAuthJsonBody,
   stripSessionTokenFromAuthJson,
 } from "@/app/lib/proxyAuthCookie";
+import { readUpstreamBodyText, sanitizeProxiedResponseHeaders } from "@/app/lib/proxyBuffer";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -97,9 +98,7 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
     if (rewritten) responseHeaders.append("set-cookie", rewritten);
   }
 
-  let bodyText = await upstream.text();
-  responseHeaders.delete("content-length");
-  responseHeaders.delete("transfer-encoding");
+  let bodyText = await readUpstreamBodyText(upstream);
 
   if (
     upstream.ok &&
@@ -113,6 +112,9 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
     bodyText = stripSessionTokenFromAuthJson(bodyText);
     responseHeaders.delete("set-cookie");
   }
+
+  const bodyBytes = new TextEncoder().encode(bodyText);
+  sanitizeProxiedResponseHeaders(responseHeaders, bodyBytes.byteLength);
   const contentType = responseHeaders.get("content-type") || "";
   if (
     !contentType.includes("application/json") &&

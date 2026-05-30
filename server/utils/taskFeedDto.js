@@ -1,3 +1,5 @@
+const { photoDataUrlForFeed } = require('./profilePhoto');
+
 const URGENCY_VALUES = ['low', 'normal', 'high'];
 
 function normalizeUrgency(value) {
@@ -32,7 +34,7 @@ function mapTaskToFeedPost(task, client) {
     // Email omitted from public feed (privacy). Clients see their own email in profile/settings.
     authorEmail: '',
     authorAccountType: clientDoc?.accountType || 'client',
-    authorAvatarDataUrl: clientDoc?.photoDataUrl || undefined,
+    authorAvatarDataUrl: photoDataUrlForFeed(clientDoc?.photoDataUrl),
     title: task.title,
     content: task.description || '',
     category: task.subjectCategory || 'General',

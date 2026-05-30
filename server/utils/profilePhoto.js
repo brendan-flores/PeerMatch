@@ -16,8 +16,20 @@ function sanitizePhotoDataUrl(value) {
   return str;
 }
 
+/** Feed/list APIs must stay small — full base64 avatars break Vercel proxy responses. */
+const MAX_FEED_AVATAR_DATA_URL_LENGTH = 512;
+
+function photoDataUrlForFeed(value) {
+  const str = String(value || '').trim();
+  if (!str || str.length > MAX_FEED_AVATAR_DATA_URL_LENGTH) return undefined;
+  if (!/^data:image\/[a-zA-Z0-9+.-]+;base64,/i.test(str)) return undefined;
+  return str;
+}
+
 module.exports = {
   MAX_PHOTO_DATA_URL_LENGTH,
+  MAX_FEED_AVATAR_DATA_URL_LENGTH,
   INVALID_PHOTO_MESSAGE,
   sanitizePhotoDataUrl,
+  photoDataUrlForFeed,
 };

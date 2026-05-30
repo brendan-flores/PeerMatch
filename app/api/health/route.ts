@@ -1,5 +1,6 @@
 import { vercelApiEnvHint } from "@/app/lib/deployEnvHint";
 import { getServerApiBackendOrigin } from "@/app/lib/apiBackend";
+import { readUpstreamBodyText, sanitizeProxiedResponseHeaders } from "@/app/lib/proxyBuffer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,14 +15,15 @@ export async function GET() {
       cache: "no-store",
       signal: AbortSignal.timeout(9_500),
     });
-    const body = await upstream.text();
+    const body = await readUpstreamBodyText(upstream);
+    const headers = new Headers(upstream.headers);
+    sanitizeProxiedResponseHeaders(headers, new TextEncoder().encode(body).byteLength);
+    headers.set("content-type", "application/json; charset=utf-8");
+    headers.set("cache-control", "no-store");
 
     return new Response(body || "{}", {
       status: upstream.status,
-      headers: {
-        "content-type": "application/json; charset=utf-8",
-        "cache-control": "no-store",
-      },
+      headers,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "upstream fetch failed";

@@ -5,6 +5,7 @@ const Offer = require('../models/Offer');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
 const { mapTaskToFeedPost } = require('../utils/taskFeedDto');
+const { photoDataUrlForFeed } = require('../utils/profilePhoto');
 const {
   notifyClientNewOffer,
   notifyFreelancerOfferAccepted,
@@ -91,9 +92,7 @@ router.get('/mine', authMiddleware, async (req, res) => {
 
     res.json({
       offers: offers.map((offer) => {
-        const freelancerPhoto = offer.freelancerId?.photoDataUrl
-          ? String(offer.freelancerId.photoDataUrl).trim()
-          : undefined;
+        const freelancerPhoto = photoDataUrlForFeed(offer.freelancerId?.photoDataUrl);
         return mapOfferDto(offer, freelancerPhoto);
       }),
       posts: tasks.map((task) => {

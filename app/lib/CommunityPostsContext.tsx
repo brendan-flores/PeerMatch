@@ -119,15 +119,8 @@ export function CommunityPostsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void refreshApproved();
-    const cookieName = "peermatch_token";
-    const hasSession =
-      typeof document !== "undefined" &&
-      document.cookie.split(";").some((part) => part.trim().startsWith(`${cookieName}=`));
-    if (hasSession) {
-      void refreshMyPosts();
-    } else {
-      setMyPostsLoading(false);
-    }
+    // peermatch_token is HttpOnly — not visible on document.cookie; always try /api/tasks/mine.
+    void refreshMyPosts();
     const onRefresh = () => void refreshAll();
     const onPhotoUpdated = (event: Event) => {
       const detail = (event as CustomEvent<ProfilePhotoUpdatedDetail>).detail;
