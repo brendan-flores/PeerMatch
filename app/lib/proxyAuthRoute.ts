@@ -3,7 +3,9 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import {
   applySessionCookieFromUpstream,
+  applySessionFromAuthJsonBody,
   clearSessionCookieOnAppHost,
+  stripSessionTokenFromAuthJson,
 } from "@/app/lib/proxyAuthCookie";
 
 const PROXY_TIMEOUT_MS = 9_500;
@@ -27,13 +29,22 @@ export async function proxyAuthPostWithSessionCookie(
     signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
   });
 
-  const bodyText = await upstream.text();
-
+  let cookieApplied = false;
   if (upstream.ok) {
-    await applySessionCookieFromUpstream(upstream);
+    cookieApplied = await applySessionCookieFromUpstream(upstream);
   }
 
-  return new NextResponse(bodyText || "{}", {
+  const bodyText = await upstream.text();
+
+  if (upstream.ok && !cookieApplied) {
+    await applySessionFromAuthJsonBody(bodyText);
+  }
+
+  const outgoing = upstream.ok
+    ? stripSessionTokenFromAuthJson(bodyText)
+    : bodyText || "{}";
+
+  return new NextResponse(outgoing, {
     status: upstream.status,
     headers: {
       "content-type": "application/json; charset=utf-8",

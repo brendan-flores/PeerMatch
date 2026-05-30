@@ -93,6 +93,8 @@ Redeploy Vercel after changes.
 1. `https://peermatch-api.onrender.com/api/health` → JSON with `database: connected`, `email: supabase_otp`
 2. `https://peermatch-app.site/api/health` → **same JSON** (proves Vercel proxy + `NEXT_PUBLIC_API_BASE_URL`)
 3. If the page looks blank in Brave, disable Shields for your site or view source — JSON may not render visibly.
-4. Login at `https://peermatch-app.site/login`
+4. Login at `https://peermatch-app.site/login` — after success, DevTools → Application → Cookies → `peermatch_token` on `peermatch-app.site`
+
+Login needs **both** Render and Vercel on the latest build (Render returns `sessionToken` for the BFF; Vercel sets the cookie and strips it from the browser response).
 
 If (1) works but (2) does not → fix `NEXT_PUBLIC_API_BASE_URL` on Vercel and redeploy.

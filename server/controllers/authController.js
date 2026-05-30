@@ -52,6 +52,8 @@ async function login(req, res) {
         role: user.role,
         ...(user.accountType ? { accountType: user.accountType } : {}),
       },
+      /** Used by Vercel BFF to set HttpOnly cookie; stripped before the browser sees the response. */
+      sessionToken: token,
     });
   } catch (error) {
     console.error(error);

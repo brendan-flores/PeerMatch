@@ -45,6 +45,20 @@ export function parseMaxAgeFromSetCookieLine(raw: string): number | undefined {
 /**
  * Copy JWT from Render Set-Cookie onto the Vercel app host (reliable on mobile Safari).
  */
+export async function setSessionCookieOnAppHost(
+  token: string,
+  maxAgeSec = DEFAULT_MAX_AGE_SEC,
+): Promise<void> {
+  const store = await cookies();
+  store.set(SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: maxAgeSec,
+  });
+}
+
 export async function applySessionCookieFromUpstream(
   upstream: Response,
 ): Promise<boolean> {
@@ -53,17 +67,39 @@ export async function applySessionCookieFromUpstream(
     if (!token) continue;
 
     const maxAge = parseMaxAgeFromSetCookieLine(line) ?? DEFAULT_MAX_AGE_SEC;
-    const store = await cookies();
-    store.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge,
-    });
+    await setSessionCookieOnAppHost(token, maxAge);
     return true;
   }
   return false;
+}
+
+/** Read sessionToken from login/verify JSON (fallback when Set-Cookie is not visible to fetch). */
+export async function applySessionFromAuthJsonBody(
+  bodyText: string,
+): Promise<boolean> {
+  if (!bodyText.trim()) return false;
+  try {
+    const data = JSON.parse(bodyText) as { sessionToken?: unknown };
+    const token =
+      typeof data.sessionToken === "string" ? data.sessionToken.trim() : "";
+    if (!token) return false;
+    await setSessionCookieOnAppHost(token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function stripSessionTokenFromAuthJson(bodyText: string): string {
+  if (!bodyText.trim()) return "{}";
+  try {
+    const data = JSON.parse(bodyText) as Record<string, unknown>;
+    if (!("sessionToken" in data)) return bodyText;
+    const { sessionToken: _removed, ...rest } = data;
+    return JSON.stringify(rest);
+  } catch {
+    return bodyText;
+  }
 }
 
 export async function clearSessionCookieOnAppHost(): Promise<void> {

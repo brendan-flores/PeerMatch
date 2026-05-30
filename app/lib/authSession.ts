@@ -65,13 +65,25 @@ export function hasAuthUserId(user: Pick<LoginUserPayload, "id">): boolean {
   return Boolean(String(user.id || "").trim());
 }
 
+const EMPTY_SESSION_BODY = "EMPTY_SESSION_BODY";
+
 function isRetryableAuthMeError(err: unknown): boolean {
   if (!isApiError(err)) return true;
   if (err.status === 0) return true;
   if (err.status === 401) return true;
   if (err.status === 502 || err.status === 503 || err.status === 504) return true;
-  if (err.status === 200 && err.message === "EMPTY_SESSION_BODY") return true;
+  if (err.status === 200 && err.message === EMPTY_SESSION_BODY) return true;
   return false;
+}
+
+function toSessionError(err: unknown): unknown {
+  if (!isApiError(err)) return err;
+  if (err.message !== EMPTY_SESSION_BODY) return err;
+  return new ApiError(
+    "Signed in, but your session did not load. Redeploy both Render and Vercel (latest login fix), hard-refresh, then try again. In DevTools → Application → Cookies, confirm peermatch_token exists on peermatch-app.site.",
+    500,
+    err.payload,
+  );
 }
 
 function invalidMeResponseError(payload: unknown): ApiError {
@@ -121,19 +133,19 @@ export async function fetchAuthMeWithRetry(options?: {
           payload !== null &&
           Object.keys(payload as object).length === 0);
       if (emptyBody) {
-        throw new ApiError("EMPTY_SESSION_BODY", 200, payload);
+        throw new ApiError(EMPTY_SESSION_BODY, 200, payload);
       }
       throw invalidMeResponseError(payload);
     } catch (err) {
       lastErr = err;
       if (!isRetryableAuthMeError(err) || i === attempts - 1) {
-        throw err;
+        throw toSessionError(err);
       }
       await new Promise((resolve) => setTimeout(resolve, baseDelayMs * (i + 1)));
     }
   }
 
-  throw lastErr;
+  throw toSessionError(lastErr);
 }
 
 /** Confirm the session cookie is stored before leaving the login page. */
@@ -148,6 +160,6 @@ export async function assertSessionAfterLogin(): Promise<AuthMeResponse> {
         err.payload,
       );
     }
-    throw err;
+    throw toSessionError(err);
   }
 }

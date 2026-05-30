@@ -145,6 +145,7 @@ async function handleVerifyOtp(req, res) {
 
     return res.json({
       ...activation.body,
+      sessionToken: jwt,
       ...(supabaseResult?.session ? { supabaseSession: supabaseResult.session } : {}),
     });
   } catch (error) {
