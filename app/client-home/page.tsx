@@ -406,9 +406,9 @@ function ClientHomePageContent() {
     let cancelled = false;
     (async () => {
       try {
-        const list = await fetchClientOffers();
+        const { offers } = await fetchClientOffers();
         if (cancelled) return;
-        setPendingOffersCount(list.filter((offer) => isOfferPending(offer.status)).length);
+        setPendingOffersCount(offers.filter((offer) => isOfferPending(offer.status)).length);
       } catch {
         // ignore — offers panel will surface errors when opened
       }

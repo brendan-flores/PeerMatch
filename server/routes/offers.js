@@ -4,6 +4,7 @@ const ClientTask = require('../models/ClientTask');
 const Offer = require('../models/Offer');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
+const { mapTaskToFeedPost } = require('../utils/taskFeedDto');
 const {
   notifyClientNewOffer,
   notifyFreelancerOfferAccepted,
@@ -54,12 +55,53 @@ router.get('/mine', authMiddleware, async (req, res) => {
       .limit(200)
       .lean();
 
+    const postIds = [
+      ...new Set(
+        offers
+          .map((offer) => String(offer.postId || ''))
+          .filter((id) => id && mongoose.Types.ObjectId.isValid(id)),
+      ),
+    ];
+
+    const [client, tasks] = await Promise.all([
+      User.findById(req.user.userId)
+        .select('name email accountType photoDataUrl')
+        .lean(),
+      postIds.length > 0
+        ? ClientTask.find({ _id: { $in: postIds }, clientId: req.user.userId }).lean()
+        : [],
+    ]);
+
+    const freelancerIds = [
+      ...new Set(
+        tasks
+          .map((task) =>
+            task.assignedFreelancerId ? String(task.assignedFreelancerId) : '',
+          )
+          .filter((id) => id && mongoose.Types.ObjectId.isValid(id)),
+      ),
+    ];
+
+    const freelancers =
+      freelancerIds.length > 0
+        ? await User.find({ _id: { $in: freelancerIds } }).select('name').lean()
+        : [];
+
+    const freelancerById = new Map(freelancers.map((f) => [String(f._id), f]));
+
     res.json({
       offers: offers.map((offer) => {
-        const freelancerPhoto = offer.freelancerId?.photoDataUrl 
-          ? String(offer.freelancerId.photoDataUrl).trim() 
+        const freelancerPhoto = offer.freelancerId?.photoDataUrl
+          ? String(offer.freelancerId.photoDataUrl).trim()
           : undefined;
         return mapOfferDto(offer, freelancerPhoto);
+      }),
+      posts: tasks.map((task) => {
+        const assigned = freelancerById.get(String(task.assignedFreelancerId || ''));
+        return mapTaskToFeedPost(
+          { ...task, assignedFreelancerName: assigned?.name || undefined },
+          client,
+        );
       }),
     });
   } catch (error) {

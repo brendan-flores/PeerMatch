@@ -1,4 +1,6 @@
 import { apiGetJson, apiPatchJson } from "./api";
+import { mapFeedPosts } from "./communityPosts";
+import type { CommunityPost } from "./postsStorage";
 
 export type OfferStatus = "pending" | "accepted" | "rejected";
 
@@ -16,9 +18,31 @@ export type ClientOffer = {
   freelancerPhotoDataUrl?: string;
 };
 
-export async function fetchClientOffers(): Promise<ClientOffer[]> {
-  const data = await apiGetJson<{ offers: ClientOffer[] }>("/api/offers/mine");
-  return data.offers || [];
+export type ClientOffersPayload = {
+  offers: ClientOffer[];
+  posts: CommunityPost[];
+};
+
+export type TaskPostPatch = Pick<
+  CommunityPost,
+  | "id"
+  | "hireStatus"
+  | "reviewSubmittedAt"
+  | "reviewRating"
+  | "reviewText"
+  | "assignedFreelancerId"
+  | "assignedFreelancerName"
+  | "completedAt"
+>;
+
+export async function fetchClientOffers(): Promise<ClientOffersPayload> {
+  const data = await apiGetJson<{ offers: ClientOffer[]; posts?: CommunityPost[] }>(
+    "/api/offers/mine",
+  );
+  return {
+    offers: data.offers || [],
+    posts: mapFeedPosts(data.posts),
+  };
 }
 
 export async function acceptClientOffer(offerId: string): Promise<ClientOffer> {
@@ -43,14 +67,14 @@ export function isOfferPending(status: OfferStatus | string | undefined): boolea
 }
 
 export async function completeClientTask(taskId: string) {
-  return apiPatchJson<{ message: string; post: { id: string; hireStatus?: string; reviewSubmittedAt?: string } }>(
+  return apiPatchJson<{ message: string; post: TaskPostPatch }>(
     `/api/tasks/${encodeURIComponent(taskId)}/complete`,
     {},
   );
 }
 
 export async function submitTaskReview(taskId: string, input: { rating: number; text: string }) {
-  return apiPatchJson<{ message: string; post: { id: string; reviewSubmittedAt?: string } }>(
+  return apiPatchJson<{ message: string; post: TaskPostPatch }>(
     `/api/tasks/${encodeURIComponent(taskId)}/review`,
     { rating: input.rating, text: input.text },
   );

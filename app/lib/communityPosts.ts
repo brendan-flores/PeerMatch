@@ -55,6 +55,8 @@ function mapFeedPosts(posts: ApiFeedPost[] | undefined): CommunityPost[] {
   }));
 }
 
+export { mapFeedPosts };
+
 export async function fetchApprovedCommunityPosts(
   filters?: CommunityPostFeedFilters,
 ): Promise<CommunityPost[]> {

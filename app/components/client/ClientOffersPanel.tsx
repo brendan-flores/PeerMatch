@@ -123,8 +123,9 @@ export function ClientOffersPanel({
   highlightPostId = null,
   onHighlightComplete,
 }: ClientOffersPanelProps) {
-  const { myPosts, refreshAll } = useCommunityPostsContext();
+  const { myPosts, refreshAll, updatePostLocally } = useCommunityPostsContext();
   const [offers, setOffers] = useState<ClientOffer[]>([]);
+  const [offerPosts, setOfferPosts] = useState<CommunityPost[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
   const [busyOfferId, setBusyOfferId] = useState<string | null>(null);
@@ -139,9 +140,10 @@ export function ClientOffersPanel({
     const requestId = ++loadRequestIdRef.current;
     if (!silent) setInitialLoading(true);
     try {
-      const list = await fetchClientOffers();
+      const { offers: list, posts } = await fetchClientOffers();
       if (requestId !== loadRequestIdRef.current) return;
       setOffers(list);
+      setOfferPosts(posts);
       setStatusMessage("");
     } catch (err) {
       if (requestId !== loadRequestIdRef.current) return;
@@ -165,8 +167,12 @@ export function ClientOffersPanel({
   const postById = useMemo(() => {
     const map = new Map<string, CommunityPost>();
     approvedMyPosts.forEach((post) => map.set(post.id, post));
+    offerPosts.forEach((post) => {
+      const existing = map.get(post.id);
+      map.set(post.id, existing ? { ...existing, ...post } : post);
+    });
     return map;
-  }, [approvedMyPosts]);
+  }, [approvedMyPosts, offerPosts]);
 
   const groups = useMemo(() => {
     const offersByPost = new Map<string, ClientOffer[]>();
@@ -275,7 +281,13 @@ export function ClientOffersPanel({
     setBusyPostId(postId);
     setStatusMessage("");
     try {
-      await completeClientTask(postId);
+      const result = await completeClientTask(postId);
+      if (result.post) {
+        setOfferPosts((prev) =>
+          prev.map((post) => (post.id === postId ? { ...post, ...result.post } : post)),
+        );
+        updatePostLocally(postId, result.post);
+      }
       await Promise.all([loadOffers({ silent: true }), refreshAll()]);
       setStatusMessage("Task marked as completed. You can leave a review below.");
     } catch (err) {
@@ -295,7 +307,13 @@ export function ClientOffersPanel({
     setBusyPostId(postId);
     setStatusMessage("");
     try {
-      await submitTaskReview(postId, { rating: draft.rating, text: draft.text.trim() });
+      const result = await submitTaskReview(postId, { rating: draft.rating, text: draft.text.trim() });
+      if (result.post) {
+        setOfferPosts((prev) =>
+          prev.map((post) => (post.id === postId ? { ...post, ...result.post } : post)),
+        );
+        updatePostLocally(postId, result.post);
+      }
       await loadOffers({ silent: true });
       await refreshAll();
       setStatusMessage("Thank you for your review.");
