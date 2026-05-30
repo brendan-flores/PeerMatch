@@ -1,3 +1,4 @@
+import { vercelApiEnvHint } from "@/app/lib/deployEnvHint";
 import { extractApiErrorMessage, readApiResponsePayload } from "@/app/lib/parseApiError";
 import { getApiBaseUrl as resolveApiBaseUrl } from "@/app/lib/siteUrls";
 
@@ -52,7 +53,7 @@ export async function apiPostJson<TResponse>(
   } catch {
     const hint =
       typeof window !== "undefined" && !getApiBaseUrl()
-        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        ? vercelApiEnvHint()
         : "";
     throw new ApiError(
       `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
@@ -90,7 +91,7 @@ export async function apiPutJson<TResponse>(
   } catch {
     const hint =
       typeof window !== "undefined" && !getApiBaseUrl()
-        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        ? vercelApiEnvHint()
         : "";
     throw new ApiError(
       `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
@@ -123,7 +124,7 @@ export async function apiGetJson<TResponse>(
   } catch {
     const hint =
       typeof window !== "undefined" && !getApiBaseUrl()
-        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        ? vercelApiEnvHint()
         : "";
     throw new ApiError(
       `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
@@ -161,7 +162,7 @@ export async function apiPatchJson<TResponse>(
   } catch {
     const hint =
       typeof window !== "undefined" && !getApiBaseUrl()
-        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        ? vercelApiEnvHint()
         : "";
     throw new ApiError(
       `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
@@ -195,7 +196,7 @@ export async function apiSend(
   } catch {
     const hint =
       typeof window !== "undefined" && !getApiBaseUrl()
-        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        ? vercelApiEnvHint()
         : "";
     throw new ApiError(
       `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,
@@ -225,7 +226,7 @@ export async function apiDeleteJson<TResponse>(
   } catch {
     const hint =
       typeof window !== "undefined" && !getApiBaseUrl()
-        ? " Set API_PROXY_URL on Vercel to your Render API URL, then redeploy."
+        ? vercelApiEnvHint()
         : "";
     throw new ApiError(
       `Cannot connect to the server. Please make sure the API is running and try again.${hint}`,

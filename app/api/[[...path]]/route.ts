@@ -1,3 +1,4 @@
+import { vercelApiEnvHint } from "@/app/lib/deployEnvHint";
 import { getServerApiBackendOrigin } from "@/app/lib/apiBackend";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -66,7 +67,7 @@ async function proxyToBackend(request: NextRequest, segments: string[] | undefin
     return NextResponse.json(
       {
         message:
-          "Cannot reach the API server. Confirm the API is running on Render, set API_PROXY_URL on Vercel to that URL, then redeploy. If the API was sleeping, try again in a few seconds.",
+          `Cannot reach the API server. Confirm Render is running.${vercelApiEnvHint()} If the API was sleeping, try again in a few seconds.`,
         proxyTarget: backend,
       },
       { status: 502 },

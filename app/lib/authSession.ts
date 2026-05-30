@@ -1,3 +1,4 @@
+import { vercelApiEnvHint } from "@/app/lib/deployEnvHint";
 import { apiGetJson, ApiError, isApiError } from "@/app/lib/api";
 import { extractApiErrorMessage } from "@/app/lib/parseApiError";
 
@@ -78,8 +79,8 @@ function isRetryableAuthMeError(err: unknown): boolean {
 function invalidMeResponseError(payload: unknown): ApiError {
   const hint =
     typeof payload === "string" && payload.includes("<html")
-      ? "The API returned an HTML page instead of JSON. Set API_PROXY_URL on Vercel to your Render URL and redeploy."
-      : "Could not read your session from the server. On Vercel set API_PROXY_URL and NEXT_PUBLIC_API_BASE_URL to your Render API URL, then redeploy.";
+      ? `The API returned an HTML page instead of JSON.${vercelApiEnvHint()}`
+      : `Could not read your session from the server.${vercelApiEnvHint()}`;
 
   const fromPayload = extractApiErrorMessage(payload, 500);
   const message =

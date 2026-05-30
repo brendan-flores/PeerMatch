@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 /**
  * Socket.IO and HTTP /api/* calls are handled by app/api/[[...path]]/route.ts
- * which reads API_PROXY_URL at runtime (no build-time rewrites needed).
+ * which proxies to Render using NEXT_PUBLIC_API_BASE_URL (API_PROXY_URL optional).
  */
 
 const nextConfig: NextConfig = {

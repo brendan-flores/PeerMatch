@@ -10,7 +10,7 @@ The app is one Next.js repo: main routes (`/`, `/login`, `/client-home`, …) an
 | Admin Next.js | `https://peermatch-admin.vercel.app` | Admin dashboard |
 | API | `https://peermatch-api.onrender.com` | MongoDB, auth cookies, Socket.IO |
 
-Both frontends call the same `NEXT_PUBLIC_API_BASE_URL` with `credentials: "include"`. Admin uses a separate cookie name (`peermatch_admin_token`).
+The browser calls same-origin `/api/*` on Vercel (proxied to Render). `NEXT_PUBLIC_API_BASE_URL` must point at Render for the proxy and Socket.IO. See [DEPLOY_ENV.md](./DEPLOY_ENV.md). Admin uses a separate cookie name (`peermatch_admin_token`).
 
 ---
 
@@ -37,15 +37,11 @@ Both frontends call the same `NEXT_PUBLIC_API_BASE_URL` with `credentials: "incl
    TRUST_PROXY=1
    ```
 
-   Also set on Vercel (main project):
+   `NEXT_PUBLIC_API_BASE_URL` is required on Vercel (used by the server proxy and Socket.IO). `API_PROXY_URL` is optional.
 
-   ```
-   API_PROXY_URL=https://peermatch-api.onrender.com
-   ```
+   Browser API calls use same-origin `/api` so login cookies work on mobile Safari.
 
-   `NEXT_PUBLIC_API_BASE_URL` is used by the **server proxy** and Socket.IO. Browser API calls always use same-origin `/api` so login cookies work on **mobile Safari** (do not point the browser at Render directly).
-
-   Set `NEXT_PUBLIC_MAIN_SITE_URL=https://peermatch-app.site` (your canonical host) so users who land on `*.vercel.app` are redirected before login.
+   Set `NEXT_PUBLIC_MAIN_SITE_URL=https://peermatch-app.site` so users who land on `*.vercel.app` are redirected before login.
 
 5. `middleware.ts` will:
    - On **admin** host: `/` → `/admin/dashboard`, block main-app paths, keep `/admin/*`.
