@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiPostJson, ApiError } from "../lib/api";
 
-const OTP_LENGTH = 8;
+const OTP_LENGTH = 6;
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
@@ -208,8 +208,21 @@ export default function VerifyPage() {
             <p className="mt-4 text-center text-sm leading-6 text-zinc-600">
               Enter the verification code
             </p>
+            <p className="mt-3 text-center text-xs leading-5 text-zinc-500">
+              If you don&apos;t see the email, check your Junk folder and{" "}
+              <a
+                href="https://security.microsoft.com/quarantine"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[#0069A8] underline hover:text-[#004f7d]"
+              >
+                Microsoft Quarantine
+              </a>{" "}
+              (sign in with your @cit.edu account). Release the message from PeerMatch, then enter
+              the code here.
+            </p>
 
-            <div className="mt-10 flex w-full justify-center gap-2">
+            <div className="mt-10 flex w-full justify-center gap-3">
               {digits.map((value, index) => (
                 <input
                   key={index}
@@ -223,7 +236,7 @@ export default function VerifyPage() {
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   aria-label={`Digit ${index + 1}`}
-                  className={`ui-input h-16 w-12 rounded-lg border bg-white text-center text-2xl font-semibold text-[#0F172A] shadow-[0_10px_20px_rgba(0,0,0,0.08)] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30 ${
+                  className={`ui-input h-16 w-14 rounded-lg border bg-white text-center text-2xl font-semibold text-[#0F172A] shadow-[0_10px_20px_rgba(0,0,0,0.08)] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30 ${
                     status.kind === "error" ? "border-red-400" : "border-zinc-200"
                   }`}
                 />
