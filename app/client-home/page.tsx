@@ -49,12 +49,16 @@ import { DashboardCenterColumn } from "../components/dashboard/DashboardCenterCo
 import {
   dashboardPanelScrollClass,
   dashboardCenterPanelCompactPaddingClass,
+  dashboardCenterPanelHeadingClass,
   dashboardFeedPageHeadingClass,
   dashboardPanelScrollInsetClass,
   dashboardProfileScrollClass,
   dashboardSidebarNavScrollClass,
+  mobileDashboardWhitePanelClass,
 } from "../components/dashboard/dashboardShellClasses";
 import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
+import { MobileFeedTopBar } from "../components/dashboard/MobileFeedTopBar";
+import { buildClientMobileNavItems } from "../components/dashboard/dashboardMobileNavItems";
 import { NavUnreadBadge } from "../components/NavUnreadBadge";
 import { fetchClientOffers, isOfferPending } from "../lib/offersApi";
 import { useCurrentUserProfile } from "../lib/CurrentUserProfileContext";
@@ -654,20 +658,45 @@ function ClientHomePageContent() {
 
   const isFeedView = pathname === "/client-home" && !activePanel;
 
+  const mobileNavItems = useMemo(
+    () =>
+      buildClientMobileNavItems({
+        unreadMessageCount,
+        pendingOffersCount,
+        onDashboardNavigate: () => router.push("/client-home"),
+      }),
+    [router, unreadMessageCount, pendingOffersCount],
+  );
+
   const panelTransitionClass = `transform-gpu transition-all duration-[420ms] ease-[cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none ${
     isPanelVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.995] opacity-0"
   }`;
 
   return (
     <div
-      className="h-[100dvh] overflow-hidden bg-[#E5F6F4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6"
+      className={`flex h-[100dvh] flex-col overflow-hidden bg-[#E5F6F4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6 ${
+        activePanel === "messages" ? "max-lg:px-0 max-lg:py-0" : ""
+      }`}
     >
+      {activePanel !== "messages" ? (
+        <MobileFeedTopBar
+          items={mobileNavItems}
+          isActive={isNavActive}
+          onLogout={handleLogout}
+          notifications={notifications}
+          onMarkAllRead={markAllRead}
+          onMarkOneRead={markOneRead}
+          onDeleteNotification={deleteOne}
+          onNotificationClick={handleNotificationClick}
+        />
+      ) : null}
+
       <div
-        className="mx-auto grid h-full min-h-0 w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px]"
+        className={`mx-auto grid min-h-0 w-full max-w-[1600px] flex-1 grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
+          activePanel === "messages" ? "max-lg:gap-0" : ""
+        }`}
       >
-        <aside
-          className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:row-span-1"
-        >
+        <aside className="hidden h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-[#E8EFEC] p-6 shadow-sm lg:flex lg:row-span-1">
           <SidebarBrand />
 
           <nav className={dashboardSidebarNavScrollClass} aria-label="Main">
@@ -733,7 +762,7 @@ function ClientHomePageContent() {
             <FreelancerFeedMain
               scrollable
               children={null}
-              header={<FeedPageHeader title={postsHeading} />}
+              header={<FeedPageHeader title={postsHeading} className="hidden lg:block" />}
               scroll={
                 <section aria-labelledby="client-community-feed" className="space-y-4">
                   {approvedLoading ? (
@@ -769,16 +798,23 @@ function ClientHomePageContent() {
         >
         <main
           className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-100/80 bg-white shadow-[0_4px_32px_rgba(15,23,42,0.04)] ${
-            activePanel === "create-post" || activePanel === "offers" || activePanel === "messages"
-              ? dashboardCenterPanelCompactPaddingClass
+            activePanel === "messages"
+              ? "max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent max-lg:p-0 max-lg:shadow-none lg:px-6 lg:pb-8 lg:pt-4"
+              : activePanel === "create-post" || activePanel === "offers" || activePanel === "profile" || activePanel === "featured-post"
+              ? "max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent max-lg:p-0 max-lg:shadow-none lg:p-4"
+              : "p-6 sm:p-8 lg:p-10"
+          } ${
+            activePanel === "create-post" || activePanel === "offers"
+              ? `${dashboardCenterPanelCompactPaddingClass} max-lg:!p-0`
               : activePanel === "profile" || activePanel === "featured-post"
-                ? "p-4"
-                : "p-6 sm:p-8 lg:p-10"
+                ? "max-lg:!p-0"
+                : ""
           }`}
         >
           <div className="flex h-full min-h-0 flex-1 flex-col">
             {activePanel === "create-post" ? (
-              <div className={dashboardPanelScrollClass}>
+              <div className={`${mobileDashboardWhitePanelClass} h-full min-h-0`}>
+              <div className={`${dashboardPanelScrollClass} max-lg:px-4 max-lg:py-4`}>
               <section aria-labelledby="create-post-heading" className="min-w-0">
                 <div className={dashboardFeedPageHeadingClass}>
                   <h1 id="create-post-heading" className="text-4xl font-bold tracking-tight text-zinc-900">
@@ -965,25 +1001,40 @@ function ClientHomePageContent() {
                 </div>
               </section>
               </div>
+              </div>
             ) : activePanel === "offers" ? (
-              <div className={dashboardPanelScrollClass}>
+              <div className={`${mobileDashboardWhitePanelClass} h-full min-h-0`}>
+              <div className={`${dashboardPanelScrollClass} max-lg:px-4 max-lg:py-4`}>
                 <ClientOffersPanel
                   onPendingCountChange={setPendingOffersCount}
                   highlightPostId={highlightPost}
                   onHighlightComplete={clearOfferHighlightFromUrl}
                 />
               </div>
+              </div>
             ) : activePanel === "messages" ? (
               <section
                 aria-labelledby="messages-heading"
-                className="flex h-full max-h-full min-h-0 w-full flex-1 flex-col overflow-hidden"
+                className="flex h-full max-h-full min-h-0 w-full flex-1 flex-col overflow-hidden max-lg:rounded-none"
               >
                 <div className="h-full max-h-full min-h-0 flex-1 overflow-hidden">
                   <ChatLayout
                     currentUserId={meUserId}
                     initialOtherQuery={peerUserId.trim()}
                     allowUnsend
-                    className="!h-full !min-h-0 rounded-2xl border border-zinc-200 !bg-white"
+                    currentUserName={profileNameInput || displayName}
+                    currentUserPhoto={displayProfilePhoto}
+                    mobileNav={{
+                      items: mobileNavItems,
+                      isActive: isNavActive,
+                      onLogout: handleLogout,
+                    }}
+                    notifications={notifications}
+                    onMarkAllRead={markAllRead}
+                    onMarkOneRead={markOneRead}
+                    onDeleteNotification={deleteOne}
+                    onNotificationClick={handleNotificationClick}
+                    className="!h-full !min-h-0 !rounded-none !border-0 !bg-[#E5F6F4] lg:!rounded-2xl lg:!border lg:!border-zinc-200 lg:!bg-white"
                   />
                 </div>
               </section>
@@ -992,8 +1043,11 @@ function ClientHomePageContent() {
                 aria-labelledby={activePanel === "featured-post" ? "featured-post-heading" : "profile-heading"}
                 className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${dashboardPanelScrollInsetClass}`}
               >
-                <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden xl:grid-cols-[260px_minmax(0,1fr)] xl:items-stretch">
-                  <article className="h-fit w-full max-w-[320px] shrink-0 rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:max-w-none">
+                <div className={`h-full min-h-0 ${mobileDashboardWhitePanelClass}`}>
+                  <div
+                    className={`panel-scroll-pane flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] max-lg:px-4 max-lg:py-4 xl:flex-row xl:gap-4 xl:overflow-hidden xl:px-0 xl:py-0`}
+                  >
+                    <article className="mx-auto h-fit w-full max-w-md shrink-0 rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-4 shadow-sm xl:mx-0 xl:max-w-[260px]">
                     <div className="mx-auto flex justify-center">
                       <UserAvatar
                         id={meUserId}
@@ -1029,7 +1083,7 @@ function ClientHomePageContent() {
                     </div>
                   </article>
 
-                  <div className={dashboardProfileScrollClass}>
+                  <div className={`mx-auto w-full max-w-md space-y-4 max-lg:overflow-visible max-lg:flex-none xl:mx-0 xl:max-w-none xl:min-h-0 xl:flex-1 ${dashboardProfileScrollClass}`}>
                     {activePanel === "featured-post" ? (
                       <FeaturedPostEditor authorId={meUserId} authorAvatar={displayProfilePhoto || undefined} />
                     ) : (
@@ -1163,6 +1217,7 @@ function ClientHomePageContent() {
                       </>
                     )}
                   </div>
+                  </div>
                 </div>
               </section>
             ) : null}
@@ -1171,17 +1226,19 @@ function ClientHomePageContent() {
         </DashboardCenterColumn>
         )}
 
-        <ClientRightAside
-          recentPosts={recentPosts}
-          notifications={notifications}
-          onMarkAllRead={markAllRead}
-          onMarkOneRead={markOneRead}
-          onDeleteNotification={deleteOne}
-          onNotificationClick={handleNotificationClick}
-          onRecentPostClick={(postId) =>
-            router.push(`/client-home?post=${encodeURIComponent(postId)}`)
-          }
-        />
+        <div className="hidden h-full min-h-0 lg:block lg:row-span-1">
+          <ClientRightAside
+            recentPosts={recentPosts}
+            notifications={notifications}
+            onMarkAllRead={markAllRead}
+            onMarkOneRead={markOneRead}
+            onDeleteNotification={deleteOne}
+            onNotificationClick={handleNotificationClick}
+            onRecentPostClick={(postId) =>
+              router.push(`/client-home?post=${encodeURIComponent(postId)}`)
+            }
+          />
+        </div>
       </div>
     </div>
   );

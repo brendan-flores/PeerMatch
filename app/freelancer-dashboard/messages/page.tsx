@@ -1,36 +1,103 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  dashboardCenterPanelClass,
   dashboardCenterPanelFixedClass,
 } from "@/app/components/dashboard/dashboardShellClasses";
+import { buildFreelancerMobileNavItems } from "@/app/components/dashboard/dashboardMobileNavItems";
 import { ChatLayout } from "@/app/components/chat/ChatLayout";
+import { useNotifications } from "@/app/hooks/useNotifications";
+import { useUnreadMessageCount } from "@/app/hooks/useUnreadMessageCount";
+import { apiPostJson } from "@/app/lib/api";
+import { clearFreelancerGreetingSession } from "@/app/lib/freelancerStorage";
+import type { NotificationItem } from "@/app/lib/notifications";
+import { resetHighlightConsumption } from "@/app/lib/notificationHighlight";
+import { disconnectSocket } from "@/app/lib/socket";
 import { useFreelancerDashboardUser } from "../FreelancerDashboardShell";
 
 function FreelancerMessagesPageContent() {
   const { user } = useFreelancerDashboardUser();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const fromUrl = searchParams.get("with") || "";
   const [peerUserId, setPeerUserId] = useState(fromUrl);
+  const { count: unreadMessageCount } = useUnreadMessageCount(user?.id ?? null);
+  const {
+    items: notifications,
+    markAllRead,
+    markOneRead,
+    deleteOne,
+  } = useNotifications(user?.id ?? null);
 
   useEffect(() => {
     setPeerUserId(fromUrl);
   }, [fromUrl]);
+
+  const isFreelancerNavActive = useCallback(
+    (href: string) => {
+      if (href === "/freelancer-dashboard") {
+        return pathname === "/freelancer-dashboard";
+      }
+      return pathname === href || pathname.startsWith(`${href}/`);
+    },
+    [pathname],
+  );
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await apiPostJson("/api/auth/logout", {});
+    } finally {
+      disconnectSocket();
+      clearFreelancerGreetingSession();
+      router.push("/login");
+    }
+  }, [router]);
+
+  const handleNotificationClick = useCallback(
+    (item: NotificationItem) => {
+      if (item.type === "new_task" && item.relatedTaskId) {
+        resetHighlightConsumption(item.relatedTaskId);
+        router.push(
+          `/freelancer-dashboard?highlightPost=${encodeURIComponent(item.relatedTaskId)}`,
+        );
+      }
+    },
+    [router],
+  );
+
+  const mobileNavItems = useMemo(
+    () => buildFreelancerMobileNavItems(unreadMessageCount),
+    [unreadMessageCount],
+  );
 
   if (!user) {
     return null;
   }
 
   return (
-    <main className={`${dashboardCenterPanelClass} ${dashboardCenterPanelFixedClass} max-h-full p-4`}>
+    <main
+      className={`${dashboardCenterPanelFixedClass} h-full max-h-full max-lg:bg-transparent lg:rounded-2xl lg:border lg:border-zinc-100/80 lg:bg-white lg:p-4`}
+    >
       <div className="h-full max-h-full min-h-0 flex-1 overflow-hidden">
         <ChatLayout
           currentUserId={user.id}
           initialOtherQuery={peerUserId.trim()}
           allowUnsend
-          className="!h-full !min-h-0 rounded-2xl border border-zinc-200 !bg-white"
+          currentUserName={user.name}
+          currentUserPhoto={user.photoDataUrl}
+          mobileNav={{
+            items: mobileNavItems,
+            isActive: isFreelancerNavActive,
+            onLogout: handleLogout,
+          }}
+          notifications={notifications}
+          onMarkAllRead={markAllRead}
+          onMarkOneRead={markOneRead}
+          onDeleteNotification={deleteOne}
+          onNotificationClick={handleNotificationClick}
+          className="!h-full !min-h-0 !rounded-none !border-0 !bg-[#E5F6F4] lg:!rounded-2xl lg:!border lg:!border-zinc-200 lg:!bg-white"
         />
       </div>
     </main>

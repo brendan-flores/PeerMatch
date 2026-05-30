@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Send, Smile, X } from "lucide-react";
+import { ChevronLeft, Mic, Send, Smile, X } from "lucide-react";
 import Picker from "emoji-picker-react";
 import { ApiError, apiDeleteJson, apiGetJson, apiPostJson } from "@/app/lib/api";
 import type { ChatMessagePayload } from "@/app/lib/chatTypes";
@@ -31,6 +31,7 @@ type ChatThreadProps = {
   allowUnsend?: boolean;
   onConversationUpdated?: (otherUserIdResolved: string, messages: ChatMessagePayload[]) => void;
   className?: string;
+  onBack?: () => void;
 };
 
 function isSameConversation(msg: ChatMessagePayload, a: string, b: string): boolean {
@@ -47,6 +48,7 @@ export function ChatThread({
   allowUnsend = false,
   onConversationUpdated,
   className = "",
+  onBack,
 }: ChatThreadProps) {
   const [messages, setMessages] = useState<ChatMessagePayload[]>([]);
   const [socketError, setSocketError] = useState<string | null>(null);
@@ -631,8 +633,18 @@ export function ChatThread({
 
   return (
     <div className={`flex h-full max-h-full min-h-0 flex-col overflow-hidden ${className}`}>
-      <header className="shrink-0 min-h-[76px] border-b border-zinc-200 bg-white px-6 py-6">
-        <div className="flex items-center justify-between gap-3">
+      <header className="shrink-0 border-b border-zinc-200 bg-white px-4 py-3 lg:min-h-[76px] lg:px-6 lg:py-6">
+        <div className="flex items-center gap-3">
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Back to chats"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-800 transition hover:bg-zinc-100 lg:hidden"
+            >
+              <ChevronLeft className="h-5 w-5" strokeWidth={2} />
+            </button>
+          ) : null}
           {resolvedOtherId ? (
             <UserAvatar
               id={resolvedOtherId}
@@ -643,19 +655,19 @@ export function ChatThread({
             />
           ) : null}
           <div className="min-w-0 flex-1">
-            <p className="truncate leading-tight text-sm font-semibold text-zinc-900">{title}</p>
+            <p className="truncate text-sm font-semibold leading-tight text-zinc-900">{title}</p>
             <p
-              className={`mt-1 text-xs font-medium leading-tight ${
-                statusText === "Online" ? "text-[#4DD2AC]" : "text-zinc-700"
+              className={`mt-0.5 text-xs font-medium leading-tight lg:mt-1 ${
+                statusText === "Online" ? "text-[#4DD2AC]" : "text-zinc-500"
               }`}
             >
-              {canChat ? statusText : ""}
+              {canChat ? (statusText === "Online" ? "Active now" : statusText) : ""}
             </p>
           </div>
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#F5F5F5] px-6 py-6">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#E5F6F4] px-4 py-4 lg:bg-white lg:px-6 lg:py-6">
         <div className="space-y-4 pb-2">
           {loadingHistory ? <p className="text-sm text-zinc-500">Loading messages…</p> : null}
           {resolvingUser ? <p className="text-sm text-zinc-500">Looking up user…</p> : null}
@@ -708,7 +720,7 @@ export function ChatThread({
         </div>
       </div>
 
-      <form onSubmit={send} className="shrink-0 border-t border-zinc-200 bg-white px-6 py-4">
+      <form onSubmit={send} className="relative shrink-0 border-t border-zinc-200 bg-white px-4 py-3 lg:px-6 lg:py-4">
         {replyingTo ? (
           <div className="mb-3 flex items-start justify-between gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
             <div className="min-w-0">
@@ -725,44 +737,70 @@ export function ChatThread({
             </button>
           </div>
         ) : null}
+
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <button
-              ref={emojiButtonRef}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowEmojiPicker(!showEmojiPicker);
-              }}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
-              aria-label="Add emoji"
-              disabled={!canChat}
-            >
-              <Smile className="h-5 w-5" strokeWidth={1.8} />
-            </button>
-            {showEmojiPicker && (
-              <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-2 z-20">
-                <Picker onEmojiClick={handleEmojiClick} lazyLoadEmojis />
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            aria-label="Voice message"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 lg:hidden"
+            disabled={!canChat}
+          >
+            <Mic className="h-5 w-5" strokeWidth={1.75} />
+          </button>
+
+          <button
+            ref={emojiButtonRef}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowEmojiPicker(!showEmojiPicker);
+            }}
+            className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300 lg:inline-flex"
+            aria-label="Add emoji"
+            disabled={!canChat}
+          >
+            <Smile className="h-5 w-5" strokeWidth={1.8} />
+          </button>
+
           <input
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Type a message…"
-            className="h-10 min-w-0 flex-1 rounded-full border border-zinc-200 bg-zinc-50 px-4 text-sm leading-5 text-zinc-800 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-[#4DD2AC]/30"
+            placeholder="Aa"
+            className="h-10 min-w-0 flex-1 rounded-full border border-zinc-200 bg-zinc-100 px-4 text-sm leading-5 text-zinc-800 placeholder:text-zinc-400 outline-none focus:border-zinc-300 focus:bg-white focus:ring-2 focus:ring-[#FF6B35]/20 lg:bg-zinc-50 lg:placeholder:text-zinc-400 lg:focus:ring-[#4DD2AC]/30"
             disabled={!canChat}
           />
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowEmojiPicker(!showEmojiPicker);
+            }}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
+            aria-label="Add emoji"
+            disabled={!canChat}
+          >
+            <Smile className="h-5 w-5" strokeWidth={1.8} />
+          </button>
+
           <button
             type="submit"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#4DD2AC] text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition hover:brightness-95 disabled:cursor-not-allowed lg:h-10 lg:w-10 lg:disabled:bg-zinc-300 ${
+              draft.trim() ? "bg-[#FF6B35] lg:bg-[#4DD2AC]" : "hidden bg-zinc-300 lg:inline-flex lg:disabled:opacity-100"
+            }`}
             aria-label="Send message"
             disabled={!canChat || !draft.trim()}
           >
             <Send className="h-4 w-4" strokeWidth={2} />
           </button>
         </div>
+
+        {showEmojiPicker ? (
+          <div ref={emojiPickerRef} className="absolute bottom-full right-4 z-20 mb-2 lg:left-4 lg:right-auto">
+            <Picker onEmojiClick={handleEmojiClick} lazyLoadEmojis />
+          </div>
+        ) : null}
       </form>
 
       {forwardFrom ? (

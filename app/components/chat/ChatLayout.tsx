@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MoreVertical, Search, Trash2 } from "lucide-react";
+import { Menu, MoreVertical, Search, Trash2 } from "lucide-react";
 import type { ChatMessagePayload } from "@/app/lib/chatTypes";
 import { dispatchUnreadMessagesRefresh } from "@/app/hooks/useUnreadMessageCount";
 import { apiDeleteJson, apiGetJson } from "@/app/lib/api";
@@ -16,7 +16,13 @@ import type { UserSearchResult } from "@/app/lib/userSearch";
 import { searchUsersByQuery } from "@/app/lib/userSearch";
 import { ChatThread } from "@/app/components/chat/ChatThread";
 import { UserAvatar } from "@/app/components/UserAvatar";
-import { dashboardCenterPanelHeadingClass } from "@/app/components/dashboard/dashboardShellClasses";
+import { NotificationsDropdown } from "@/app/components/NotificationsDropdown";
+import { dashboardCenterPanelHeadingClass, mobileDashboardWhitePanelClass } from "@/app/components/dashboard/dashboardShellClasses";
+import {
+  MobileDashboardMenu,
+  type MobileNavItem,
+} from "@/app/components/dashboard/MobileDashboardMenu";
+import type { NotificationItem } from "@/app/lib/notifications";
 
 type Conversation = {
   otherUserId: string;
@@ -53,11 +59,41 @@ function formatTimeAgo(iso?: string) {
   return `${diffDay}d ago`;
 }
 
+function formatChatListTime(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (sameDay) {
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+  const diffDay = Math.floor((now.getTime() - d.getTime()) / (24 * 60 * 60 * 1000));
+  if (diffDay === 1) return "Yesterday";
+  if (diffDay < 7) return d.toLocaleDateString([], { weekday: "short" });
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 type ChatLayoutProps = {
   currentUserId: string;
   initialOtherQuery?: string; // ObjectId or name fragment (from ?with=)
   allowUnsend?: boolean;
   className?: string;
+  currentUserName?: string;
+  currentUserPhoto?: string;
+  mobileNav?: {
+    items: MobileNavItem[];
+    isActive: (href: string) => boolean;
+    onLogout: () => void | Promise<void>;
+  };
+  notifications?: NotificationItem[];
+  onMarkAllRead?: () => void | Promise<void>;
+  onMarkOneRead?: (id: string) => void | Promise<void>;
+  onDeleteNotification?: (id: string) => void | Promise<void>;
+  onNotificationClick?: (item: NotificationItem) => void;
 };
 
 export function ChatLayout({
@@ -65,6 +101,12 @@ export function ChatLayout({
   initialOtherQuery,
   allowUnsend = false,
   className = "",
+  mobileNav,
+  notifications = [],
+  onMarkAllRead,
+  onMarkOneRead,
+  onDeleteNotification,
+  onNotificationClick,
 }: ChatLayoutProps) {
   const [searchText, setSearchText] = useState<string>("");
   const [searchLoading, setSearchLoading] = useState(false);
@@ -87,6 +129,7 @@ export function ChatLayout({
 
   // Conversation delete menu state
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const userNameByIdRef = useRef<Record<string, string>>({});
   const userPhotoByIdRef = useRef<Record<string, string>>({});
@@ -483,12 +526,51 @@ export function ChatLayout({
     }
   };
 
+  const handleBackFromThread = () => {
+    setActiveUserId("");
+    setActiveUserName("");
+    setActiveUserPhoto("");
+  };
+
+  const showMobileThread = Boolean(activeUserId);
+
   return (
-    <div className={`flex h-full max-h-full min-h-0 w-full min-w-0 overflow-hidden bg-[#F5F5F5] ${className}`}>
-      {/* Left sidebar */}
-      <aside className="flex h-full max-h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden border-r border-zinc-200 bg-white">
-        <div className={`shrink-0 px-4 pt-3 pb-3 ${dashboardCenterPanelHeadingClass}`}>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Messages</h1>
+    <div className={`flex h-full max-h-full min-h-0 w-full min-w-0 overflow-hidden bg-[#E5F6F4] px-3 pb-3 pt-0 lg:bg-[#F5F5F5] lg:px-0 lg:pb-0 lg:pt-0 ${className}`}>
+      {/* Left sidebar / mobile chat list */}
+      <aside
+        className={`flex h-full max-h-full min-h-0 shrink-0 flex-col overflow-hidden bg-transparent lg:w-[300px] lg:border-r lg:border-zinc-200 lg:bg-white ${
+          showMobileThread ? "hidden lg:flex" : "flex w-full"
+        }`}
+      >
+        <div className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${mobileDashboardWhitePanelClass} lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none`}>
+        <div className={`shrink-0 px-4 pt-3 pb-3 lg:bg-white ${dashboardCenterPanelHeadingClass}`}>
+          <div className="flex items-center justify-between gap-3 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-800 transition hover:bg-zinc-50"
+            >
+              <Menu className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+
+            <h1 className="text-base font-bold tracking-tight text-zinc-900">Chats</h1>
+
+            <NotificationsDropdown
+              items={notifications}
+              onMarkAllRead={onMarkAllRead ?? (() => undefined)}
+              onMarkOneRead={onMarkOneRead ?? (() => undefined)}
+              onDeleteNotification={onDeleteNotification}
+              onNotificationClick={onNotificationClick}
+              menuAlign="right"
+              menuElevated
+              compact
+              centerOnMobile
+              className="relative shrink-0"
+            />
+          </div>
+
+          <h1 className="hidden text-2xl font-bold tracking-tight text-zinc-900 lg:block">Messages</h1>
 
           <div ref={dropdownWrapRef} className="relative mt-4">
             <Search
@@ -500,8 +582,8 @@ export function ChatLayout({
               type="text"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search conversations..."
-              className="h-10 w-full rounded-xl border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-800 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-[#4DD2AC]/30"
+              placeholder="Search"
+              className="h-10 w-full rounded-full border border-zinc-200 bg-zinc-100 pl-9 pr-3 text-sm text-zinc-800 placeholder:text-zinc-400 outline-none focus:border-zinc-300 focus:bg-white focus:ring-2 focus:ring-[#4DD2AC]/30 lg:rounded-xl lg:border-zinc-200 lg:bg-white"
               autoComplete="off"
               spellCheck={false}
               onFocus={() => {
@@ -551,25 +633,34 @@ export function ChatLayout({
           </div>
         </div>
 
-        <div className="h-0 min-h-0 flex-1 overflow-y-scroll overscroll-contain px-4 pb-4 [scrollbar-gutter:stable] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 [&::-webkit-scrollbar-track]:bg-transparent">
-          <div className="space-y-3">
+        <div className="h-0 min-h-0 flex-1 overflow-y-scroll overscroll-contain px-2 pb-4 lg:px-4 [scrollbar-gutter:stable] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 [&::-webkit-scrollbar-track]:bg-transparent">
+          <div className="space-y-0 lg:space-y-3">
             {filteredConversations.map((c) => {
               const active = c.otherUserId === activeUserId;
               const isMenuOpen = menuOpenId === c.otherUserId;
+              const listTime = formatChatListTime(c.lastTimestamp || undefined);
               return (
                 <div key={c.otherUserId} className="relative">
                   <div
                     onClick={() => handleSelectConversationFromSidebar(c)}
-                    className={`w-full rounded-xl border border-transparent px-2 py-2 text-left transition cursor-pointer ${
+                    className={`w-full rounded-xl border border-transparent px-2 py-3 text-left transition cursor-pointer lg:py-2 ${
                       active ? "bg-[#FFF2EB]" : "hover:bg-zinc-50"
                     }`}
                   >
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-center gap-3">
+                      <UserAvatar
+                        id={c.otherUserId}
+                        name={c.otherName}
+                        photoDataUrl={c.otherPhotoDataUrl}
+                        size="md"
+                        className="shrink-0 lg:hidden"
+                      />
                       <UserAvatar
                         id={c.otherUserId}
                         name={c.otherName}
                         photoDataUrl={c.otherPhotoDataUrl}
                         size="sm"
+                        className="hidden shrink-0 lg:inline-flex"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
@@ -581,7 +672,10 @@ export function ChatLayout({
                             {c.otherName}
                           </p>
                           <div className="flex items-center gap-1">
-                            <p className="text-[11px] font-medium leading-tight text-zinc-500">
+                            <p className="text-[11px] font-medium leading-tight text-zinc-500 lg:hidden">
+                              {listTime}
+                            </p>
+                            <p className="hidden text-[11px] font-medium leading-tight text-zinc-500 lg:block">
                               {formatTimeAgo(c.lastTimestamp || undefined)}
                             </p>
                             <button
@@ -590,7 +684,7 @@ export function ChatLayout({
                                 e.stopPropagation();
                                 setMenuOpenId(isMenuOpen ? null : c.otherUserId);
                               }}
-                              className="p-1 rounded hover:bg-zinc-200 text-zinc-400 hover:text-zinc-600 transition"
+                              className="hidden rounded p-1 text-zinc-400 transition hover:bg-zinc-200 hover:text-zinc-600 lg:inline-flex"
                               aria-label="Conversation options"
                               data-menu-id={c.otherUserId}
                             >
@@ -600,11 +694,15 @@ export function ChatLayout({
                         </div>
                         {c.lastMessagePreview && c.lastTimestamp ? (
                           <p
-                            className={`mt-1 truncate text-xs ${
-                              c.hasUnread ? "font-semibold text-zinc-900" : "text-zinc-600"
+                            className={`mt-0.5 truncate text-xs lg:mt-1 ${
+                              c.hasUnread ? "font-semibold text-zinc-900" : "text-zinc-500"
                             } leading-snug`}
                           >
-                            {c.lastMessagePreview}
+                            <span className="lg:hidden">
+                              {c.lastMessagePreview}
+                              {listTime ? ` · ${listTime}` : ""}
+                            </span>
+                            <span className="hidden lg:inline">{c.lastMessagePreview}</span>
                           </p>
                         ) : null}
                       </div>
@@ -638,7 +736,7 @@ export function ChatLayout({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-zinc-200 bg-white p-4">
+        <div className="hidden shrink-0 border-t border-zinc-200 bg-white p-4 lg:block">
           <button
             type="button"
             onClick={handleNewChat}
@@ -648,10 +746,16 @@ export function ChatLayout({
             New Chat
           </button>
         </div>
+        </div>
       </aside>
 
       {/* Main chat */}
-      <main className="flex h-full max-h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#F5F5F5]">
+      <main
+        className={`h-full max-h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent lg:flex lg:bg-[#F5F5F5] ${
+          showMobileThread ? "flex" : "hidden"
+        }`}
+      >
+        <div className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${mobileDashboardWhitePanelClass} lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none`}>
         <ChatThread
           className="h-full"
           currentUserId={currentUserId}
@@ -660,6 +764,7 @@ export function ChatLayout({
           otherUserPhoto={activeUserPhoto}
           statusText={activeUserStatusText}
           allowUnsend={allowUnsend}
+          onBack={handleBackFromThread}
           onConversationUpdated={(otherId, msgs: ChatMessagePayload[]) => {
             if (!otherId) return;
             if (!msgs || msgs.length === 0) return; // IMPORTANT: do not persist empty/temporary chats
@@ -701,7 +806,18 @@ export function ChatLayout({
             });
           }}
         />
+        </div>
       </main>
+
+      {mobileNav ? (
+        <MobileDashboardMenu
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          items={mobileNav.items}
+          isActive={mobileNav.isActive}
+          onLogout={() => void mobileNav.onLogout()}
+        />
+      ) : null}
     </div>
   );
 }

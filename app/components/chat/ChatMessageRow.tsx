@@ -250,14 +250,14 @@ export function ChatMessageRow({
   const bubble = (
     <div className={`relative min-w-0 max-w-full ${reactionMap.size > 0 ? "pb-3" : ""}`}>
       <div
-        className={`rounded-xl px-4 py-2.5 ${
+        className={`rounded-2xl px-4 py-2.5 ${
           isTombstone
             ? mine
               ? "rounded-tr-md bg-transparent text-zinc-500 ring-0"
               : "rounded-tl-md bg-transparent text-zinc-500 ring-0"
             : mine
-              ? "rounded-tr-md bg-[#4DD2AC] text-white"
-              : "rounded-tl-md bg-white text-zinc-900 ring-1 ring-zinc-200"
+              ? "rounded-br-sm bg-[#FF6B35] text-white lg:rounded-tr-md lg:bg-[#4DD2AC]"
+              : "rounded-bl-sm bg-zinc-100 text-zinc-900 lg:rounded-tl-md lg:bg-white lg:ring-1 lg:ring-zinc-200"
         }`}
       >
         {fwd && !isTombstone ? (

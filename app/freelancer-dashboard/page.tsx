@@ -76,7 +76,7 @@ function FreelancerDashboardPageContent() {
   return (
     <FreelancerFeedMain
       scrollable
-      header={<FeedPageHeader title="Community Feed" />}
+      header={<FeedPageHeader title="Community Feed" className="hidden lg:block" />}
       scroll={
         <section aria-labelledby="latest-posts-heading" className="space-y-4">
           {loading ? <p className="text-sm text-zinc-500">Loading posts…</p> : null}

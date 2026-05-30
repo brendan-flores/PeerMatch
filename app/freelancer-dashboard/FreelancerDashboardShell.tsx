@@ -14,6 +14,8 @@ import { usePathname, useRouter } from "next/navigation";
 import type { NotificationItem } from "@/app/lib/notifications";
 
 import { DashboardCenterColumn } from "@/app/components/dashboard/DashboardCenterColumn";
+import { MobileFeedTopBar } from "@/app/components/dashboard/MobileFeedTopBar";
+import { buildFreelancerMobileNavItems } from "@/app/components/dashboard/dashboardMobileNavItems";
 
 import { FreelancerSidebar } from "@/app/components/freelancer/FreelancerSidebar";
 
@@ -23,11 +25,12 @@ import { useNotifications } from "@/app/hooks/useNotifications";
 
 import { useUnreadMessageCount } from "@/app/hooks/useUnreadMessageCount";
 
-import { apiGetJson, ApiError } from "@/app/lib/api";
+import { apiGetJson, apiPostJson, ApiError } from "@/app/lib/api";
 
 import {
   normalizeAuthUser,
   persistFreelancerFromMe,
+  clearFreelancerGreetingSession,
 } from "@/app/lib/freelancerStorage";
 
 import type { CommunityPost } from "@/app/lib/postsStorage";
@@ -159,6 +162,33 @@ export function FreelancerDashboardShell({
 
   const { count: unreadMessageCount } =
     useUnreadMessageCount(user?.id ?? null);
+
+  const isFreelancerNavActive = useCallback(
+    (href: string) => {
+      if (href === "/freelancer-dashboard") {
+        return pathname === "/freelancer-dashboard";
+      }
+      return pathname === href || pathname.startsWith(`${href}/`);
+    },
+    [pathname],
+  );
+
+  const mobileNavItems = useMemo(
+    () => buildFreelancerMobileNavItems(unreadMessageCount),
+    [unreadMessageCount],
+  );
+
+  const isMessagesRoute = pathname.startsWith("/freelancer-dashboard/messages");
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await apiPostJson("/api/auth/logout", {});
+    } finally {
+      disconnectSocket();
+      clearFreelancerGreetingSession();
+      router.push("/login");
+    }
+  }, [router]);
 
   const handleNotificationClick =
     useCallback(
@@ -421,10 +451,31 @@ export function FreelancerDashboardShell({
     <FreelancerUserContext.Provider
       value={value}
     >
-      <div className="relative h-[100dvh] overflow-hidden bg-[#E5F6F4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
-        <div className="mx-auto grid h-full min-h-0 w-full max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px]">
-          <div className="h-full min-h-0 overflow-hidden lg:row-span-1">
-            <FreelancerSidebar />
+      <div
+        className={`relative flex h-[100dvh] flex-col overflow-hidden bg-[#E5F6F4] px-4 py-4 sm:px-6 lg:px-8 lg:py-6 ${
+          isMessagesRoute ? "max-lg:px-0 max-lg:py-0" : ""
+        }`}
+      >
+        {!isMessagesRoute ? (
+          <MobileFeedTopBar
+            items={mobileNavItems}
+            isActive={isFreelancerNavActive}
+            onLogout={handleLogout}
+            notifications={notifications}
+            onMarkAllRead={markAllRead}
+            onMarkOneRead={markOneRead}
+            onDeleteNotification={deleteOne}
+            onNotificationClick={handleNotificationClick}
+          />
+        ) : null}
+
+        <div
+          className={`mx-auto grid min-h-0 w-full max-w-[1600px] flex-1 grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] xl:grid-cols-[280px_minmax(0,1fr)_320px] ${
+            isMessagesRoute ? "max-lg:gap-0" : ""
+          }`}
+        >
+          <div className="hidden h-full min-h-0 overflow-hidden lg:block lg:row-span-1">
+            <FreelancerSidebar unreadMessageCount={unreadMessageCount} />
           </div>
 
           <DashboardCenterColumn
@@ -449,7 +500,7 @@ export function FreelancerDashboardShell({
             {children}
           </DashboardCenterColumn>
 
-          <div className="relative z-10 h-full min-h-0 lg:row-span-1">
+          <div className="relative z-10 hidden h-full min-h-0 lg:block lg:row-span-1">
             <FreelancerRightAside
               notifications={
                 notifications

@@ -80,7 +80,7 @@ function FreelancerBrowsePageContent() {
     <FreelancerFeedMain
       scrollable
       header={
-        <FeedPageHeader>
+        <FeedPageHeader className="hidden lg:block">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Browse Post</h1>
           <p className="mt-1 text-sm text-zinc-500">Explore posts from the community.</p>
         </FeedPageHeader>

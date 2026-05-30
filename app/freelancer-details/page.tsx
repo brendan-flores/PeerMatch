@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Button from "../components/Button";
 import AuthPageHeader from "../components/AuthPageHeader";
+import { BubbleDropdown } from "../components/BubbleDropdown";
 import { useRouter } from "next/navigation";
 import { apiPostJson, ApiError } from "../lib/api";
 import {
@@ -10,13 +11,14 @@ import {
   readImageFileAsDataUrl,
   type ProfileSaveResponse,
 } from "../lib/profilePhoto";
+import {
+  bubbleInputClass,
+  bubbleTextareaClass,
+  profileCardClass,
+  profileFormCardClass,
+} from "../lib/profileFormStyles";
 
-const yearLevels = [
-  "1st Year",
-  "2nd Year",
-  "3rd Year",
-  "4th Year",
-];
+const yearLevels = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 
 const courseOptions = [
   "BS Architecture",
@@ -28,7 +30,6 @@ const courseOptions = [
   "BS Industrial Engineering",
   "BS Mechanical Engineering",
   "BS Mining Engineering",
-
   "BS Accountancy",
   "BS Accounting Information Systems",
   "BS Management Accounting",
@@ -37,7 +38,6 @@ const courseOptions = [
   "BS Tourism Management",
   "BS Office Administration",
   "Bachelor in Public Administration",
-
   "AB Communication",
   "AB English with Applied Linguistics",
   "Bachelor of Elementary Education",
@@ -46,14 +46,11 @@ const courseOptions = [
   "BS Biology",
   "BS Math with Applied Industrial Mathematics",
   "BS Psychology",
-
   "BS Computer Science",
   "BS Information Technology",
-
   "BS Nursing",
   "BS Pharmacy",
   "BS Medical Technology",
-
   "BS Criminology",
 ] as const;
 
@@ -61,63 +58,38 @@ export default function FreelancerDetailsPage() {
   const router = useRouter();
 
   const [course, setCourse] = useState("");
-  const [yearLevel, setYearLevel] = useState(
-    yearLevels[0]
-  );
-
+  const [yearLevel, setYearLevel] = useState(yearLevels[0]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-
   const [aboutMe, setAboutMe] = useState("");
-
-  const [photoFile, setPhotoFile] =
-    useState<File | null>(null);
-
-  const [showConfirmation, setShowConfirmation] =
-    useState(false);
-
-  const [statusMessage, setStatusMessage] =
-    useState("");
-
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
-
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=FreelancerDetails"
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=FreelancerDetails",
   );
 
-  const fileInputRef =
-    useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!photoFile) return;
-
     const url = URL.createObjectURL(photoFile);
-
     setPhotoPreview(url);
-
     return () => URL.revokeObjectURL(url);
   }, [photoFile]);
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
-    if (file) {
-      setPhotoFile(file);
-    }
+    if (file) setPhotoFile(file);
   };
 
   const handleChoosePhoto = () => {
     fileInputRef.current?.click();
   };
 
-  const handleSubmit = (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     if (isSubmitting) return;
 
     void (async () => {
@@ -139,7 +111,6 @@ export default function FreelancerDetailsPage() {
         });
 
         applySavedProfilePhoto(saved, photoDataUrl || "");
-
         setShowConfirmation(true);
 
         window.setTimeout(() => {
@@ -147,10 +118,7 @@ export default function FreelancerDetailsPage() {
         }, 1600);
       } catch (err) {
         const message =
-          err instanceof ApiError
-            ? err.message
-            : "Could not save profile. Please try again.";
-
+          err instanceof ApiError ? err.message : "Could not save profile. Please try again.";
         setStatusMessage(message);
       } finally {
         setIsSubmitting(false);
@@ -163,23 +131,21 @@ export default function FreelancerDetailsPage() {
       <div className="flex min-h-screen w-full flex-col">
         <AuthPageHeader />
 
-        <main className="flex flex-1 items-start justify-center px-4 py-12">
-          <div className="w-full max-w-[1120px]">
+        <main className="flex flex-1 items-start justify-center overflow-x-hidden px-4 py-8 sm:py-12">
+          <div className="w-full min-w-0 max-w-[1120px]">
             <div className="text-center">
-              <h1 className="text-4xl font-semibold tracking-tight text-slate-950">
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
                 Complete Your Freelancer Profile
               </h1>
-
               <p className="mt-2 text-sm text-slate-600">
-                Set up your freelancer profile to
-                connect with clients and peers
+                Set up your freelancer profile to connect with clients and peers
               </p>
             </div>
 
-            <div className="mt-10 grid gap-8 lg:grid-cols-[320px_1fr] lg:items-start">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mt-8 grid min-w-0 gap-6 sm:mt-10 sm:gap-8 lg:grid-cols-[320px_1fr] lg:items-start">
+              <section className={profileCardClass}>
                 <div className="flex flex-col items-center gap-4">
-                  <div className="relative h-24 w-24 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  <div className="relative h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
                     <img
                       src={photoPreview}
                       alt="Freelancer profile preview"
@@ -190,7 +156,7 @@ export default function FreelancerDetailsPage() {
                   <button
                     type="button"
                     onClick={handleChoosePhoto}
-                    className="rounded-full bg-[#FA642C] px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#e05b26]"
+                    className="ui-interactive rounded-full bg-[#FA642C] px-7 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(250,100,44,0.28)] hover:bg-[#e05625] motion-safe:hover:-translate-y-0.5"
                   >
                     Change Photo
                   </button>
@@ -205,25 +171,20 @@ export default function FreelancerDetailsPage() {
 
                   <div className="h-px w-full bg-slate-200" />
 
-                  <div className="w-full rounded-xl bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-semibold text-slate-900">
-                      Tip
-                    </p>
-
-                    <p className="mt-1 text-[11px] leading-5 text-slate-600">
-                      A complete freelancer profile
-                      helps you attract better
-                      opportunities and build trust
-                      faster.
+                  <div className="w-full rounded-[1.75rem] bg-[#F8FAFC] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                    <p className="text-xs font-semibold text-[#0F172A]">Tip</p>
+                    <p className="mt-1 text-[11px] leading-5 text-zinc-600">
+                      A complete freelancer profile helps you attract better opportunities and
+                      build trust faster.
                     </p>
                   </div>
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+              <section className={profileFormCardClass}>
                 <div
                   aria-live="polite"
-                  className={`mb-5 overflow-hidden rounded-xl border transition-all duration-500 ease-out ${
+                  className={`mb-5 overflow-hidden rounded-[1.75rem] border transition-all duration-500 ease-out ${
                     showConfirmation
                       ? "max-h-40 border-emerald-200 bg-emerald-50 opacity-100"
                       : "max-h-0 border-transparent bg-transparent opacity-0"
@@ -236,96 +197,51 @@ export default function FreelancerDetailsPage() {
                         : "-translate-y-2 scale-[0.98]"
                     }`}
                   >
-                    <p className="text-sm font-semibold">
-                      Profile saved successfully.
-                    </p>
-
-                    <p className="mt-1 text-xs text-emerald-800/80">
-                      Taking you to your home page…
-                    </p>
+                    <p className="text-sm font-semibold">Profile saved successfully.</p>
+                    <p className="mt-1 text-xs text-emerald-800/80">Taking you to your home page…</p>
                   </div>
                 </div>
 
-                <form
-                  onSubmit={handleSubmit}
-                  className="space-y-8"
-                >
+                <form onSubmit={handleSubmit} className="space-y-8">
                   <div>
                     <div className="flex items-start gap-3">
                       <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#0069A8] text-xs font-semibold text-white">
                         1
                       </span>
-
                       <div>
-                        <p className="text-sm font-semibold text-slate-950">
-                          Academic Information
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-500">
-                          Tell us about your current
-                          studies
-                        </p>
+                        <p className="text-sm font-semibold text-slate-950">Academic Information</p>
+                        <p className="mt-1 text-xs text-slate-500">Tell us about your current studies</p>
                       </div>
                     </div>
 
-                    <div className="mt-5 grid gap-4">
-                      <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          Course
-                        </span>
+                    <div className="mt-5 grid min-w-0 gap-4">
+                      <div className="block min-w-0">
+                        <span className="text-xs font-medium text-slate-700">Course</span>
+                        <div className="mt-2">
+                          <BubbleDropdown
+                            id="freelancer-course"
+                            name="course"
+                            value={course}
+                            onChange={setCourse}
+                            options={courseOptions}
+                            placeholder="Select a course"
+                            required
+                          />
+                        </div>
+                      </div>
 
-                        <select
-                          value={course}
-                          onChange={(e) =>
-                            setCourse(e.target.value)
-                          }
-                          required
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
-                        >
-                          <option value="" disabled>
-                            Select a course
-                          </option>
-
-                          {courseOptions.map(
-                            (option) => (
-                              <option
-                                key={option}
-                                value={option}
-                              >
-                                {option}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </label>
-
-                      <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          Academic Year
-                        </span>
-
-                        <select
-                          value={yearLevel}
-                          onChange={(e) =>
-                            setYearLevel(
-                              e.target.value
-                            )
-                          }
-                          required
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
-                        >
-                          {yearLevels.map(
-                            (level) => (
-                              <option
-                                key={level}
-                                value={level}
-                              >
-                                {level}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </label>
+                      <div className="block min-w-0">
+                        <span className="text-xs font-medium text-slate-700">Academic Year</span>
+                        <div className="mt-2">
+                          <BubbleDropdown
+                            id="freelancer-year-level"
+                            name="yearLevel"
+                            value={yearLevel}
+                            onChange={setYearLevel}
+                            options={yearLevels}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -336,82 +252,54 @@ export default function FreelancerDetailsPage() {
                       <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#0069A8] text-xs font-semibold text-white">
                         2
                       </span>
-
                       <div>
-                        <p className="text-sm font-semibold text-slate-950">
-                          Freelancer Profile
-                        </p>
-
+                        <p className="text-sm font-semibold text-slate-950">Freelancer Profile</p>
                         <p className="mt-1 text-xs text-slate-500">
                           Share what you can offer and connect with clients and peers
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-5 grid gap-4">
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <label className="block">
-                          <span className="text-xs font-medium text-slate-700">
-                            First Name
-                          </span>
-
+                    <div className="mt-5 grid min-w-0 gap-4">
+                      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+                        <label className="block min-w-0">
+                          <span className="text-xs font-medium text-slate-700">First Name</span>
                           <input
                             type="text"
                             value={firstName}
-                            onChange={(e) =>
-                              setFirstName(
-                                e.target.value
-                              )
-                            }
+                            onChange={(e) => setFirstName(e.target.value)}
                             placeholder="First Name"
                             required
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                            className={bubbleInputClass}
                           />
                         </label>
 
-                        <label className="block">
-                          <span className="text-xs font-medium text-slate-700">
-                            Last Name
-                          </span>
-
+                        <label className="block min-w-0">
+                          <span className="text-xs font-medium text-slate-700">Last Name</span>
                           <input
                             type="text"
                             value={lastName}
-                            onChange={(e) =>
-                              setLastName(
-                                e.target.value
-                              )
-                            }
+                            onChange={(e) => setLastName(e.target.value)}
                             placeholder="Last Name"
                             required
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                            className={bubbleInputClass}
                           />
                         </label>
                       </div>
 
-                      <label className="block">
-                        <span className="text-xs font-medium text-slate-700">
-                          About Me
-                        </span>
-
+                      <label className="block min-w-0">
+                        <span className="text-xs font-medium text-slate-700">About Me</span>
                         <textarea
                           value={aboutMe}
-                          onChange={(e) =>
-                            setAboutMe(
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => setAboutMe(e.target.value)}
                           placeholder="Tell clients and peers about your strengths, interests, and the projects you'd like to work on..."
                           required
                           rows={5}
-                          className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                          className={bubbleTextareaClass}
                         />
                       </label>
 
-                      <p className="text-[11px] text-slate-500">
-                        {aboutMe.length}/500
-                        characters
-                      </p>
+                      <p className="text-[11px] text-slate-500">{aboutMe.length}/500 characters</p>
                     </div>
                   </div>
 
@@ -419,26 +307,19 @@ export default function FreelancerDetailsPage() {
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full rounded-xl bg-[#FA642C] py-3.5 text-sm font-semibold text-white hover:bg-[#e05b26] disabled:cursor-not-allowed disabled:bg-zinc-300"
+                      className="ui-interactive w-full rounded-full bg-[#FA642C] py-4 text-sm font-semibold text-white shadow-[0_20px_40px_rgba(250,100,44,0.22)] hover:bg-[#e05625] disabled:cursor-not-allowed disabled:bg-zinc-300 motion-safe:hover:-translate-y-0.5"
                     >
-                      {isSubmitting
-                        ? "Saving..."
-                        : "Continue"}
+                      {isSubmitting ? "Saving..." : "Continue"}
                     </Button>
 
                     {statusMessage ? (
-                      <p
-                        className="mt-3 text-center text-sm text-red-600"
-                        role="alert"
-                      >
+                      <p className="mt-3 text-center text-sm text-red-600" role="alert">
                         {statusMessage}
                       </p>
                     ) : null}
 
                     <p className="mt-3 text-center text-[11px] text-slate-500">
-                      You can update your freelancer
-                      profile anytime in your
-                      settings
+                      You can update your freelancer profile anytime in your settings
                     </p>
                   </div>
                 </form>

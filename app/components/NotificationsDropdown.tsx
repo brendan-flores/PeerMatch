@@ -52,9 +52,13 @@ type NotificationsDropdownProps = {
   onDeleteNotification?: (id: string) => void | Promise<void>;
   onNotificationClick?: (item: NotificationItem) => void;
   className?: string;
-  menuAlign?: "left" | "right";
+  menuAlign?: "left" | "right" | "center";
   /** Use on right aside so the panel scroll area does not paint over the menu */
   menuElevated?: boolean;
+  /** Smaller trigger for mobile top bars */
+  compact?: boolean;
+  /** Center the panel under the viewport on small screens (mobile top bars) */
+  centerOnMobile?: boolean;
 };
 
 function contextIcon(type: NotificationType) {
@@ -88,10 +92,13 @@ export function NotificationsDropdown({
   className = "",
   menuAlign = "left",
   menuElevated = false,
+  compact = false,
+  centerOnMobile = false,
 }: NotificationsDropdownProps) {
   const [open, setOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [mobilePanelTop, setMobilePanelTop] = useState(72);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   const unreadCount = useMemo(() => items.filter((item) => !item.read).length, [items]);
@@ -100,6 +107,7 @@ export function NotificationsDropdown({
     if (!open) return;
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node;
+      if ((target as Element).closest?.("[data-notification-panel]")) return;
       if ((target as Element).closest?.("[data-notification-delete-modal]")) return;
       const el = wrapRef.current;
       if (!el?.contains(target)) setOpen(false);
@@ -107,6 +115,23 @@ export function NotificationsDropdown({
     window.addEventListener("pointerdown", onPointerDown);
     return () => window.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !centerOnMobile || !compact) return;
+    const updateTop = () => {
+      const trigger = wrapRef.current?.querySelector("[data-bell-trigger]");
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      setMobilePanelTop(rect.bottom + 12);
+    };
+    updateTop();
+    window.addEventListener("resize", updateTop);
+    window.addEventListener("scroll", updateTop, true);
+    return () => {
+      window.removeEventListener("resize", updateTop);
+      window.removeEventListener("scroll", updateTop, true);
+    };
+  }, [open, centerOnMobile, compact]);
 
   useEffect(() => {
     if (!open && !deleteTargetId) return;
@@ -133,6 +158,97 @@ export function NotificationsDropdown({
       setDeleting(false);
     }
   };
+
+  const panelBody = (
+    <>
+      <header className="flex items-center gap-2.5 border-b border-zinc-100 px-4 py-3.5">
+        <Bell className="h-5 w-5 shrink-0 text-zinc-700" strokeWidth={1.6} />
+        <h2 className="text-base font-bold text-zinc-900">Notifications</h2>
+        {unreadCount > 0 ? (
+          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#FF6B35] px-1.5 text-xs font-bold text-white">
+            {unreadCount}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
+          aria-label="Close notifications"
+        >
+          <X className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </header>
+
+      <ul className="max-h-[min(420px,60vh)] overflow-y-auto overscroll-contain p-3">
+        {items.length === 0 ? (
+          <li className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-zinc-500 shadow-[0_2px_12px_rgba(15,23,42,0.08)]">
+            No notifications yet
+          </li>
+        ) : (
+          items.map((item) => (
+            <li key={item.id} className="mb-2 last:mb-0">
+              <div
+                className={`flex w-full items-stretch gap-1 rounded-2xl bg-white transition hover:shadow-[0_4px_16px_rgba(15,23,42,0.1)] ${
+                  item.read
+                    ? "shadow-[0_2px_12px_rgba(15,23,42,0.08)]"
+                    : "shadow-[0_2px_14px_rgba(255,107,53,0.18)]"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!item.read) void onMarkOneRead(item.id);
+                    onNotificationClick?.(item);
+                    setOpen(false);
+                  }}
+                  className="flex min-w-0 flex-1 items-start gap-3 bg-transparent px-3 py-3 text-left shadow-none ring-0 hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B35]/25 rounded-none"
+                >
+                  <NotificationAvatar item={item} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-zinc-900">{item.userName}</span>
+                    <span className="mt-0.5 block text-sm leading-snug text-zinc-600">{item.actionText}</span>
+                    <span className="mt-1 block text-xs text-zinc-400">
+                      {formatNotificationTimeAgo(item.createdAt)}
+                    </span>
+                  </span>
+                </button>
+                <div className="flex shrink-0 flex-col items-center gap-1 px-2 py-3">
+                  <span className="shrink-0">{contextIcon(item.type)}</span>
+                  {onDeleteNotification ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTargetId(item.id);
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+                      aria-label="Delete notification"
+                    >
+                      <MoreHorizontal className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </li>
+          ))
+        )}
+      </ul>
+
+      {items.length > 0 ? (
+        <footer className="border-t border-zinc-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => void onMarkAllRead()}
+            disabled={unreadCount === 0}
+            className="mx-auto block w-full py-1 text-center text-sm font-medium text-zinc-500 transition hover:text-zinc-800 disabled:cursor-default disabled:opacity-50"
+          >
+            Mark all as read
+          </button>
+        </footer>
+      ) : null}
+    </>
+  );
 
   const deleteModal =
     deleteTargetId && typeof document !== "undefined"
@@ -186,113 +302,52 @@ export function NotificationsDropdown({
           type="button"
           data-bell-trigger
           onClick={() => setOpen((prev) => !prev)}
-          className="relative flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200/90 bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-50"
+          className={`relative flex items-center justify-center rounded-full border border-zinc-200/90 bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-50 ${
+            compact ? "h-8 w-8" : "h-11 w-11"
+          }`}
           aria-label="Notifications"
           aria-expanded={open}
           aria-haspopup="dialog"
         >
-          <Bell className="h-5 w-5" strokeWidth={1.6} />
+          <Bell className={compact ? "h-4 w-4" : "h-5 w-5"} strokeWidth={1.6} />
           {unreadCount > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#FF6B35] px-1 text-[10px] font-bold text-white">
+            <span
+              className={`absolute flex items-center justify-center rounded-full bg-[#FF6B35] font-bold text-white ${
+                compact
+                  ? "-right-0.5 -top-0.5 h-4 min-w-4 px-0.5 text-[9px]"
+                  : "-right-0.5 -top-0.5 h-5 min-w-5 px-1 text-[10px]"
+              }`}
+            >
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           ) : null}
         </button>
 
-        {open ? (
+        {open && centerOnMobile && compact && typeof document !== "undefined"
+          ? createPortal(
+              <div
+                data-notification-panel
+                role="dialog"
+                aria-label="Notifications"
+                className="fixed left-1/2 z-[200] w-[min(100vw-2rem,380px)] -translate-x-1/2 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]"
+                style={{ top: mobilePanelTop }}
+              >
+                {panelBody}
+              </div>,
+              document.body,
+            )
+          : null}
+
+        {open && !(centerOnMobile && compact) ? (
           <div
+            data-notification-panel
             role="dialog"
             aria-label="Notifications"
             className={`absolute top-full mt-3 w-[min(100vw-2rem,380px)] overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)] ${
-              menuAlign === "right" ? "right-0" : "left-0"
+              menuAlign === "right" ? "right-0" : menuAlign === "center" ? "left-1/2 -translate-x-1/2" : "left-0"
             } ${menuElevated ? "z-[200]" : "z-50"}`}
           >
-            <header className="flex items-center gap-2.5 border-b border-zinc-100 px-4 py-3.5">
-              <Bell className="h-5 w-5 shrink-0 text-zinc-700" strokeWidth={1.6} />
-              <h2 className="text-base font-bold text-zinc-900">Notifications</h2>
-              {unreadCount > 0 ? (
-                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#FF6B35] px-1.5 text-xs font-bold text-white">
-                  {unreadCount}
-                </span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
-                aria-label="Close notifications"
-              >
-                <X className="h-4 w-4" strokeWidth={2} />
-              </button>
-            </header>
-
-            <ul className="max-h-[min(420px,60vh)] overflow-y-auto overscroll-contain p-3">
-              {items.length === 0 ? (
-                <li className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-zinc-500 shadow-[0_2px_12px_rgba(15,23,42,0.08)]">
-                  No notifications yet
-                </li>
-              ) : (
-                items.map((item) => (
-                  <li key={item.id} className="mb-2 last:mb-0">
-                    <div
-                      className={`flex w-full items-stretch gap-1 rounded-2xl bg-white transition hover:shadow-[0_4px_16px_rgba(15,23,42,0.1)] ${
-                        item.read
-                          ? "shadow-[0_2px_12px_rgba(15,23,42,0.08)]"
-                          : "shadow-[0_2px_14px_rgba(255,107,53,0.18)]"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!item.read) void onMarkOneRead(item.id);
-                          onNotificationClick?.(item);
-                          setOpen(false);
-                        }}
-                        className="flex min-w-0 flex-1 items-start gap-3 bg-transparent px-3 py-3 text-left shadow-none ring-0 hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B35]/25 rounded-none"
-                      >
-                        <NotificationAvatar item={item} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-semibold text-zinc-900">{item.userName}</span>
-                          <span className="mt-0.5 block text-sm leading-snug text-zinc-600">{item.actionText}</span>
-                          <span className="mt-1 block text-xs text-zinc-400">
-                            {formatNotificationTimeAgo(item.createdAt)}
-                          </span>
-                        </span>
-                      </button>
-                      <div className="flex shrink-0 flex-col items-center gap-1 px-2 py-3">
-                        <span className="shrink-0">{contextIcon(item.type)}</span>
-                        {onDeleteNotification ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteTargetId(item.id);
-                            }}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
-                            aria-label="Delete notification"
-                          >
-                            <MoreHorizontal className="h-4 w-4" strokeWidth={2} />
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  </li>
-                ))
-              )}
-            </ul>
-
-            {items.length > 0 ? (
-              <footer className="border-t border-zinc-100 px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => void onMarkAllRead()}
-                  disabled={unreadCount === 0}
-                  className="mx-auto block w-full py-1 text-center text-sm font-medium text-zinc-500 transition hover:text-zinc-800 disabled:cursor-default disabled:opacity-50"
-                >
-                  Mark all as read
-                </button>
-              </footer>
-            ) : null}
+            {panelBody}
           </div>
         ) : null}
       </div>

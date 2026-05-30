@@ -3,8 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Button from "../components/Button";
 import AuthPageHeader from "../components/AuthPageHeader";
+import { BubbleDropdown } from "../components/BubbleDropdown";
 import { useRouter } from "next/navigation";
 import { apiPostJson, ApiError } from "../lib/api";
+import {
+  bubbleInputClass,
+  bubbleTextareaClass,
+  profileCardClass,
+  profileFormCardClass,
+} from "../lib/profileFormStyles";
 import {
   applySavedProfilePhoto,
   readImageFileAsDataUrl,
@@ -137,10 +144,10 @@ export default function ClientDetailsPage() {
       <div className="flex min-h-screen w-full flex-col">
         <AuthPageHeader />
 
-        <main className="flex flex-1 items-start justify-center px-4 py-12">
-          <div className="w-full max-w-[1120px]">
+        <main className="flex flex-1 items-start justify-center overflow-x-hidden px-4 py-8 sm:py-12">
+          <div className="w-full min-w-0 max-w-[1120px]">
             <div className="text-center">
-              <h1 className="text-4xl font-semibold tracking-tight text-slate-950">
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
                 Complete Your Client Profile
               </h1>
 
@@ -149,10 +156,10 @@ export default function ClientDetailsPage() {
               </p>
             </div>
 
-            <div className="mt-10 grid gap-8 lg:grid-cols-[320px_1fr] lg:items-start">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mt-8 grid min-w-0 gap-6 sm:mt-10 sm:gap-8 lg:grid-cols-[320px_1fr] lg:items-start">
+              <section className={profileCardClass}>
                 <div className="flex flex-col items-center gap-4">
-                  <div className="relative h-24 w-24 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  <div className="relative h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
                     <img
                       src={photoPreview}
                       alt="Client profile preview"
@@ -163,7 +170,7 @@ export default function ClientDetailsPage() {
                   <button
                     type="button"
                     onClick={handleChoosePhoto}
-                    className="rounded-full bg-[#FA642C] px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#e05b26]"
+                    className="ui-interactive rounded-full bg-[#FA642C] px-7 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(250,100,44,0.28)] hover:bg-[#e05625] motion-safe:hover:-translate-y-0.5"
                   >
                     Change Photo
                   </button>
@@ -178,10 +185,10 @@ export default function ClientDetailsPage() {
 
                   <div className="h-px w-full bg-slate-200" />
 
-                  <div className="w-full rounded-xl bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-semibold text-slate-900">Tip</p>
+                  <div className="w-full rounded-[1.75rem] bg-[#F8FAFC] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                    <p className="text-xs font-semibold text-[#0F172A]">Tip</p>
 
-                    <p className="mt-1 text-[11px] leading-5 text-slate-600">
+                    <p className="mt-1 text-[11px] leading-5 text-zinc-600">
                       A complete client profile helps you attract better freelancers and build trust
                       faster.
                     </p>
@@ -189,10 +196,10 @@ export default function ClientDetailsPage() {
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+              <section className={profileFormCardClass}>
                 <div
                   aria-live="polite"
-                  className={`mb-5 overflow-hidden rounded-xl border transition-all duration-500 ease-out ${
+                  className={`mb-5 overflow-hidden rounded-[1.75rem] border transition-all duration-500 ease-out ${
                     showConfirmation
                       ? "max-h-40 border-emerald-200 bg-emerald-50 opacity-100"
                       : "max-h-0 border-transparent bg-transparent opacity-0"
@@ -225,44 +232,36 @@ export default function ClientDetailsPage() {
                       </div>
                     </div>
 
-                    <div className="mt-5 grid gap-4">
-                      <label className="block">
+                    <div className="mt-5 grid min-w-0 gap-4">
+                      <div className="block min-w-0">
                         <span className="text-xs font-medium text-slate-700">Course</span>
 
-                        <select
-                          value={course}
-                          onChange={(e) => setCourse(e.target.value)}
-                          required
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
-                        >
-                          <option value="" disabled>
-                            Select a course
-                          </option>
+                        <div className="mt-2">
+                          <BubbleDropdown
+                            id="client-course"
+                            name="course"
+                            value={course}
+                            onChange={setCourse}
+                            options={courseOptions}
+                            placeholder="Select a course"
+                            required
+                          />
+                        </div>
+                      </div>
 
-                          {courseOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className="block">
+                      <div className="block min-w-0">
                         <span className="text-xs font-medium text-slate-700">Academic Year</span>
 
-                        <select
-                          value={yearLevel}
-                          onChange={(e) => setYearLevel(e.target.value)}
-                          required
-                          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
-                        >
-                          {yearLevels.map((level) => (
-                            <option key={level} value={level}>
-                              {level}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                        <div className="mt-2">
+                          <BubbleDropdown
+                            id="client-year-level"
+                            name="yearLevel"
+                            value={yearLevel}
+                            onChange={setYearLevel}
+                            options={yearLevels}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -283,9 +282,9 @@ export default function ClientDetailsPage() {
                       </div>
                     </div>
 
-                    <div className="mt-5 grid gap-4">
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <label className="block">
+                    <div className="mt-5 grid min-w-0 gap-4">
+                      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+                        <label className="block min-w-0">
                           <span className="text-xs font-medium text-slate-700">First Name</span>
 
                           <input
@@ -294,11 +293,11 @@ export default function ClientDetailsPage() {
                             onChange={(e) => setFirstName(e.target.value)}
                             placeholder="First Name"
                             required
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                            className={bubbleInputClass}
                           />
                         </label>
 
-                        <label className="block">
+                        <label className="block min-w-0">
                           <span className="text-xs font-medium text-slate-700">Last Name</span>
 
                           <input
@@ -307,12 +306,12 @@ export default function ClientDetailsPage() {
                             onChange={(e) => setLastName(e.target.value)}
                             placeholder="Last Name"
                             required
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                            className={bubbleInputClass}
                           />
                         </label>
                       </div>
 
-                      <label className="block">
+                      <label className="block min-w-0">
                         <span className="text-xs font-medium text-slate-700">About Me</span>
 
                         <textarea
@@ -321,7 +320,7 @@ export default function ClientDetailsPage() {
                           placeholder="Tell them more about yourself..."
                           required
                           rows={5}
-                          className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"
+                          className={bubbleTextareaClass}
                         />
                       </label>
 
@@ -333,7 +332,7 @@ export default function ClientDetailsPage() {
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full rounded-xl bg-[#FA642C] py-3.5 text-sm font-semibold text-white hover:bg-[#e05b26] disabled:cursor-not-allowed disabled:bg-zinc-300"
+                      className="ui-interactive w-full rounded-full bg-[#FA642C] py-4 text-sm font-semibold text-white shadow-[0_20px_40px_rgba(250,100,44,0.22)] hover:bg-[#e05625] disabled:cursor-not-allowed disabled:bg-zinc-300 motion-safe:hover:-translate-y-0.5"
                     >
                       {isSubmitting ? "Saving..." : "Continue"}
                     </Button>

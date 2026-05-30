@@ -82,6 +82,17 @@ export const dashboardFeedHeaderGapClass = "mt-4";
 export const dashboardFeedScrollClass =
   "feed-scroll-pane min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]";
 
+/** Mobile: centered white panel on mint background (profile, panels, feed body, chats) */
+export const mobileDashboardWhitePanelClass =
+  "max-lg:mx-auto max-lg:flex max-lg:h-full max-lg:min-h-0 max-lg:w-full max-lg:max-w-lg max-lg:flex-col max-lg:overflow-hidden max-lg:rounded-2xl max-lg:border max-lg:border-zinc-100/80 max-lg:bg-white max-lg:shadow-[0_4px_32px_rgba(15,23,42,0.04)]";
+
+/** Mobile: single scroll region inside the white panel */
+export const mobileDashboardPanelScrollClass =
+  "max-lg:min-h-0 max-lg:flex-1 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-4 max-lg:py-4 max-lg:[-webkit-overflow-scrolling:touch]";
+
+/** Mobile: centered column for profile / form stacks */
+export const mobileDashboardCenteredStackClass = "mx-auto flex w-full max-w-md flex-col gap-4";
+
 /** Profile layout */
 export const dashboardProfileSectionClass = "flex min-h-0 flex-1 flex-col";
 
