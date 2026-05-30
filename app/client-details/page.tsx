@@ -318,7 +318,7 @@ export default function ClientDetailsPage() {
                         <textarea
                           value={aboutMe}
                           onChange={(e) => setAboutMe(e.target.value)}
-                          placeholder="Tell freelancers about your project..."
+                          placeholder="Tell them more about yourself..."
                           required
                           rows={5}
                           className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-[#66A5CC] focus:ring-2 focus:ring-[#66A5CC]/25"

@@ -6,19 +6,13 @@ import { useRouter } from "next/navigation";
 import { apiPostJson, ApiError } from "../lib/api";
 
 const OTP_LENGTH = 8;
-const OTP_PART_LENGTH = 4;
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
 
 function isValidOtpCode(value: string) {
-  return /^\d{8}$/.test(value);
-}
-
-function splitOtpParts(code: string): [string, string] {
-  const digits = onlyDigits(code).slice(0, OTP_LENGTH);
-  return [digits.slice(0, OTP_PART_LENGTH), digits.slice(OTP_PART_LENGTH)];
+  return new RegExp(`^\\d{${OTP_LENGTH}}$`).test(value);
 }
 
 export default function VerifyPage() {
@@ -49,8 +43,7 @@ export default function VerifyPage() {
     }
   }, []);
 
-  const [firstPart, setFirstPart] = useState("");
-  const [secondPart, setSecondPart] = useState("");
+  const [digits, setDigits] = useState<string[]>(Array.from({ length: OTP_LENGTH }, () => ""));
   const [status, setStatus] = useState<{ kind: "idle" | "error" | "success"; message: string }>({
     kind: "idle",
     message: "",
@@ -59,50 +52,71 @@ export default function VerifyPage() {
   const [isResending, setIsResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const firstInputRef = useRef<HTMLInputElement | null>(null);
-  const secondInputRef = useRef<HTMLInputElement | null>(null);
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const code = useMemo(() => `${firstPart}${secondPart}`, [firstPart, secondPart]);
+  const code = useMemo(() => digits.join(""), [digits]);
   const canSubmit = isValidOtpCode(code) && !isSubmitting;
   const canResend = !isResending && resendCooldown === 0;
 
-  const clearStatus = () => {
+  const setDigitAt = (index: number, next: string) => {
+    setDigits((prev) => {
+      const copy = [...prev];
+      copy[index] = next;
+      return copy;
+    });
+  };
+
+  const focusIndex = (index: number) => {
+    const el = inputRefs.current[index];
+    if (el) el.focus();
+  };
+
+  const handleChange = (index: number, raw: string) => {
     if (status.kind !== "idle") setStatus({ kind: "idle", message: "" });
-  };
 
-  const handlePartChange = (part: "first" | "second", raw: string) => {
-    clearStatus();
     const cleaned = onlyDigits(raw);
-
-    if (cleaned.length > OTP_PART_LENGTH) {
-      const [nextFirst, nextSecond] = splitOtpParts(cleaned);
-      setFirstPart(nextFirst);
-      setSecondPart(nextSecond);
-      if (nextSecond.length === OTP_PART_LENGTH) {
-        secondInputRef.current?.focus();
-      } else if (nextFirst.length === OTP_PART_LENGTH) {
-        secondInputRef.current?.focus();
-      }
+    if (cleaned.length === 0) {
+      setDigitAt(index, "");
       return;
     }
 
-    if (part === "first") {
-      setFirstPart(cleaned);
-      if (cleaned.length === OTP_PART_LENGTH) {
-        secondInputRef.current?.focus();
-      }
+    const chars = cleaned.slice(0, OTP_LENGTH).split("");
+    if (chars.length > 1) {
+      setDigits((prev) => {
+        const next = [...prev];
+        for (let i = 0; i < OTP_LENGTH; i++) next[i] = chars[i] || "";
+        return next;
+      });
+      focusIndex(Math.min(chars.length, OTP_LENGTH) - 1);
       return;
     }
 
-    setSecondPart(cleaned);
+    setDigitAt(index, cleaned);
+    if (index < OTP_LENGTH - 1) focusIndex(index + 1);
   };
 
-  const handlePartKeyDown = (
-    part: "first" | "second",
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (event.key === "Backspace" && part === "second" && !secondPart) {
-      firstInputRef.current?.focus();
+  const handleKeyDown = (index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Backspace") {
+      if (digits[index]) {
+        setDigitAt(index, "");
+        return;
+      }
+      if (index > 0) {
+        focusIndex(index - 1);
+        setDigitAt(index - 1, "");
+      }
+      return;
+    }
+
+    if (event.key === "ArrowLeft" && index > 0) {
+      event.preventDefault();
+      focusIndex(index - 1);
+      return;
+    }
+
+    if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) {
+      event.preventDefault();
+      focusIndex(index + 1);
       return;
     }
 
@@ -112,9 +126,8 @@ export default function VerifyPage() {
   };
 
   const resetCodeInputs = () => {
-    setFirstPart("");
-    setSecondPart("");
-    firstInputRef.current?.focus();
+    setDigits(Array.from({ length: OTP_LENGTH }, () => ""));
+    focusIndex(0);
   };
 
   const handleSubmit = async () => {
@@ -170,11 +183,6 @@ export default function VerifyPage() {
     }
   };
 
-  const partInputClass = (hasError: boolean) =>
-    `ui-input h-16 w-full rounded-xl border bg-white px-4 text-center text-2xl font-semibold tracking-[0.35em] text-[#0F172A] shadow-[0_10px_20px_rgba(0,0,0,0.08)] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30 ${
-      hasError ? "border-red-400" : "border-zinc-200"
-    }`;
-
   return (
     <div className="min-h-screen bg-[#E5F6F4]">
       <div className="flex min-h-screen w-full flex-col">
@@ -201,34 +209,25 @@ export default function VerifyPage() {
               Enter the verification code
             </p>
 
-            <div className="mt-8 flex w-full items-center justify-center gap-3">
-              <input
-                ref={firstInputRef}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={OTP_PART_LENGTH}
-                value={firstPart}
-                onChange={(e) => handlePartChange("first", e.target.value)}
-                onKeyDown={(e) => handlePartKeyDown("first", e)}
-                aria-label="Verification code first half"
-                placeholder="0000"
-                className={partInputClass(status.kind === "error")}
-              />
-              <span className="text-xl font-semibold text-zinc-400" aria-hidden>
-                —
-              </span>
-              <input
-                ref={secondInputRef}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={OTP_PART_LENGTH}
-                value={secondPart}
-                onChange={(e) => handlePartChange("second", e.target.value)}
-                onKeyDown={(e) => handlePartKeyDown("second", e)}
-                aria-label="Verification code second half"
-                placeholder="0000"
-                className={partInputClass(status.kind === "error")}
-              />
+            <div className="mt-10 flex w-full justify-center gap-2">
+              {digits.map((value, index) => (
+                <input
+                  key={index}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={1}
+                  value={value}
+                  onChange={(e) => handleChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  aria-label={`Digit ${index + 1}`}
+                  className={`ui-input h-16 w-12 rounded-lg border bg-white text-center text-2xl font-semibold text-[#0F172A] shadow-[0_10px_20px_rgba(0,0,0,0.08)] outline-none focus:border-[#0069A8] focus:ring-2 focus:ring-[#66A5CC]/30 ${
+                    status.kind === "error" ? "border-red-400" : "border-zinc-200"
+                  }`}
+                />
+              ))}
             </div>
 
             {status.kind !== "idle" ? (
