@@ -1,168 +1,85 @@
 # PeerMatch
 
-PeerMatch is a campus peer-matching platform where **clients** post tasks, **freelancers** browse and submit offers, and **admins** moderate posts and users. The app is built as a **Next.js** frontend with an **Express + MongoDB** API, **Supabase Auth** for email OTP verification, and **Socket.IO** for real-time notifications.
+PeerMatch is a full-stack campus marketplace that connects **clients** who need help with academic tasks to **freelancers** who can deliver that work. An **admin** panel supports moderation and user oversight.
+
+Built for institutional use (e.g. `@cit.edu` email verification) with separate experiences for each role.
 
 ## Tech stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 16 (App Router), React 19, Tailwind CSS 4 |
-| API | Express, Mongoose, JWT (HttpOnly cookies) |
-| Database | MongoDB (Atlas in production) |
-| Email verification | Supabase Auth OTP (SMTP via Resend in Supabase dashboard) |
-| Realtime | Socket.IO |
-| Production hosting | **Vercel** (web) + **Render** (API) |
+- **Frontend:** Next.js 16, React 19, Tailwind CSS 4
+- **Backend:** Node.js, Express, Mongoose
+- **Database:** MongoDB
+- **Auth:** JWT sessions, Supabase Auth (email OTP)
+- **Realtime:** Socket.IO
+- **Deploy:** Vercel (web) · Render (API)
 
 ## Features
 
-- **Registration & login** — institutional email (`@cit.edu` by default), Supabase OTP verification, username/password stored in MongoDB
-- **Client dashboard** (`/client-home`) — post tasks, manage offers (pending / in progress / completed / rejected), messages, profile
-- **Freelancer dashboard** (`/freelancer-dashboard`) — browse feed, submit offers, messages, profile, public freelancer pages
-- **Admin** (`/admin`) — task moderation, user management, dashboard stats (separate admin cookie)
-- **Realtime** — notifications and live updates via Socket.IO
+| Role | Highlights |
+|------|------------|
+| **Client** | Post tasks, review offers, hire freelancers, messaging, profile |
+| **Freelancer** | Browse community feed, submit offers, messaging, public profile |
+| **Admin** | Approve/decline posts, user management, dashboard metrics |
 
-## Architecture (production)
+Shared: in-app notifications, offer workflow (pending → in progress → completed/rejected), mobile-friendly dashboards.
 
-```
-Browser  →  https://peermatch-app.site/api/*   (same origin, Vercel)
-                ↓ proxy
-           https://peermatch-api.onrender.com   (Express API, MongoDB, JWT)
+## Getting started
 
-Socket.IO  →  Render API host (NEXT_PUBLIC_API_BASE_URL)
-```
-
-- The browser **never** calls Render directly for REST API calls in production (same-origin `/api/...` keeps cookies working on mobile Safari).
-- **Login** uses dedicated Vercel routes (`app/api/auth/login`, etc.) that forward to Render, set `peermatch_token` on the app host, and strip `sessionToken` from the JSON sent to the browser.
-- Large list responses omit full base64 avatars in feed APIs to keep proxy payloads small.
-
-See **[docs/DEPLOY_ENV.md](docs/DEPLOY_ENV.md)** for full environment variable lists (Render, Vercel, Supabase).
-
-## Getting started (local)
-
-### Prerequisites
-
-- Node.js 20+
-- MongoDB running locally (or a Atlas URI in `.env`)
-- Supabase project with Email OTP enabled ([docs/SUPABASE-AUTH-SETUP.md](docs/SUPABASE-AUTH-SETUP.md))
-
-### Install & configure
+**Requirements:** Node.js 20+, MongoDB, Supabase project (email OTP)
 
 ```bash
+git clone <repository-url>
+cd PeerMatch
 npm install
 cp .env.example .env
 ```
 
-Edit `.env`:
+Set at minimum in `.env`:
 
-- `MONGODB_URI` — local or Atlas
-- `JWT_SECRET` — at least 32 characters
-- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` — from Supabase dashboard
+- `MONGODB_URI`
+- `JWT_SECRET` (32+ characters)
+- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_API_BASE_URL=http://localhost:5000`
 - `CORS_ORIGINS=http://localhost:3000`
 
-Verification email is sent by **Supabase** (not legacy `EMAIL_*` vars on the API). Configure Resend SMTP in the Supabase dashboard for production deliverability.
-
-### Run development
+See [.env.example](.env.example) and [docs/SUPABASE-AUTH-SETUP.md](docs/SUPABASE-AUTH-SETUP.md) for details.
 
 ```bash
 npm run dev
 ```
 
-| Service | URL |
-|---------|-----|
-| Next.js (main + admin UI) | http://localhost:3000 |
-| Express API | http://localhost:5000 |
+| App | URL |
+|-----|-----|
+| Web (main + admin UI) | http://localhost:3000 |
+| API | http://localhost:5000 |
 
-Other scripts:
-
-```bash
-npm run build          # production Next.js build
-npm run start:server   # API only (production mode)
-npm run seed:admin     # create admin user (set SEED_ADMIN_PASSWORD)
-npm run seed:tasks     # sample tasks (dev)
-```
-
-## Project structure
-
-```
-app/                    Next.js App Router (pages, components, hooks)
-  api/                  Vercel API routes (proxy, auth BFF, health)
-  client-home/          Client dashboard
-  freelancer-dashboard/ Freelancer dashboard
-  admin/                Admin dashboard
-  lib/                  API client, auth session, sockets, shared logic
-server/                 Express API
-  routes/               auth, tasks, offers, messages, notifications, admin
-  controllers/          auth, messages, users
-  models/               User, ClientTask, Offer, Message, etc.
-  middleware/           JWT auth
-  services/             notifications, reviews, budget suggest
-docs/                   Deployment and Supabase guides
-middleware.ts           Host-based routing (main vs admin domain)
-```
-
-## Environment variables
-
-| Where | What to set |
-|-------|-------------|
-| **Local** | `.env` from [.env.example](.env.example) |
-| **Render (API)** | `MONGODB_URI`, `JWT_*`, `CORS_ORIGINS`, `SUPABASE_*`, `TRUST_PROXY` — no `EMAIL_*` |
-| **Vercel (web)** | `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_MAIN_SITE_URL`, `MAIN_SITE_HOSTS`, admin URL/host vars — no API secrets |
-
-`API_PROXY_URL` on Vercel is **optional**; the server proxy uses `NEXT_PUBLIC_API_BASE_URL` when unset.
-
-Do **not** set `COOKIE_DOMAIN` on Render unless main and admin share a parent domain.
+Useful scripts: `npm run build` · `npm run seed:admin` · `npm run seed:tasks`
 
 ## Deployment
 
-1. **API** — deploy `server/` to Render (or similar). Set env from [docs/DEPLOY_ENV.md](docs/DEPLOY_ENV.md). Confirm `GET /api/health` returns `database: connected` and `email: supabase_otp`.
-2. **Web** — deploy the repo to Vercel. Set `NEXT_PUBLIC_API_BASE_URL` to your Render URL. Redeploy after env changes.
-3. **Supabase** — Site URL, redirect URLs, and Resend SMTP ([docs/SUPABASE-AUTH-SETUP.md](docs/SUPABASE-AUTH-SETUP.md)).
+PeerMatch runs as two services:
 
-Detailed steps: [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md).
+1. **API** — deploy the `server/` app (e.g. Render) with MongoDB, JWT, Supabase, and CORS configured.
+2. **Web** — deploy the Next.js app (e.g. Vercel) with `NEXT_PUBLIC_API_BASE_URL` pointing at your API.
 
-### Post-deploy checks
+Configure Supabase (site URL, redirects, email SMTP) for production sign-up.
 
-1. `https://<your-api>/api/health` — JSON with `ok`, `database`, `email`
-2. `https://<your-site>/api/health` — same JSON (proxy + `NEXT_PUBLIC_API_BASE_URL`)
-3. Login at `/login` — cookie `peermatch_token` on the **app** domain (Application → Cookies in DevTools)
-4. Feed loads — `GET /api/tasks` returns `posts` with a non-empty body (not HTTP 200 with size 0)
+Full checklists:
 
-Login and dashboard data require **both** Render and Vercel on the latest build after auth/proxy changes.
+- [docs/DEPLOY_ENV.md](docs/DEPLOY_ENV.md) — environment variables
+- [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md) — Vercel and admin domain setup
+- [docs/SUPABASE-AUTH-SETUP.md](docs/SUPABASE-AUTH-SETUP.md) — email verification
 
-## API overview (selected routes)
+After deploy, confirm `/api/health` on both the API and your public site, then test login and the main dashboards.
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/health` | — | Health check |
-| POST | `/api/auth/register` | — | Register (sends Supabase OTP) |
-| POST | `/api/auth/verify-otp` | — | Verify email, create session |
-| POST | `/api/auth/login` | — | Login |
-| GET | `/api/auth/me` | ✓ | Current user |
-| GET | `/api/tasks` | — | Public approved feed |
-| GET | `/api/tasks/mine` | ✓ | Client’s posts |
-| GET | `/api/offers/mine` | ✓ | Client offers |
-| GET | `/api/messages/conversations` | ✓ | Message threads |
-| GET | `/api/notifications` | ✓ | Notifications |
+## Project layout
 
-Admin routes live under `/api/admin/*` with `peermatch_admin_token`.
-
-## Troubleshooting
-
-| Symptom | Likely cause |
-|---------|----------------|
-| Login works but sections are empty | Redeploy both Vercel and Render; check `GET /api/tasks` response size in Network tab |
-| “Could not read your session” / empty `/api/auth/me` | Cookie not on app domain — redeploy latest login BFF routes |
-| `/api/health` blank in browser but works in curl | Hard refresh; check response body size |
-| Verification email not received | Supabase SMTP / Resend config, not Render `EMAIL_*` |
-| CORS errors | Add your site URL to `CORS_ORIGINS` on Render |
-
-## Documentation
-
-- [docs/DEPLOY_ENV.md](docs/DEPLOY_ENV.md) — production env checklist
-- [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md) — Vercel + admin domain setup
-- [docs/SUPABASE-AUTH-SETUP.md](docs/SUPABASE-AUTH-SETUP.md) — Supabase OTP and SMTP
+```
+app/          Next.js UI (client, freelancer, admin)
+server/       Express API and Socket.IO
+docs/         Deployment and Supabase guides
+```
 
 ## License
 
-Private academic project — see course/repository policies.
+Academic / course project — use and distribution per your institution’s policies.
