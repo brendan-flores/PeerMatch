@@ -75,9 +75,23 @@ After deploy, confirm `/api/health` on both the API and your public site, then t
 ## Project layout
 
 ```
-app/          Next.js UI (client, freelancer, admin)
-server/       Express API and Socket.IO
-docs/         Deployment and Supabase guides
+app/
+  components/   Shared UI (client, freelancer, chat, dashboard)
+  hooks/        Reusable React hooks
+  lib/          Domain modules (api, auth, posts, chat, profile, …)
+  admin/        Admin dashboard (separate host in production)
+  api/          Next.js API routes (auth proxy, health, Render proxy)
+server/
+  routes/       Express routers
+  controllers/  Route handlers
+  services/     Business logic
+  models/       Mongoose schemas
+  scripts/      Seeds and one-off ops (seed:admin, promoteToAdmin, …)
+docs/           Deployment and Supabase guides
+public/
+  branding/     Logos and brand images
+  roles/        Client/freelancer role icons
+scripts/        Asset tooling (e.g. process-brand-logo.mjs)
 ```
 
 ## License

@@ -97,9 +97,6 @@ export const mobileDashboardWhitePanelClass =
 export const mobileDashboardPanelScrollClass =
   "max-lg:min-h-0 max-lg:flex-1 max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:px-4 max-lg:py-4 max-lg:[-webkit-overflow-scrolling:touch]";
 
-/** Mobile: centered column for profile / form stacks */
-export const mobileDashboardCenteredStackClass = "mx-auto flex w-full max-w-md flex-col gap-4";
-
 /** Profile layout */
 export const dashboardProfileSectionClass = "flex min-h-0 flex-1 flex-col";
 
@@ -122,9 +119,6 @@ export const dashboardProfileFormStackClass =
 
 export const dashboardProfileFormCardClass =
   "rounded-2xl border border-zinc-200 bg-[#F3F6F5] p-5 shadow-sm sm:p-6";
-
-export const dashboardTipsAsideClass =
-  "rounded-2xl border border-[#F3DCCF] bg-[#FFF2EB] p-5 shadow-sm sm:p-6";
 
 export const dashboardProfileScrollClass =
   "profile-scroll-pane min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain [-webkit-overflow-scrolling:touch] scroll-smooth";

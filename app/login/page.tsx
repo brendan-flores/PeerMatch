@@ -10,15 +10,14 @@ import {
   hasAuthUserId,
   parseLoginUserFromPayload,
   type LoginUserPayload,
-} from "../lib/authSession";
-import { apiPostJson, ApiError, getErrorMessage, isApiError } from "../lib/api";
-import { getApiBaseUrl, getMainSiteUrl } from "../lib/siteUrls";
-import { connectSocket } from "../lib/socket";
+} from "@/app/lib/auth";
+import { apiPostJson, ApiError, getErrorMessage, isApiError } from "@/app/lib/api";
+import { getApiBaseUrl, getMainSiteUrl } from "@/app/lib/api";
+import { connectSocket } from "@/app/lib/chat";
 import {
   normalizeAuthUser,
   persistFreelancerFromMe,
-  recordFreelancerLoginForGreeting,
-} from "../lib/freelancerStorage";
+} from "@/app/lib/freelancer";
 
 function isClientAccount(user: LoginUserPayload) {
   const role = String(user?.role || "").toLowerCase();
@@ -127,7 +126,6 @@ export default function LoginPage() {
         return;
       }
 
-      recordFreelancerLoginForGreeting(user.id);
       redirectAfterLogin("/freelancer-dashboard");
     } catch (err) {
       const message = getErrorMessage(err, "Login failed. Please try again.");

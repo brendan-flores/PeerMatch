@@ -6,10 +6,10 @@ import { FeedPageHeader } from "@/app/components/dashboard/FeedPageHeader";
 import { CommunityPostCard } from "@/app/components/freelancer/CommunityPostCard";
 import { FreelancerFeedMain } from "@/app/components/freelancer/FreelancerFeedMain";
 import { OfferHelpPanel } from "@/app/components/freelancer/OfferHelpPanel";
-import { consumeHighlightOnce } from "@/app/lib/notificationHighlight";
-import { useCommunityPosts } from "@/app/lib/useCommunityPosts";
-import { useFreelancerDashboardUser, useFreelancerSelectedPost } from "./FreelancerDashboardShell";
-import { useOpenPostFromQuery } from "./useOpenPostFromQuery";
+import { consumeHighlightOnce } from "@/app/lib/notifications";
+import { useCommunityPosts } from "@/app/hooks/useCommunityPosts";
+import { useFreelancerDashboardUser, useFreelancerSelectedPost } from "@/app/components/freelancer/FreelancerDashboardShell";
+import { useOpenPostFromQuery } from "@/app/hooks/useOpenPostFromQuery";
 
 function FreelancerDashboardPageContent() {
   const router = useRouter();

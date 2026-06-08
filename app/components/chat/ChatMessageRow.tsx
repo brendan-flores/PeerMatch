@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CornerUpLeft, Forward, MoreVertical, SmilePlus } from "lucide-react";
-import type { ChatMessagePayload } from "@/app/lib/chatTypes";
-import { dedupeReactions, normalizeReactionUserId } from "@/app/lib/reactionUtils";
+import type { ChatMessagePayload } from "@/app/lib/chat";
+import { dedupeReactions, normalizeReactionUserId } from "@/app/lib/chat";
 import { ChatEmoji } from "@/app/components/chat/ChatEmoji";
 
 const DEFAULT_REACTIONS = ["❤️", "😆", "😮", "😢", "😡", "👍"] as const;

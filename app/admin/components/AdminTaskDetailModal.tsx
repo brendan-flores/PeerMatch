@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { formatRelativeTime } from "../lib/formatTime";
+import { formatRelativeTime } from "@/app/lib/time";
 import type { AdminTaskRow } from "../types";
 
 type AdminTaskDetailModalProps = {

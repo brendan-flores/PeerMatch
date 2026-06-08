@@ -4,9 +4,9 @@ import { Check, Handshake, Star } from "lucide-react";
 import { dashboardFeedPageHeadingClass } from "@/app/components/dashboard/dashboardShellClasses";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/app/lib/api";
-import { formatPhpBudget } from "@/app/lib/communityPosts";
-import { useCommunityPostsContext } from "@/app/lib/CommunityPostsContext";
-import { freelancerProfilePath } from "@/app/lib/freelancerProfileApi";
+import { formatPhpBudget } from "@/app/lib/posts";
+import { useCommunityPostsContext } from "@/app/lib/posts";
+import { freelancerProfilePath } from "@/app/lib/freelancer";
 import {
   acceptClientOffer,
   completeClientTask,
@@ -16,22 +16,10 @@ import {
   rejectClientOffer,
   submitTaskReview,
   type ClientOffer,
-} from "@/app/lib/offersApi";
-import type { CommunityPost, TaskHireStatus } from "@/app/lib/postsStorage";
+} from "@/app/lib/offers";
+import type { CommunityPost, TaskHireStatus } from "@/app/lib/posts";
 import { UserAvatar } from "@/app/components/UserAvatar";
-
-function formatTimeAgo(value: string) {
-  const ts = new Date(value).getTime();
-  if (!Number.isFinite(ts)) return "Just now";
-  const diffMs = Date.now() - ts;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (diffMs < minute) return "Just now";
-  if (diffMs < hour) return `${Math.floor(diffMs / minute)} min ago`;
-  if (diffMs < day) return `${Math.floor(diffMs / hour)} hr ago`;
-  return `${Math.floor(diffMs / day)} day${Math.floor(diffMs / day) > 1 ? "s" : ""} ago`;
-}
+import { formatTimeAgo } from "@/app/lib/time";
 
 function hireStatusLabel(status: TaskHireStatus | undefined) {
   if (status === "assigned") return "In progress";

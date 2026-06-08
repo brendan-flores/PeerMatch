@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { apiGetJson, apiPatchJson, ApiError } from "@/app/lib/api";
-import { formatRelativeTime } from "../lib/formatTime";
+import { formatRelativeTime } from "@/app/lib/time";
 import type { AdminTaskRow } from "../types";
 import { AdminTaskDetailModal } from "./AdminTaskDetailModal";
 import { useAdminLayoutStats } from "./AdminLayout";

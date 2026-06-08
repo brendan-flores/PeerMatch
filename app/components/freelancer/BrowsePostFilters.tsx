@@ -8,7 +8,7 @@ import {
   URGENCY_FILTER_OPTIONS,
   type CommunityPostFeedFilters,
   type TaskUrgencyValue,
-} from "@/app/lib/postFilters";
+} from "@/app/lib/posts";
 
 type BrowsePostFiltersProps = {
   value: CommunityPostFeedFilters;

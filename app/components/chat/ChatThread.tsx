@@ -4,8 +4,8 @@ import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, us
 import { ChevronLeft, Mic, Send, Smile, X } from "lucide-react";
 import Picker from "emoji-picker-react";
 import { ApiError, apiDeleteJson, apiGetJson, apiPostJson } from "@/app/lib/api";
-import type { ChatMessagePayload } from "@/app/lib/chatTypes";
-import { dedupeReactions, toggleMessageReaction } from "@/app/lib/reactionUtils";
+import type { ChatMessagePayload } from "@/app/lib/chat";
+import { dedupeReactions, toggleMessageReaction } from "@/app/lib/chat";
 import { ChatMessageRow } from "@/app/components/chat/ChatMessageRow";
 import { UserAvatar } from "@/app/components/UserAvatar";
 import { dispatchUnreadMessagesRefresh } from "@/app/hooks/useUnreadMessageCount";
@@ -20,7 +20,7 @@ import {
   subscribeMessageVanishedForViewer,
   subscribeReceiveMessage,
   subscribeSocketError,
-} from "@/app/lib/socket";
+} from "@/app/lib/chat";
 
 type ChatThreadProps = {
   currentUserId: string;

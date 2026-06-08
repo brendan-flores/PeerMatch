@@ -53,9 +53,9 @@ async function processLogo(inputPath, outputPath, background = "transparent") {
 }
 
 const root = path.resolve(import.meta.dirname, "..");
-const source = process.argv[2] || path.join(root, "public", "peermatch-brand-logo.png");
-const outTransparent = path.join(root, "public", "peermatch-brand-logo.png");
-const outHeader = path.join(root, "public", "peermatch-brand-logo-header.png");
+const source = process.argv[2] || path.join(root, "public", "branding", "peermatch-brand-logo.png");
+const outTransparent = path.join(root, "public", "branding", "peermatch-brand-logo.png");
+const outHeader = path.join(root, "public", "branding", "peermatch-brand-logo-header.png");
 
 await processLogo(source, outTransparent, "transparent");
 await processLogo(source, outHeader, "header");

@@ -5,18 +5,18 @@ import Button from "../components/Button";
 import AuthPageHeader from "../components/AuthPageHeader";
 import { BubbleDropdown } from "../components/BubbleDropdown";
 import { useRouter } from "next/navigation";
-import { apiPostJson, ApiError } from "../lib/api";
+import { apiPostJson, ApiError } from "@/app/lib/api";
 import {
   bubbleInputClass,
   bubbleTextareaClass,
   profileCardClass,
   profileFormCardClass,
-} from "../lib/profileFormStyles";
+} from "@/app/lib/profile";
 import {
   applySavedProfilePhoto,
   readImageFileAsDataUrl,
   type ProfileSaveResponse,
-} from "../lib/profilePhoto";
+} from "@/app/lib/profile";
 
 const yearLevels = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 

@@ -7,7 +7,7 @@ import { ApiError } from "@/app/lib/api";
 import {
   fetchPublicFreelancerProfile,
   type PublicFreelancerProfile,
-} from "@/app/lib/freelancerProfileApi";
+} from "@/app/lib/freelancer";
 
 function ReviewStars({ rating }: { rating: number }) {
   return (

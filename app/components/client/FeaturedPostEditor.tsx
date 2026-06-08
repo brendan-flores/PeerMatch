@@ -5,33 +5,21 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { apiDeleteJson, apiPutJson, ApiError } from "@/app/lib/api";
 import {
   useCommunityPostsContext,
-} from "@/app/lib/CommunityPostsContext";
-import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
+} from "@/app/lib/posts";
+import { useCurrentUserProfile } from "@/app/lib/profile";
 import { UserAvatar } from "@/app/components/UserAvatar";
-import { formatPhpBudget } from "@/app/lib/communityPosts";
+import { formatPhpBudget } from "@/app/lib/posts";
 import {
   isEligibleFeaturedPost,
   type CommunityPost,
   type CommunityPostPriority,
-} from "@/app/lib/postsStorage";
+} from "@/app/lib/posts";
+import { formatTimeAgo } from "@/app/lib/time";
 
 type FeaturedPostEditorProps = {
   authorId: string;
   authorAvatar?: string;
 };
-
-function formatTimeAgo(value: string) {
-  const ts = new Date(value).getTime();
-  if (!Number.isFinite(ts)) return "Just now";
-  const diffMs = Date.now() - ts;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (diffMs < minute) return "Just now";
-  if (diffMs < hour) return `${Math.floor(diffMs / minute)} min ago`;
-  if (diffMs < day) return `${Math.floor(diffMs / hour)} hr ago`;
-  return `${Math.floor(diffMs / day)} day${Math.floor(diffMs / day) > 1 ? "s" : ""} ago`;
-}
 
 function priorityBadgeClass(priority: CommunityPostPriority) {
   if (priority === "High") return "bg-[#FF6B35] text-white";

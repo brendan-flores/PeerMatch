@@ -2,12 +2,12 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, FileText, PhilippinePeso, Send } from "lucide-react";
-import type { CommunityPost } from "@/app/lib/postsStorage";
-import { formatTimeAgo } from "@/app/lib/formatTimeAgo";
-import { resolvePostAuthorAvatar } from "@/app/lib/profilePhotoDisplay";
+import type { CommunityPost } from "@/app/lib/posts";
+import { formatTimeAgo } from "@/app/lib/time";
+import { resolvePostAuthorAvatar } from "@/app/lib/profile";
 import { apiPostJson, ApiError } from "@/app/lib/api";
-import { buildOfferChatMessage } from "@/app/lib/offerChatMessage";
-import { sendChatMessageWithClientId } from "@/app/lib/socket";
+import { buildOfferChatMessage } from "@/app/lib/offers";
+import { sendChatMessageWithClientId } from "@/app/lib/chat";
 
 const MESSAGE_MAX = 500;
 

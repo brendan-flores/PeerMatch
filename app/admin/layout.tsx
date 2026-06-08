@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "./admin.css";
+import "./styles/admin.css";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 
 export const metadata: Metadata = {

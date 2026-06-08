@@ -1,11 +1,11 @@
-import { vercelApiEnvHint } from "@/app/lib/deployEnvHint";
-import { getServerApiBackendOrigin } from "@/app/lib/apiBackend";
+import { vercelApiEnvHint } from "@/app/lib/api";
+import { getServerApiBackendOrigin } from "@/app/lib/api/apiBackend";
 import {
   applySessionCookieFromUpstream,
   applySessionFromAuthJsonBody,
   stripSessionTokenFromAuthJson,
-} from "@/app/lib/proxyAuthCookie";
-import { readUpstreamBodyText, sanitizeProxiedResponseHeaders } from "@/app/lib/proxyBuffer";
+} from "@/app/lib/auth/proxyAuthCookie";
+import { readUpstreamBodyText, sanitizeProxiedResponseHeaders } from "@/app/lib/auth/proxyBuffer";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 

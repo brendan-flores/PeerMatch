@@ -8,8 +8,7 @@ import { LayoutDashboard, LogOut, MessageCircle, Search, User } from "lucide-rea
 import { dashboardSidebarNavScrollClass } from "@/app/components/dashboard/dashboardShellClasses";
 import { NavUnreadBadge } from "@/app/components/NavUnreadBadge";
 import { apiPostJson } from "@/app/lib/api";
-import { disconnectSocket } from "@/app/lib/socket";
-import { clearFreelancerGreetingSession } from "@/app/lib/freelancerStorage";
+import { disconnectSocket } from "@/app/lib/chat";
 
 const navItemClass =
   "flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-zinc-900 transition-[background-color,color,box-shadow] duration-300 ease-in-out hover:bg-white/80 hover:shadow-sm";
@@ -44,7 +43,6 @@ export function FreelancerSidebar({ unreadMessageCount = 0 }: FreelancerSidebarP
       await apiPostJson("/api/auth/logout", {});
     } finally {
       disconnectSocket();
-      clearFreelancerGreetingSession();
       router.push("/login");
     }
   };

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiPostJson, ApiError } from "../lib/api";
+import { apiPostJson, ApiError } from "@/app/lib/api";
 
 const OTP_LENGTH = 6;
 
@@ -191,7 +191,7 @@ export default function VerifyPage() {
             <div className="mx-auto flex w-full max-w-[1120px] items-center justify-center">
               <div className="px-1 py-1">
                 <Image
-                  src="/logo.png"
+                  src="/branding/logo.png"
                   alt="PeerMatch — Student Collaboration"
                   width={240}
                   height={48}

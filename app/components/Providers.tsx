@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CommunityPostsProvider } from "@/app/lib/CommunityPostsContext";
-import { CurrentUserProfileProvider } from "@/app/lib/CurrentUserProfileContext";
+import { CommunityPostsProvider } from "@/app/lib/posts";
+import { CurrentUserProfileProvider } from "@/app/lib/profile";
 
 export function Providers({
   children,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Menu, MoreVertical, Search, Trash2 } from "lucide-react";
-import type { ChatMessagePayload } from "@/app/lib/chatTypes";
+import type { ChatMessagePayload } from "@/app/lib/chat";
 import { dispatchUnreadMessagesRefresh } from "@/app/hooks/useUnreadMessageCount";
 import { apiDeleteJson, apiGetJson } from "@/app/lib/api";
 import {
@@ -11,9 +11,9 @@ import {
   subscribePresenceSnapshot,
   subscribePresenceUpdate,
   subscribeReceiveMessage,
-} from "@/app/lib/socket";
-import type { UserSearchResult } from "@/app/lib/userSearch";
-import { searchUsersByQuery } from "@/app/lib/userSearch";
+} from "@/app/lib/chat";
+import type { UserSearchResult } from "@/app/lib/chat";
+import { searchUsersByQuery } from "@/app/lib/chat";
 import { ChatThread } from "@/app/components/chat/ChatThread";
 import { UserAvatar } from "@/app/components/UserAvatar";
 import { NotificationsDropdown } from "@/app/components/NotificationsDropdown";

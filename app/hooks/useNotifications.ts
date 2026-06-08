@@ -12,8 +12,8 @@ import {
   markNotificationRead,
   upsertNotificationItem,
   type ApiNotification,
-} from "@/app/lib/notificationsApi";
-import { connectSocket, subscribeNotification } from "@/app/lib/socket";
+} from "@/app/lib/notifications";
+import { connectSocket, subscribeNotification } from "@/app/lib/chat";
 
 export function useNotifications(userId: string | null) {
   const [items, setItems] = useState<NotificationItem[]>([]);

@@ -1,6 +1,6 @@
-import { vercelApiEnvHint } from "@/app/lib/deployEnvHint";
-import { getServerApiBackendOrigin } from "@/app/lib/apiBackend";
-import { readUpstreamBodyText, sanitizeProxiedResponseHeaders } from "@/app/lib/proxyBuffer";
+import { vercelApiEnvHint } from "@/app/lib/api";
+import { getServerApiBackendOrigin } from "@/app/lib/api/apiBackend";
+import { readUpstreamBodyText, sanitizeProxiedResponseHeaders } from "@/app/lib/auth/proxyBuffer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

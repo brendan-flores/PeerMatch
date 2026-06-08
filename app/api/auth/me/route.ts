@@ -1,5 +1,5 @@
-import { getServerApiBackendOrigin } from "@/app/lib/apiBackend";
-import { readUpstreamBodyText, sanitizeProxiedResponseHeaders } from "@/app/lib/proxyBuffer";
+import { getServerApiBackendOrigin } from "@/app/lib/api/apiBackend";
+import { readUpstreamBodyText, sanitizeProxiedResponseHeaders } from "@/app/lib/auth/proxyBuffer";
 import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";

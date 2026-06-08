@@ -1,4 +1,4 @@
-import { FreelancerDashboardShell } from "./FreelancerDashboardShell";
+import { FreelancerDashboardShell } from "@/app/components/freelancer/FreelancerDashboardShell";
 
 export default function FreelancerDashboardLayout({
   children,

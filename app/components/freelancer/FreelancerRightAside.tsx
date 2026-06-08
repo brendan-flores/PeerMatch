@@ -8,28 +8,16 @@ import {
   dashboardRightAsideWrapClass,
 } from "@/app/components/dashboard/dashboardShellClasses";
 import type { NotificationItem } from "@/app/lib/notifications";
-import { useFreelancerSelectedPost } from "@/app/freelancer-dashboard/FreelancerDashboardShell";
+import { useFreelancerSelectedPost } from "@/app/components/freelancer/FreelancerDashboardShell";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
-import { useCommunityPostsContext } from "@/app/lib/CommunityPostsContext";
+import { useCommunityPostsContext } from "@/app/lib/posts";
 import {
   isCommunityPostWithinLast24Hours,
   type CommunityPost,
-} from "@/app/lib/postsStorage";
-import { resolvePostAuthorAvatar } from "@/app/lib/profilePhotoDisplay";
-
-function formatTimeAgo(value: string) {
-  const ts = new Date(value).getTime();
-  if (!Number.isFinite(ts)) return "Just now";
-  const diffMs = Date.now() - ts;
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (diffMs < minute) return "Just now";
-  if (diffMs < hour) return `${Math.floor(diffMs / minute)} min ago`;
-  if (diffMs < day) return `${Math.floor(diffMs / hour)} hr ago`;
-  return `${Math.floor(diffMs / day)} day${Math.floor(diffMs / day) > 1 ? "s" : ""} ago`;
-}
+} from "@/app/lib/posts";
+import { resolvePostAuthorAvatar } from "@/app/lib/profile";
+import { formatTimeAgo } from "@/app/lib/time";
 
 type FreelancerRightAsideProps = {
   notifications: NotificationItem[];

@@ -24,8 +24,8 @@ export default function PeerMatchBrandLogo({
   const width = Math.round(height * LOGO_ASPECT);
   const src =
     surface === "header"
-      ? `/peermatch-brand-logo-header.png?${LOGO_VERSION}`
-      : `/peermatch-brand-logo.png?${LOGO_VERSION}`;
+      ? `/branding/peermatch-brand-logo-header.png?${LOGO_VERSION}`
+      : `/branding/peermatch-brand-logo.png?${LOGO_VERSION}`;
 
   return (
     <Image

@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { proxyAuthPostWithSessionCookie } from "@/app/lib/proxyAuthRoute";
+import { proxyAuthPostWithSessionCookie } from "@/app/lib/auth/proxyAuthRoute";
 
 export const runtime = "nodejs";
 export const maxDuration = 10;

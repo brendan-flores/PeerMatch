@@ -9,7 +9,6 @@ const {
   applyFeedFiltersToQuery,
 } = require('../utils/postFeedFilters');
 const { parseBudget } = require('../utils/budgetValidation');
-const { suggestBudgetWithOpenAI } = require('../services/suggestBudget');
 const {
   notifyFreelancersNewTask,
   notifyClientPostReview,
@@ -126,43 +125,6 @@ router.get('/mine', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Could not load your posts.' });
-  }
-});
-
-/** AI-assisted fair rate range for student collaboration (PHP) */
-router.post('/suggest-budget', authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.userId).select('accountType role suspended').lean();
-    if (!user) {
-      return res.status(401).json({ message: 'Authentication required.' });
-    }
-    if (user.suspended) {
-      return res.status(403).json({ message: 'Your account is suspended.' });
-    }
-    if (user.role !== 'user' || user.accountType !== 'client') {
-      return res.status(403).json({ message: 'Only client accounts can request rate suggestions.' });
-    }
-
-    const title = String(req.body?.title || '').trim().slice(0, 120);
-    const description = String(req.body?.description || req.body?.content || '').trim().slice(0, 1200);
-    const subjectCategory = String(req.body?.subjectCategory || req.body?.category || '').trim().slice(0, 80);
-    const urgency = normalizeUrgency(req.body?.urgency || req.body?.priority);
-
-    if (!title || !description || !subjectCategory) {
-      return res.status(400).json({ message: 'Category, title, and description are required for a rate suggestion.' });
-    }
-
-    const suggestion = await suggestBudgetWithOpenAI({
-      title,
-      description,
-      subjectCategory,
-      urgency,
-    });
-
-    res.json(suggestion);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Could not generate a rate suggestion. Please try again.' });
   }
 });
 

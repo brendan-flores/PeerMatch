@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiGetJson } from "@/app/lib/api";
-import { connectSocket, subscribeMessageStatus, subscribeReceiveMessage } from "@/app/lib/socket";
+import { connectSocket, subscribeMessageStatus, subscribeReceiveMessage } from "@/app/lib/chat";
 
 export const UNREAD_MESSAGES_REFRESH_EVENT = "peermatch:unread-messages-refresh";
 

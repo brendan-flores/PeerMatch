@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
-import type { UserSearchResult } from "@/app/lib/userSearch";
-import { searchUsersByQuery } from "@/app/lib/userSearch";
+import type { UserSearchResult } from "@/app/lib/chat";
+import { searchUsersByQuery } from "@/app/lib/chat";
 
 type Props = {
   query: string;

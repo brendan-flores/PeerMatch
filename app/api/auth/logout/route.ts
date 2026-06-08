@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { proxyAuthLogout } from "@/app/lib/proxyAuthRoute";
+import { proxyAuthLogout } from "@/app/lib/auth/proxyAuthRoute";
 
 export const runtime = "nodejs";
 export const maxDuration = 10;

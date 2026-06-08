@@ -4,7 +4,7 @@ import Link from "next/link";
 import AuthPageHeader from "../../components/AuthPageHeader";
 import { FormEvent, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { apiPostJson, ApiError } from "../../lib/api";
+import { apiPostJson, ApiError } from "@/app/lib/api";
 
 type RoleType = "client" | "freelancer";
 

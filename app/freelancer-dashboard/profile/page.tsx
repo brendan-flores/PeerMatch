@@ -19,8 +19,8 @@ import {
 } from "@/app/components/dashboard/dashboardShellClasses";
 import { ApiError, apiGetJson, apiPutJson } from "@/app/lib/api";
 import { UserAvatar } from "@/app/components/UserAvatar";
-import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
-import { persistProfilePhotoFromFile } from "@/app/lib/profilePhoto";
+import { useCurrentUserProfile } from "@/app/lib/profile";
+import { persistProfilePhotoFromFile } from "@/app/lib/profile";
 
 type LanguageItem = { name: string; proficiency: string };
 type PortfolioItem = { title: string; description: string };

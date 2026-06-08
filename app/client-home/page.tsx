@@ -26,15 +26,16 @@ import {
   UserCircle,
   User,
 } from "lucide-react";
-import { fetchAuthMeWithRetry } from "../lib/authSession";
-import { apiGetJson, apiPostJson, ApiError, isApiError } from "../lib/api";
+import { formatTimeAgo } from "@/app/lib/time";
+import { fetchAuthMeWithRetry } from "@/app/lib/auth";
+import { apiGetJson, apiPostJson, ApiError, isApiError } from "@/app/lib/api";
 import {
   formatPhpBudget,
   POST_REVIEW_MESSAGE,
   urgencyBadgeClass,
   URGENCY_OPTIONS,
-} from "../lib/communityPosts";
-import { useCommunityPostsContext } from "../lib/CommunityPostsContext";
+} from "@/app/lib/posts";
+import { useCommunityPostsContext } from "@/app/lib/posts";
 import { ClientOffersPanel } from "../components/client/ClientOffersPanel";
 import { ClientRightAside } from "../components/client/ClientRightAside";
 import { FeaturedPostEditor } from "../components/client/FeaturedPostEditor";
@@ -43,13 +44,13 @@ import {
   isEligibleFeaturedPost,
   notifyCommunityPostsChanged,
   type CommunityPostPriority,
-} from "../lib/postsStorage";
+} from "@/app/lib/posts";
 import {
   connectSocket,
   disconnectSocket,
   subscribeNotification,
   subscribePostApproved,
-} from "../lib/socket";
+} from "@/app/lib/chat";
 import { ChatLayout } from "../components/chat/ChatLayout";
 import { DashboardCenterColumn } from "../components/dashboard/DashboardCenterColumn";
 import {
@@ -70,11 +71,11 @@ import { FeedPageHeader } from "../components/dashboard/FeedPageHeader";
 import { MobileFeedTopBar } from "../components/dashboard/MobileFeedTopBar";
 import { buildClientMobileNavItems } from "../components/dashboard/dashboardMobileNavItems";
 import { NavUnreadBadge } from "../components/NavUnreadBadge";
-import { countPendingOffers, fetchClientOffers } from "../lib/offersApi";
-import { useCurrentUserProfile } from "../lib/CurrentUserProfileContext";
-import { persistProfilePhotoFromFile } from "../lib/profilePhoto";
+import { countPendingOffers, fetchClientOffers } from "@/app/lib/offers";
+import { useCurrentUserProfile } from "@/app/lib/profile";
+import { persistProfilePhotoFromFile } from "@/app/lib/profile";
 import { UserAvatar } from "../components/UserAvatar";
-import { dicebearInitialsAvatar } from "../lib/profilePhotoDisplay";
+import { dicebearInitialsAvatar } from "@/app/lib/profile";
 import { useNotifications, type NotificationItem } from "@/app/hooks/useNotifications";
 import { useUnreadMessageCount } from "../hooks/useUnreadMessageCount";
 
@@ -222,19 +223,6 @@ function ClientHomePageContent() {
   const displayHours = displayHoursRaw;
 
   const postsHeading = "Community Feed";
-
-  const formatTimeAgo = (value: string) => {
-    const ts = new Date(value).getTime();
-    if (!Number.isFinite(ts)) return "Just now";
-    const diffMs = Date.now() - ts;
-    const minute = 60 * 1000;
-    const hour = 60 * minute;
-    const day = 24 * hour;
-    if (diffMs < minute) return "Just now";
-    if (diffMs < hour) return `${Math.floor(diffMs / minute)} min ago`;
-    if (diffMs < day) return `${Math.floor(diffMs / hour)} hr ago`;
-    return `${Math.floor(diffMs / day)} day${Math.floor(diffMs / day) > 1 ? "s" : ""} ago`;
-  };
 
   const mapPostForUi = (
     post: {

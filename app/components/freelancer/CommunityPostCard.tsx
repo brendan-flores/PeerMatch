@@ -1,10 +1,10 @@
 "use client";
 
-import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
-import { formatPhpBudget } from "@/app/lib/communityPosts";
-import { formatTimeAgo } from "@/app/lib/formatTimeAgo";
-import { resolvePostAuthorAvatar } from "@/app/lib/profilePhotoDisplay";
-import type { CommunityPost } from "@/app/lib/postsStorage";
+import { useCurrentUserProfile } from "@/app/lib/profile";
+import { formatPhpBudget } from "@/app/lib/posts";
+import { formatTimeAgo } from "@/app/lib/time";
+import { resolvePostAuthorAvatar } from "@/app/lib/profile";
+import type { CommunityPost } from "@/app/lib/posts";
 
 type CommunityPostCardProps = {
   post: CommunityPost;

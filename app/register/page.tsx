@@ -10,7 +10,7 @@ type RoleType = "client" | "freelancer";
 
 const clientIcon = (
   <Image
-    src="/client-logo.svg"
+    src="/roles/client-logo.svg"
     alt="Client logo"
     width={28}
     height={28}
@@ -36,7 +36,7 @@ const roleOptions: Array<{
     subtitle: "I’m a freelancer, looking for work",
     icon: (
       <Image
-        src="/freelancer-logo.svg"
+        src="/roles/freelancer-logo.svg"
         alt="Freelancer logo"
         width={28}
         height={28}

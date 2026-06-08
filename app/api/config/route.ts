@@ -1,4 +1,4 @@
-import { getServerApiBackendOrigin } from "@/app/lib/apiBackend";
+import { getServerApiBackendOrigin } from "@/app/lib/api/apiBackend";
 import { NextResponse } from "next/server";
 
 /** Public runtime config for the browser (Socket.IO needs the real API host). */

@@ -7,15 +7,15 @@ import { CommunityPostCard } from "@/app/components/freelancer/CommunityPostCard
 import { FreelancerFeedMain } from "@/app/components/freelancer/FreelancerFeedMain";
 import { OfferHelpPanel } from "@/app/components/freelancer/OfferHelpPanel";
 import { ApiError } from "@/app/lib/api";
-import { fetchApprovedCommunityPosts } from "@/app/lib/communityPosts";
+import { fetchApprovedCommunityPosts } from "@/app/lib/posts";
 import {
   FILTER_ALL,
   hasActiveFeedFilters,
   type CommunityPostFeedFilters,
-} from "@/app/lib/postFilters";
-import type { CommunityPost } from "@/app/lib/postsStorage";
-import { useFreelancerDashboardUser, useFreelancerSelectedPost } from "../FreelancerDashboardShell";
-import { useOpenPostFromQuery } from "../useOpenPostFromQuery";
+} from "@/app/lib/posts";
+import type { CommunityPost } from "@/app/lib/posts";
+import { useFreelancerDashboardUser, useFreelancerSelectedPost } from "@/app/components/freelancer/FreelancerDashboardShell";
+import { useOpenPostFromQuery } from "@/app/hooks/useOpenPostFromQuery";
 
 const defaultFilters: CommunityPostFeedFilters = {
   urgency: FILTER_ALL,

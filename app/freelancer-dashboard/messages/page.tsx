@@ -10,11 +10,10 @@ import { ChatLayout } from "@/app/components/chat/ChatLayout";
 import { useNotifications } from "@/app/hooks/useNotifications";
 import { useUnreadMessageCount } from "@/app/hooks/useUnreadMessageCount";
 import { apiPostJson } from "@/app/lib/api";
-import { clearFreelancerGreetingSession } from "@/app/lib/freelancerStorage";
 import type { NotificationItem } from "@/app/lib/notifications";
-import { resetHighlightConsumption } from "@/app/lib/notificationHighlight";
-import { disconnectSocket } from "@/app/lib/socket";
-import { useFreelancerDashboardUser } from "../FreelancerDashboardShell";
+import { resetHighlightConsumption } from "@/app/lib/notifications";
+import { disconnectSocket } from "@/app/lib/chat";
+import { useFreelancerDashboardUser } from "@/app/components/freelancer/FreelancerDashboardShell";
 
 function FreelancerMessagesPageContent() {
   const { user } = useFreelancerDashboardUser();
@@ -50,7 +49,6 @@ function FreelancerMessagesPageContent() {
       await apiPostJson("/api/auth/logout", {});
     } finally {
       disconnectSocket();
-      clearFreelancerGreetingSession();
       router.push("/login");
     }
   }, [router]);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiGetJson, ApiError } from "@/app/lib/api";
-import { formatRelativeTime } from "../lib/formatTime";
+import { formatRelativeTime } from "@/app/lib/time";
 import type { ActivityItem } from "../types";
 import { useAdminLayoutStats } from "./AdminLayout";
 

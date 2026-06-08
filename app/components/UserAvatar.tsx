@@ -1,11 +1,11 @@
 "use client";
 
-import { useCurrentUserProfile } from "@/app/lib/CurrentUserProfileContext";
+import { useCurrentUserProfile } from "@/app/lib/profile";
 import {
   initialsFromName,
   resolveUserPhotoDataUrl,
   type UserAvatarInput,
-} from "@/app/lib/profilePhotoDisplay";
+} from "@/app/lib/profile";
 
 const sizeClasses = {
   xs: "h-8 w-8 text-xs",
