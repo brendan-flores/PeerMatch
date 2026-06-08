@@ -89,11 +89,12 @@ export function middleware(request: NextRequest) {
   const onDedicatedAdminHost =
     hostMatches(ADMIN_HOSTS, host) && !onMainHost;
 
-  // Production: /admin/* only on the dedicated admin host (e.g. peermatch-admin.vercel.app).
-  // Do not rely on MAIN_SITE_HOSTS alone — custom domains like peermatch-app.site must not serve admin.
+  // Production: hide /admin/* on non-admin hosts (404, no redirect to admin URL).
   if (usesSeparateAdminSite() && pathname.startsWith("/admin") && !onDedicatedAdminHost) {
-    const dest = new URL(`${pathname}${request.nextUrl.search}`, ADMIN_SITE_URL);
-    return NextResponse.redirect(dest);
+    const notFoundUrl = request.nextUrl.clone();
+    notFoundUrl.pathname = "/page-not-found";
+    notFoundUrl.search = "";
+    return NextResponse.rewrite(notFoundUrl, { status: 404 });
   }
 
   if (!onDedicatedAdminHost && !onMainHost) {
