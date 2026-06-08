@@ -25,16 +25,38 @@ function trimOrigin(value: string | undefined): string {
   return String(value || "").trim().replace(/\/$/, "");
 }
 
-const MAIN_HOSTS = parseHosts(
-  process.env.MAIN_SITE_HOSTS || process.env.NEXT_PUBLIC_MAIN_SITE_HOST,
-);
-const ADMIN_HOSTS = parseHosts(
-  process.env.ADMIN_SITE_HOSTS || process.env.NEXT_PUBLIC_ADMIN_SITE_HOST,
-);
+function hostFromOrigin(origin: string): string | null {
+  if (!origin) return null;
+  try {
+    return new URL(origin).host.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function mergeHosts(envHosts: string[], origin: string): string[] {
+  const fromOrigin = hostFromOrigin(origin);
+  const merged = fromOrigin ? [...envHosts, fromOrigin] : envHosts;
+  return [...new Set(merged)];
+}
+
 const MAIN_SITE_URL = trimOrigin(
   process.env.NEXT_PUBLIC_MAIN_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL,
 );
 const ADMIN_SITE_URL = trimOrigin(process.env.NEXT_PUBLIC_ADMIN_SITE_URL);
+
+const MAIN_HOSTS = mergeHosts(
+  parseHosts(
+    process.env.MAIN_SITE_HOSTS || process.env.NEXT_PUBLIC_MAIN_SITE_HOST,
+  ),
+  MAIN_SITE_URL,
+);
+const ADMIN_HOSTS = mergeHosts(
+  parseHosts(
+    process.env.ADMIN_SITE_HOSTS || process.env.NEXT_PUBLIC_ADMIN_SITE_HOST,
+  ),
+  ADMIN_SITE_URL,
+);
 
 const MAIN_ONLY_PREFIXES = [
   "/login",
@@ -67,6 +89,13 @@ export function middleware(request: NextRequest) {
   const onDedicatedAdminHost =
     hostMatches(ADMIN_HOSTS, host) && !onMainHost;
 
+  // Production: /admin/* only on the dedicated admin host (e.g. peermatch-admin.vercel.app).
+  // Do not rely on MAIN_SITE_HOSTS alone — custom domains like peermatch-app.site must not serve admin.
+  if (usesSeparateAdminSite() && pathname.startsWith("/admin") && !onDedicatedAdminHost) {
+    const dest = new URL(`${pathname}${request.nextUrl.search}`, ADMIN_SITE_URL);
+    return NextResponse.redirect(dest);
+  }
+
   if (!onDedicatedAdminHost && !onMainHost) {
     return NextResponse.next();
   }
@@ -87,12 +116,6 @@ export function middleware(request: NextRequest) {
     }
 
     return NextResponse.next();
-  }
-
-  // Main domain: send /admin to admin site only when admin is a different URL (not localhost)
-  if (onMainHost && pathname.startsWith("/admin") && usesSeparateAdminSite()) {
-    const dest = new URL(`${pathname}${request.nextUrl.search}`, ADMIN_SITE_URL);
-    return NextResponse.redirect(dest);
   }
 
   // Local dev (localhost:3000): / and /admin/* on the same host — no redirect
