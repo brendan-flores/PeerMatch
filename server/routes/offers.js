@@ -1,5 +1,5 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const { isValidId } = require('../db/id');
 const ClientTask = require('../models/ClientTask');
 const Offer = require('../models/Offer');
 const User = require('../models/User');
@@ -60,7 +60,7 @@ router.get('/mine', authMiddleware, async (req, res) => {
       ...new Set(
         offers
           .map((offer) => String(offer.postId || ''))
-          .filter((id) => id && mongoose.Types.ObjectId.isValid(id)),
+          .filter((id) => id && isValidId(id)),
       ),
     ];
 
@@ -79,7 +79,7 @@ router.get('/mine', authMiddleware, async (req, res) => {
           .map((task) =>
             task.assignedFreelancerId ? String(task.assignedFreelancerId) : '',
           )
-          .filter((id) => id && mongoose.Types.ObjectId.isValid(id)),
+          .filter((id) => id && isValidId(id)),
       ),
     ];
 
@@ -128,7 +128,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const rate = String(req.body?.rate || '').trim().slice(0, 40);
     const postTitle = String(req.body?.postTitle || '').trim().slice(0, 120);
 
-    if (!mongoose.Types.ObjectId.isValid(postId)) {
+    if (!isValidId(postId)) {
       return res.status(400).json({ message: 'Invalid post id.' });
     }
     if (!message) {
@@ -198,7 +198,7 @@ router.post('/', authMiddleware, async (req, res) => {
 /** Client accepts a freelancer offer for a task */
 router.patch('/:id/accept', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid offer id.' });
     }
 
@@ -278,7 +278,7 @@ router.patch('/:id/accept', authMiddleware, async (req, res) => {
 /** Client rejects a single pending offer (does not assign a freelancer) */
 router.patch('/:id/reject', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid offer id.' });
     }
 
@@ -350,7 +350,7 @@ router.patch('/:id/reject', authMiddleware, async (req, res) => {
 router.get('/check', authMiddleware, async (req, res) => {
   try {
     const postId = String(req.query?.postId || '').trim();
-    if (!mongoose.Types.ObjectId.isValid(postId)) {
+    if (!isValidId(postId)) {
       return res.status(400).json({ message: 'Invalid post id.' });
     }
 

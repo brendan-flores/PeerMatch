@@ -1,18 +1,23 @@
 /**
  * Normalize hireStatus on tasks so community feed posts show correctly.
- * - approved + no assignment → hireStatus 'open'
- * - has assignedFreelancerId → hireStatus 'assigned' (or 'completed' if completedAt)
- *
  * Usage: node server/scripts/repairTaskHireStatus.js
  */
-require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 require('dotenv').config();
-const mongoose = require('mongoose');
+const connectDB = require('../db/connect');
+const { pingDatabase } = require('../db/connect');
 const ClientTask = require('../models/ClientTask');
 
+async function waitForDb() {
+  connectDB();
+  for (let i = 0; i < 12; i += 1) {
+    if (await pingDatabase()) return;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error('Database not available.');
+}
+
 async function run() {
-  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/peer-match';
-  await mongoose.connect(uri);
+  await waitForDb();
 
   const tasks = await ClientTask.find({}).lean();
   let updated = 0;
@@ -53,8 +58,7 @@ async function run() {
 
   console.log(`\nRepaired ${updated} task(s).`);
   console.log(`Community feed eligible (approved, open): ${feedCount}`);
-
-  await mongoose.disconnect();
+  process.exit(0);
 }
 
 run().catch((e) => {

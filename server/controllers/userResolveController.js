@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const { isValidId } = require('../db/id');
 const User = require('../models/User');
 const { buildPublicFreelancerProfile } = require('../utils/freelancerProfileDto');
 const { listFreelancerReviews } = require('../services/freelancerReviewService');
@@ -43,7 +43,7 @@ async function resolveUser(req, res) {
     };
 
     // Direct ObjectId resolve.
-    if (mongoose.Types.ObjectId.isValid(q)) {
+    if (isValidId(q)) {
       const user = await User.findById(q).select('name email accountType photoDataUrl').lean();
       return res.json({
         user: user
@@ -92,7 +92,7 @@ async function resolveUser(req, res) {
 async function getFreelancerPublicProfile(req, res) {
   try {
     const userId = String(req.params?.userId || '').trim();
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    if (!isValidId(userId)) {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
 

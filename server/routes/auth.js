@@ -109,7 +109,7 @@ router.post('/send-otp', async (req, res) => {
   }
 });
 
-/** POST /api/auth/verify-otp — verify Supabase OTP, then activate the MongoDB profile. */
+/** POST /api/auth/verify-otp — verify Supabase OTP, then activate the user profile. */
 async function handleVerifyOtp(req, res) {
   try {
     const normalizedEmail = normalizeEmail(req.body?.email);

@@ -68,9 +68,11 @@ function loadEnv() {
     });
 
     console.log(`Loaded ${count} variables from .env`);
-    console.log(`MONGODB_URI: ${process.env.MONGODB_URI ? 'set' : 'missing'}`);
     console.log(
-      `Supabase: ${process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY) ? 'set' : 'missing'}`,
+      `Supabase DB: ${process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY ? 'set' : 'missing'}`,
+    );
+    console.log(
+      `Supabase Auth: ${process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY) ? 'set' : 'missing'}`,
     );
     return true;
   } catch (error) {

@@ -1,7 +1,7 @@
 const cookie = require('cookie');
 const { Server } = require('socket.io');
-const mongoose = require('mongoose');
 const { COOKIE_NAME, verifyAccessToken } = require('../middleware/auth');
+const { isValidId } = require('../db/id');
 const Message = require('../models/Message');
 const User = require('../models/User');
 const { toChatMessageDto } = require('../utils/chatMessageDto');
@@ -88,7 +88,7 @@ function attachSocketServer(httpServer, options) {
     // We mark them as delivered once we emit them.
     Message.find({
       receiverId: uid,
-      vanishedForUsers: { $nin: [new mongoose.Types.ObjectId(uid)] },
+      vanishedForUsers: { $nin: [uid] },
       $or: [{ status: 'sent' }, { status: { $exists: false } }],
     })
       .sort({ timestamp: 1 })
@@ -152,7 +152,7 @@ function attachSocketServer(httpServer, options) {
           socket.emit('socket_error', { message: 'Cannot message yourself.' });
           return;
         }
-        if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+        if (!isValidId(receiverId)) {
           socket.emit('socket_error', { message: 'Invalid recipient.' });
           return;
         }
@@ -165,7 +165,7 @@ function attachSocketServer(httpServer, options) {
 
         let replyToMessageId = null;
         let replyPreview = '';
-        if (replyToMessageIdRaw && mongoose.Types.ObjectId.isValid(replyToMessageIdRaw)) {
+        if (replyToMessageIdRaw && isValidId(replyToMessageIdRaw)) {
           const parent = await Message.findById(replyToMessageIdRaw).lean();
           if (parent) {
             const ps = String(parent.senderId);
@@ -229,7 +229,7 @@ function attachSocketServer(httpServer, options) {
     socket.on('mark_seen', async (payload) => {
       try {
         const otherUserId = String(payload?.otherUserId || '').trim();
-        if (!otherUserId || !mongoose.Types.ObjectId.isValid(otherUserId)) return;
+        if (!otherUserId || !isValidId(otherUserId)) return;
 
         const docs = await Message.find({
           senderId: otherUserId,

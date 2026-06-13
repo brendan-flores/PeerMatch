@@ -2,8 +2,8 @@ const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const mongoose = require('mongoose');
 const connectDB = require('./config/db');
+const { isDbReady, pingDatabase } = require('./db/connect');
 const { loadEnv } = require('./config/env');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
@@ -14,7 +14,6 @@ const notificationsRoutes = require('./routes/notifications');
 const offersRoutes = require('./routes/offers');
 const { attachSocketServer } = require('./socket/socketServer');
 
-// Load environment variables (handles BOM stripping)
 loadEnv();
 
 const rawOrigins =
@@ -48,14 +47,14 @@ app.use((err, req, res, next) => {
 
 connectDB();
 
-function requireDb(req, res, next) {
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({
-      message:
-        'Database is unavailable. Start MongoDB or set MONGODB_URI, then try again.',
-    });
+async function requireDb(req, res, next) {
+  if (isDbReady() || (await pingDatabase())) {
+    return next();
   }
-  next();
+  return res.status(503).json({
+    message:
+      'Database is unavailable. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, then try again.',
+  });
 }
 
 app.use('/api/auth', requireDb, authRoutes);
@@ -66,15 +65,15 @@ app.use('/api/tasks', requireDb, tasksRoutes);
 app.use('/api/notifications', requireDb, notificationsRoutes);
 app.use('/api/offers', requireDb, offersRoutes);
 
-app.get('/', (req, res) => res.send('PeerMatch MERN API is running'));
+app.get('/', (req, res) => res.send('PeerMatch API is running'));
 
-/** Quick deploy check — open /api/health on your Render URL (no secrets returned). */
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   const { isSupabaseConfigured } = require('./utils/supabaseClient');
   const supabaseOk = isSupabaseConfigured();
+  const dbOk = isDbReady() || (await pingDatabase());
   res.json({
     ok: true,
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    database: dbOk ? 'connected' : 'disconnected',
     email: supabaseOk ? 'supabase_otp' : 'missing_env',
     emailProvider: supabaseOk ? 'supabase' : 'none',
     onRender: process.env.RENDER === 'true' ? 'yes' : 'no',

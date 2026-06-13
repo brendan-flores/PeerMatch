@@ -1,48 +1,29 @@
-const mongoose = require('mongoose');
+const { createModel } = require('../db/createModel');
+const TABLES = require('../db/tables');
 
-const clientTaskSchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true, trim: true },
-    description: { type: String, trim: true, default: '' },
-    subjectCategory: { type: String, trim: true, default: '' },
-    urgency: {
-      type: String,
-      enum: ['low', 'normal', 'high'],
-      default: 'normal',
-    },
-    clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    budget: { type: Number, required: true, min: 0, default: 0 },
-    category: { type: String, enum: ['academic', 'non-academic'], required: true },
-    status: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending',
-    },
-    hireStatus: {
-      type: String,
-      enum: ['open', 'assigned', 'completed'],
-      default: 'open',
-      index: true,
-    },
-    assignedFreelancerId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
-      index: true,
-    },
-    completedAt: { type: Date, default: null },
-    reviewRating: { type: Number, min: 1, max: 5, default: null },
-    reviewText: { type: String, trim: true, maxlength: 280, default: '' },
-    reviewSubmittedAt: { type: Date, default: null },
-    flagged: { type: Boolean, default: false },
-    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+const userPopulate = { getModel: () => require('./User') };
+
+const ClientTask = createModel({
+  entity: 'clientTask',
+  table: TABLES.CLIENT_TASKS,
+  populateMap: {
+    clientId: userPopulate,
+    assignedFreelancerId: userPopulate,
+    approvedBy: userPopulate,
+    rejectedBy: userPopulate,
   },
-  { timestamps: true },
-);
+});
 
-clientTaskSchema.index({ clientId: 1, createdAt: -1 });
-clientTaskSchema.index({ status: 1, hireStatus: 1, createdAt: -1 });
-clientTaskSchema.index({ status: 1 });
+/** Replaces MongoDB aggregate: group task counts by clientId. */
+ClientTask.aggregateTaskCountByClient = async function aggregateTaskCountByClient() {
+  const tasks = await ClientTask.find({}).select('clientId').lean();
+  const counts = new Map();
+  for (const task of tasks) {
+    const id = String(task.clientId || '');
+    if (!id) continue;
+    counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  return [...counts.entries()].map(([_id, count]) => ({ _id, count }));
+};
 
-module.exports = mongoose.model('ClientTask', clientTaskSchema, 'clientTasks');
+module.exports = ClientTask;

@@ -1,5 +1,5 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const { isValidId } = require('../db/id');
 const ClientTask = require('../models/ClientTask');
 const User = require('../models/User');
 const { authMiddleware, requireAdmin } = require('../middleware/auth');
@@ -125,9 +125,7 @@ router.get('/users', async (req, res) => {
         .sort({ createdAt: -1 })
         .limit(500)
         .lean(),
-      ClientTask.aggregate([
-        { $group: { _id: '$clientId', count: { $sum: 1 } } },
-      ]),
+      ClientTask.aggregateTaskCountByClient(),
     ]);
     const countByClient = new Map(taskCounts.map((x) => [String(x._id), x.count]));
 
@@ -179,7 +177,7 @@ router.patch('/tasks/:id', async (req, res) => {
     if (!['pending', 'approved', 'rejected'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status.' });
     }
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid task id.' });
     }
     const adminId = req.user.userId;
@@ -249,7 +247,7 @@ router.patch('/users/:id/role', async (req, res) => {
     if (!['user', 'admin'].includes(role)) {
       return res.status(400).json({ message: 'Invalid role.' });
     }
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
     const user = await User.findByIdAndUpdate(req.params.id, { $set: { role } }, { new: true })

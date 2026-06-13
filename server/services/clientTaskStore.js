@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const { isValidId } = require('../db/id');
 const ClientTask = require('../models/ClientTask');
 const User = require('../models/User');
 
@@ -7,7 +7,7 @@ async function loadClientsForTasks(tasks) {
     ...new Set(
       tasks
         .map((task) => (task.clientId ? String(task.clientId) : ''))
-        .filter((id) => id && mongoose.Types.ObjectId.isValid(id)),
+        .filter((id) => id && isValidId(id)),
     ),
   ];
   if (clientIds.length === 0) return new Map();
@@ -45,7 +45,7 @@ function mapTaskToAdminRow(task, clientById) {
 }
 
 async function getClientTaskByIdForAdmin(taskId) {
-  if (!mongoose.Types.ObjectId.isValid(taskId)) return null;
+  if (!isValidId(taskId)) return null;
 
   const task = await ClientTask.findById(taskId)
     .populate('clientId', 'name email accountType course yearLevel')

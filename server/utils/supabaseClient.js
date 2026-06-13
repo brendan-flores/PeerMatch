@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseAdmin, isSupabaseDbConfigured } = require('../db/supabaseAdmin');
 
 let cachedClient = null;
 
@@ -42,7 +43,6 @@ async function sendEmailOtp(email) {
   const { data, error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      // Supabase Auth stores the identity; MongoDB stores PeerMatch profile data.
       shouldCreateUser: true,
     },
   });
@@ -85,7 +85,9 @@ async function verifyEmailOtp(email, token) {
 
 module.exports = {
   isSupabaseConfigured,
+  isSupabaseDbConfigured,
   getSupabaseClient,
+  getSupabaseAdmin,
   sendEmailOtp,
   verifyEmailOtp,
 };

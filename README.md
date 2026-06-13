@@ -7,8 +7,8 @@ Built for institutional use (e.g. `@cit.edu` email verification) with separate e
 ## Tech stack
 
 - **Frontend:** Next.js 16, React 19, Tailwind CSS 4
-- **Backend:** Node.js, Express, Mongoose
-- **Database:** MongoDB
+- **Backend:** Node.js, Express
+- **Database:** Supabase Postgres
 - **Auth:** JWT sessions, Supabase Auth (email OTP)
 - **Realtime:** Socket.IO
 - **Deploy:** Vercel (web) · Render (API)
@@ -25,7 +25,7 @@ Shared: in-app notifications, offer workflow (pending → in progress → comple
 
 ## Getting started
 
-**Requirements:** Node.js 20+, MongoDB, Supabase project (email OTP)
+**Requirements:** Node.js 20+, Supabase project (Postgres + email OTP)
 
 ```bash
 git clone <repository-url>
@@ -34,11 +34,16 @@ npm install
 cp .env.example .env
 ```
 
+Apply the database schema in Supabase (SQL editor or CLI):
+
+```bash
+# Run supabase/migrations/001_initial_schema.sql against your project
+```
+
 Set at minimum in `.env`:
 
-- `MONGODB_URI`
+- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - `JWT_SECRET` (32+ characters)
-- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_API_BASE_URL=http://localhost:5000`
 - `CORS_ORIGINS=http://localhost:3000`
 
@@ -59,7 +64,7 @@ Useful scripts: `npm run build` · `npm run seed:admin` · `npm run seed:tasks`
 
 PeerMatch runs as two services:
 
-1. **API** — deploy the `server/` app (e.g. Render) with MongoDB, JWT, Supabase, and CORS configured.
+1. **API** — deploy the `server/` app (e.g. Render) with Supabase Postgres, JWT, and CORS configured.
 2. **Web** — deploy the Next.js app (e.g. Vercel) with `NEXT_PUBLIC_API_BASE_URL` pointing at your API.
 
 Configure Supabase (site URL, redirects, email SMTP) for production sign-up.
@@ -82,11 +87,14 @@ app/
   admin/        Admin dashboard (separate host in production)
   api/          Next.js API routes (auth proxy, health, Render proxy)
 server/
+  db/           Supabase client, mappers, query layer
   routes/       Express routers
   controllers/  Route handlers
   services/     Business logic
-  models/       Mongoose schemas
+  models/       Supabase-backed data access (mongoose-like API)
   scripts/      Seeds and one-off ops (seed:admin, promoteToAdmin, …)
+supabase/
+  migrations/   Postgres schema SQL
 docs/           Deployment and Supabase guides
 public/
   branding/     Logos and brand images

@@ -1,6 +1,6 @@
 # Supabase Auth OTP setup (PeerMatch)
 
-PeerMatch uses **Supabase Auth** for email verification (one-time passwords). **MongoDB** stores user profiles (username, password hash, course, etc.). **JWT cookies** power app sessions after verification.
+PeerMatch uses **Supabase Auth** for email verification (one-time passwords). **Supabase Postgres** stores user profiles (username, password hash, course, etc.). **JWT cookies** power app sessions after verification.
 
 No SMTP, Nodemailer, or Resend is used for verification.
 
@@ -93,9 +93,9 @@ curl -X PATCH "https://api.supabase.com/v1/projects/krbwawqvwsdgjtajoivv/config/
 ### Local (`.env` in project root, UTF-8)
 
 ```env
-MONGODB_URI=mongodb+srv://...your-atlas-uri.../peer-match?...
 SUPABASE_URL=https://xxxxxxxx.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 INSTITUTIONAL_EMAIL_DOMAIN=cit.edu
 JWT_SECRET=your-long-secret
 CORS_ORIGINS=http://localhost:3000
@@ -107,9 +107,9 @@ Remove old email vars if still present: `EMAIL_*`, `RESEND_*`, `EMAIL_SYNC_SEND`
 
 | Variable | Value |
 |----------|--------|
-| `MONGODB_URI` | Atlas connection string |
 | `SUPABASE_URL` | Project URL |
-| `SUPABASE_ANON_KEY` | anon public key |
+| `SUPABASE_ANON_KEY` or `SUPABASE_PUBLISHABLE_KEY` | Public API key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (database access) |
 | `INSTITUTIONAL_EMAIL_DOMAIN` | `cit.edu` |
 | `JWT_SECRET` | same as before |
 | `CORS_ORIGINS` | Vercel app URLs (comma-separated) |
@@ -148,7 +148,7 @@ Health check: `GET /api/health` → `"emailProvider": "supabase"`.
 
 **Troubleshooting**
 
-- `MONGODB_URI is not set` / `ECONNREFUSED 127.0.0.1:27017` → set Atlas URI in `.env` (UTF-8 file).
+- Database connection errors → set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env` (UTF-8 file), and run `supabase/migrations/001_initial_schema.sql`.
 - `Email verification is not configured` → set `SUPABASE_URL` and `SUPABASE_ANON_KEY`, restart API.
 - `Invalid or expired verification code` → request a new code; Supabase OTP expires quickly.
 - No email received → check Supabase **Authentication → Logs**; confirm Email provider is enabled; try a personal Gmail first to isolate delivery issues.

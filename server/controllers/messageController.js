@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const User = require('../models/User');
+const { isValidId } = require('../db/id');
 const {
   emitMessageUnsent,
   emitMessageReactionUpdate,
@@ -19,10 +19,8 @@ async function getConversation(req, res) {
     const myId = String(req.user.userId || '');
     const rawOther = String(req.params.otherUserId || '').trim();
 
-    // Allow either MongoDB ObjectId OR a partial/full name (e.g. "Roch", "Ro").
-    // This prevents "Could not load conversation" when the UI passes a name.
     let otherId = rawOther;
-    if (rawOther && !mongoose.Types.ObjectId.isValid(rawOther)) {
+    if (rawOther && !isValidId(rawOther)) {
       const tokens = rawOther
         .split(/\s+/)
         .map((t) => t.trim())
@@ -59,15 +57,12 @@ async function getConversation(req, res) {
       return res.json({ messages: [] });
     }
 
-    const myOid = new mongoose.Types.ObjectId(myId);
-    const otherOid = new mongoose.Types.ObjectId(otherId);
-
     const messages = await Message.find({
       $or: [
-        { senderId: myOid, receiverId: otherOid },
-        { senderId: otherOid, receiverId: myOid },
+        { senderId: myId, receiverId: otherId },
+        { senderId: otherId, receiverId: myId },
       ],
-      vanishedForUsers: { $nin: [myOid] },
+      vanishedForUsers: { $nin: [myId] },
     })
       .sort({ timestamp: 1 })
       .limit(500)
@@ -84,91 +79,15 @@ async function getConversation(req, res) {
 
 /**
  * GET /api/messages/conversations
- * Returns a list of conversation partners that have at least one message
- * with the authenticated user.
- *
- * Response:
- * { conversations: [{ otherUserId, otherName, otherPhotoDataUrl, lastMessagePreview, lastTimestamp, hasUnread }] }
  */
 async function getConversations(req, res) {
   try {
     const myId = String(req.user.userId || '').trim();
-    if (!mongoose.Types.ObjectId.isValid(myId)) {
+    if (!isValidId(myId)) {
       return res.json({ conversations: [] });
     }
 
-    const myObjId = new mongoose.Types.ObjectId(myId);
-
-    const conversations = await Message.aggregate([
-      {
-        $match: {
-          $and: [
-            { $or: [{ senderId: myObjId }, { receiverId: myObjId }] },
-            { vanishedForUsers: { $nin: [myObjId] } },
-          ],
-        },
-      },
-      { $sort: { timestamp: -1 } },
-      {
-        $addFields: {
-          otherUserId: {
-            $cond: [{ $eq: ['$senderId', myObjId] }, '$receiverId', '$senderId'],
-          },
-        },
-      },
-      {
-        $group: {
-          _id: '$otherUserId',
-          lastMessagePreview: {
-            $first: {
-              $cond: [{ $eq: ['$unsent', true] }, 'Deleted message', '$message'],
-            },
-          },
-          lastTimestamp: { $first: '$timestamp' },
-          lastStatus: { $first: { $ifNull: ['$status', 'sent'] } },
-          lastReceiverId: { $first: '$receiverId' },
-        },
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          otherUserId: '$_id',
-          otherName: { $ifNull: ['$user.name', 'Unknown'] },
-          otherPhotoDataUrl: {
-            $cond: [
-              { $eq: [{ $type: '$user.photoDataUrl' }, 'string'] },
-              '$user.photoDataUrl',
-              '',
-            ],
-          },
-          lastMessagePreview: 1,
-          lastTimestamp: 1,
-          hasUnread: {
-            $cond: [
-              {
-                $and: [
-                  { $eq: ['$lastReceiverId', myObjId] },
-                  { $ne: ['$lastStatus', 'seen'] },
-                ],
-              },
-              true,
-              false,
-            ],
-          },
-          _id: 0,
-        },
-      },
-      { $sort: { lastTimestamp: -1 } },
-      { $limit: 50 },
-    ]);
+    const conversations = await Message.getConversationsAggregate(myId);
 
     return res.json({
       conversations: conversations.map((c) => ({
@@ -188,20 +107,18 @@ async function getConversations(req, res) {
 
 /**
  * GET /api/messages/unread-count
- * Count of incoming messages not yet read by the authenticated user.
  */
 async function getUnreadCount(req, res) {
   try {
     const myId = String(req.user.userId || '').trim();
-    if (!mongoose.Types.ObjectId.isValid(myId)) {
+    if (!isValidId(myId)) {
       return res.json({ count: 0 });
     }
 
-    const myObjId = new mongoose.Types.ObjectId(myId);
     const count = await Message.countDocuments({
-      receiverId: myObjId,
+      receiverId: myId,
       unsent: { $ne: true },
-      vanishedForUsers: { $nin: [myObjId] },
+      vanishedForUsers: { $nin: [myId] },
       $or: [{ status: { $in: ['sent', 'delivered'] } }, { status: { $exists: false } }],
     });
 
@@ -214,15 +131,13 @@ async function getUnreadCount(req, res) {
 
 /**
  * POST /api/messages/seen
- * Marks messages as seen for the authenticated receiver.
- * Expected body: { otherUserId: string }
  */
 async function markSeen(req, res) {
   try {
     const myId = String(req.user.userId || '');
     const otherUserId = String(req.body?.otherUserId || '');
 
-    if (!mongoose.Types.ObjectId.isValid(myId) || !mongoose.Types.ObjectId.isValid(otherUserId)) {
+    if (!isValidId(myId) || !isValidId(otherUserId)) {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
 
@@ -244,14 +159,13 @@ async function markSeen(req, res) {
 
 /**
  * DELETE /api/messages/:messageId
- * Unsend a single message if the authenticated user is the sender.
  */
 async function deleteMessage(req, res) {
   try {
     const myId = String(req.user.userId || '');
     const messageId = String(req.params.messageId || '');
 
-    if (!mongoose.Types.ObjectId.isValid(myId) || !mongoose.Types.ObjectId.isValid(messageId)) {
+    if (!isValidId(myId) || !isValidId(messageId)) {
       return res.status(400).json({ message: 'Invalid id.' });
     }
 
@@ -260,7 +174,6 @@ async function deleteMessage(req, res) {
       return res.status(404).json({ message: 'Message not found.' });
     }
 
-    // Only allow the sender to delete their own message
     if (String(message.senderId) !== myId) {
       return res.status(403).json({ message: 'You can only delete your own messages.' });
     }
@@ -288,14 +201,13 @@ async function deleteMessage(req, res) {
 
 /**
  * DELETE /api/messages/conversation/:otherUserId
- * Deletes all messages in a conversation between the authenticated user and another user.
  */
 async function deleteConversation(req, res) {
   try {
     const myId = String(req.user.userId || '');
     const otherUserId = String(req.params.otherUserId || '');
 
-    if (!mongoose.Types.ObjectId.isValid(myId) || !mongoose.Types.ObjectId.isValid(otherUserId)) {
+    if (!isValidId(myId) || !isValidId(otherUserId)) {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
 
@@ -319,14 +231,13 @@ async function deleteConversation(req, res) {
 
 /**
  * POST /api/messages/:messageId/remove-for-me
- * Hides a message for the authenticated user only (Messenger-style remove for you).
  */
 async function removeMessageForMe(req, res) {
   try {
     const myId = String(req.user.userId || '');
     const messageId = String(req.params.messageId || '');
 
-    if (!mongoose.Types.ObjectId.isValid(myId) || !mongoose.Types.ObjectId.isValid(messageId)) {
+    if (!isValidId(myId) || !isValidId(messageId)) {
       return res.status(400).json({ message: 'Invalid id.' });
     }
 
@@ -366,7 +277,6 @@ async function removeMessageForMe(req, res) {
 
 /**
  * POST /api/messages/:messageId/reactions
- * Body: { emoji: string } — Messenger-style: one reaction per user; same emoji toggles off.
  */
 async function setMessageReaction(req, res) {
   try {
@@ -374,7 +284,7 @@ async function setMessageReaction(req, res) {
     const messageId = String(req.params.messageId || '');
     const emoji = String(req.body?.emoji || '').trim();
 
-    if (!mongoose.Types.ObjectId.isValid(myId) || !mongoose.Types.ObjectId.isValid(messageId)) {
+    if (!isValidId(myId) || !isValidId(messageId)) {
       return res.status(400).json({ message: 'Invalid id.' });
     }
 
@@ -399,7 +309,7 @@ async function setMessageReaction(req, res) {
 
     const next = toggleReactionForUser(message.reactions, myId, emoji);
     message.reactions = next.map((r) => ({
-      userId: new mongoose.Types.ObjectId(r.userId),
+      userId: r.userId,
       emoji: r.emoji,
     }));
     await message.save();
@@ -422,14 +332,13 @@ async function setMessageReaction(req, res) {
 
 /**
  * POST /api/messages/:messageId/vanish-for-me
- * Incoming messages only: removes the message from this viewer's chat entirely (no tombstone).
  */
 async function vanishIncomingMessageForViewer(req, res) {
   try {
     const myId = String(req.user.userId || '');
     const messageId = String(req.params.messageId || '');
 
-    if (!mongoose.Types.ObjectId.isValid(myId) || !mongoose.Types.ObjectId.isValid(messageId)) {
+    if (!isValidId(myId) || !isValidId(messageId)) {
       return res.status(400).json({ message: 'Invalid id.' });
     }
 

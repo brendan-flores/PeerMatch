@@ -74,10 +74,10 @@ function clearAccessTokenCookieForReq(req, res) {
   });
 }
 
-/** @param {{ _id: unknown, role: string }} user */
+/** @param {{ _id?: unknown, id?: unknown, role: string }} user */
 function signAccessToken(user) {
   const payload = {
-    userId: String(user._id),
+    userId: String(user._id || user.id),
     role: user.role,
   };
   return jwt.sign(payload, getJwtSecret(), { expiresIn: getJwtExpiresIn() });

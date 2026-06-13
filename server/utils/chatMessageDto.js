@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const { isValidId } = require('../db/id');
 
 /** Messenger-style: at most one reaction per user per message. */
 function dedupeReactions(reactions) {
@@ -39,7 +39,7 @@ function toChatMessageDto(m, myId) {
   const hiddenForMe = removedList.includes(String(myId));
 
   const baseReply =
-    m.replyToMessageId && mongoose.Types.ObjectId.isValid(String(m.replyToMessageId))
+    m.replyToMessageId && isValidId(String(m.replyToMessageId))
       ? { id: String(m.replyToMessageId), preview: String(m.replyPreview || '') }
       : undefined;
 

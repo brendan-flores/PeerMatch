@@ -1,32 +1,35 @@
 /**
- * Optional: insert sample tasks when the clientTasks collection is empty.
+ * Optional: insert sample tasks when the clientTasks table is empty.
  * Usage: node server/scripts/seedTasks.js
- * Requires MONGODB_URI and at least one client user in the database.
+ * Requires Supabase env and at least one client user in the database.
  */
 require('dotenv').config();
-const mongoose = require('mongoose');
+const connectDB = require('../db/connect');
+const { pingDatabase } = require('../db/connect');
 const ClientTask = require('../models/ClientTask');
 const User = require('../models/User');
 
-async function run() {
-  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/peer-match';
-  await mongoose.connect(uri);
-  if (mongoose.connection.readyState !== 1) {
-    console.error('Database not connected.');
-    process.exit(1);
+async function waitForDb() {
+  connectDB();
+  for (let i = 0; i < 12; i += 1) {
+    if (await pingDatabase()) return;
+    await new Promise((r) => setTimeout(r, 1000));
   }
+  throw new Error('Database not available.');
+}
+
+async function run() {
+  await waitForDb();
 
   const existing = await ClientTask.countDocuments();
   if (existing > 0) {
-    console.log(`clientTasks collection already has ${existing} document(s). Skipping.`);
-    await mongoose.disconnect();
+    console.log(`clientTasks already has ${existing} row(s). Skipping.`);
     process.exit(0);
   }
 
   const client = await User.findOne({ role: 'user', accountType: 'client' }).sort({ createdAt: 1 });
   if (!client) {
     console.log('No client user found. Register a client first, then re-run.');
-    await mongoose.disconnect();
     process.exit(0);
   }
 
@@ -67,7 +70,6 @@ async function run() {
   ]);
 
   console.log('Inserted sample tasks for client:', client.email);
-  await mongoose.disconnect();
   process.exit(0);
 }
 

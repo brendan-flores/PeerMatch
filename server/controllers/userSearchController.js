@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const { isValidId } = require('../db/id');
 const User = require('../models/User');
 
 function escapeRegex(input) {
@@ -36,10 +36,10 @@ async function searchUsers(req, res) {
     if (!q) return res.json({ users: [] });
 
     const nameQuery = buildNameTokenQuery(q);
-    const isObjectId = mongoose.Types.ObjectId.isValid(q);
+    const isUuid = isValidId(q);
 
     // If query is an exact ObjectId, return that user (if allowed).
-    if (isObjectId) {
+    if (isUuid) {
       const user = await User.findById(q)
         .select('name photoDataUrl')
         .lean();

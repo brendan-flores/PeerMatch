@@ -1,5 +1,5 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const { isValidId } = require('../db/id');
 const Notification = require('../models/Notification');
 const { authMiddleware } = require('../middleware/auth');
 const {
@@ -12,7 +12,7 @@ const router = express.Router();
 /** List notifications for the authenticated user (newest first) */
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.user.userId)) {
+    if (!isValidId(req.user.userId)) {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
 
@@ -32,7 +32,7 @@ router.get('/', authMiddleware, async (req, res) => {
 /** Mark all notifications as read */
 router.patch('/read-all', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.user.userId)) {
+    if (!isValidId(req.user.userId)) {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
 
@@ -54,10 +54,10 @@ router.patch('/read-all', authMiddleware, async (req, res) => {
 /** Delete a single notification */
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid notification id.' });
     }
-    if (!mongoose.Types.ObjectId.isValid(req.user.userId)) {
+    if (!isValidId(req.user.userId)) {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
 
@@ -80,10 +80,10 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 /** Mark a single notification as read */
 router.patch('/:id/read', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid notification id.' });
     }
-    if (!mongoose.Types.ObjectId.isValid(req.user.userId)) {
+    if (!isValidId(req.user.userId)) {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
 

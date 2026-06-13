@@ -32,7 +32,7 @@ async function photoUrlForActorId(actorId) {
 
 /**
  * Attach each actor's current profile photo from the User collection.
- * @param {import('mongoose').LeanDocument[]} docs
+ * @param {object[]} docs
  */
 async function enrichNotificationsWithActorPhotos(docs) {
   if (!docs?.length) return [];

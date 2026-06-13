@@ -1,28 +1,9 @@
-const mongoose = require('mongoose');
+const { createModel } = require('../db/createModel');
+const TABLES = require('../db/tables');
 
-const adminActivitySchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true, trim: true },
-    sub: { type: String, trim: true, default: '' },
-    badge: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected', 'completed', 'warning'],
-      required: true,
-    },
-    kind: {
-      type: String,
-      enum: ['default', 'task_approved', 'task_rejected', 'task_submitted', 'task_flagged'],
-      default: 'default',
-    },
-    occurredAt: { type: Date, default: Date.now, index: true },
-    clientName: { type: String, trim: true, default: '' },
-    moderatorName: { type: String, trim: true, default: '' },
-    taskTitle: { type: String, trim: true, default: '' },
-    taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
-  },
-  { timestamps: true },
-);
+const AdminActivity = createModel({
+  entity: 'adminActivity',
+  table: TABLES.ADMIN_ACTIVITIES,
+});
 
-adminActivitySchema.index({ kind: 1, occurredAt: -1 });
-
-module.exports = mongoose.model('AdminActivity', adminActivitySchema);
+module.exports = AdminActivity;

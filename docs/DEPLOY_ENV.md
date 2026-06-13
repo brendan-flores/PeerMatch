@@ -28,7 +28,6 @@ Resend belongs in **Supabase SMTP**, not Render.
 
 | Variable | Value |
 |----------|--------|
-| `MONGODB_URI` | Atlas connection string |
 | `JWT_SECRET` | Long random (32+ chars) |
 | `JWT_EXPIRES_IN` | `7d` |
 | `JWT_COOKIE_SAMESITE` | `lax` (recommended with Vercel proxy; `none` still works) |
@@ -40,6 +39,7 @@ Resend belongs in **Supabase SMTP**, not Render.
 | `PORT` | `5000` (or leave default on Render) |
 | `SUPABASE_URL` | `https://YOUR_PROJECT.supabase.co` |
 | `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` from Supabase → API Keys |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (API only — never expose to browser) |
 
 ### `CORS_ORIGINS` (comma-separated, no trailing slashes)
 
@@ -58,7 +58,7 @@ Redeploy Render after changes.
 | Variable | Why |
 |----------|-----|
 | `API_PROXY_URL` | Optional; proxy uses `NEXT_PUBLIC_API_BASE_URL` |
-| `SUPABASE_*`, `RESEND_*`, `EMAIL_*`, `MONGODB_URI`, `JWT_SECRET` | API-only secrets |
+| `SUPABASE_*`, `RESEND_*`, `EMAIL_*`, `JWT_SECRET` | API-only secrets |
 
 ### Keep / set
 

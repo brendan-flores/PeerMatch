@@ -1,5 +1,5 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const { isValidId } = require('../db/id');
 const ClientTask = require('../models/ClientTask');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
@@ -26,7 +26,7 @@ async function loadClientsForTasks(tasks) {
     ...new Set(
       tasks
         .map((task) => (task.clientId ? String(task.clientId) : ''))
-        .filter((id) => id && mongoose.Types.ObjectId.isValid(id)),
+        .filter((id) => id && isValidId(id)),
     ),
   ];
   if (clientIds.length === 0) return new Map();
@@ -76,7 +76,7 @@ router.get('/', async (req, res) => {
 /** Authenticated client's posts (all moderation statuses) */
 router.get('/mine', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.user.userId)) {
+    if (!isValidId(req.user.userId)) {
       return res.status(400).json({ message: 'Invalid user id.' });
     }
 
@@ -93,7 +93,7 @@ router.get('/mine', authMiddleware, async (req, res) => {
               ? String(task.assignedFreelancerId)
               : '',
           )
-          .filter((id) => id && mongoose.Types.ObjectId.isValid(id)),
+          .filter((id) => id && isValidId(id)),
       ),
     ];
 
@@ -203,7 +203,7 @@ router.post('/', authMiddleware, async (req, res) => {
 /** Client updates their own post */
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid post id.' });
     }
 
@@ -266,7 +266,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 /** Client marks an assigned task as completed */
 router.patch('/:id/complete', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid post id.' });
     }
 
@@ -332,7 +332,7 @@ router.patch('/:id/complete', authMiddleware, async (req, res) => {
 /** Client submits a review for the assigned freelancer after completion */
 router.patch('/:id/review', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid post id.' });
     }
 
@@ -421,7 +421,7 @@ router.patch('/:id/review', authMiddleware, async (req, res) => {
 /** Client deletes their own post */
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    if (!isValidId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid post id.' });
     }
 

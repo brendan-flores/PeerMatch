@@ -1,17 +1,25 @@
 /**
- * Inspect tasks in MongoDB and what the public feed query returns.
+ * Inspect tasks and what the public feed query returns.
  * Usage: node server/scripts/inspectTasks.js
  */
-require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 require('dotenv').config();
-const mongoose = require('mongoose');
+const connectDB = require('../db/connect');
+const { pingDatabase } = require('../db/connect');
 const ClientTask = require('../models/ClientTask');
 const User = require('../models/User');
 const { mapTaskToFeedPost } = require('../utils/taskFeedDto');
 
+async function waitForDb() {
+  connectDB();
+  for (let i = 0; i < 12; i += 1) {
+    if (await pingDatabase()) return;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error('Database not available.');
+}
+
 async function run() {
-  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/peer-match';
-  await mongoose.connect(uri);
+  await waitForDb();
 
   const all = await ClientTask.find({}).select('title status hireStatus clientId assignedFreelancerId').lean();
   console.log('TOTAL tasks:', all.length);
@@ -60,7 +68,7 @@ async function run() {
     console.log('Tasks with missing client user:', orphanClients.join(', '));
   }
 
-  await mongoose.disconnect();
+  process.exit(0);
 }
 
 run().catch((e) => {
